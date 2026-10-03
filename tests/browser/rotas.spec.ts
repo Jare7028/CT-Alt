@@ -16,7 +16,12 @@ async function login(page: Page, role: string) {
     .fill(fixtures.accounts[role].password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/agents$/);
-  await page.goto("/rotas?company=" + fixtures.tenantA);
+  if (role === "employee") {
+    await page.goto("/rotas?company=" + fixtures.tenantA);
+  } else {
+    await page.locator(".ct-sidebar nav").getByRole("link", { name: "Client Rotas", exact: true }).click();
+    await expect(page).toHaveURL("/rotas?company=" + fixtures.tenantA);
+  }
   await expect(
     page.getByRole("heading", { name: "Job scheduling" }),
   ).toBeVisible();
@@ -567,4 +572,105 @@ test("schedule settings preserve shifts, show errors, cancel safely and revoke m
       exact: true,
     }),
   ).toBeVisible();
+});
+
+test("lost create acknowledgement blocks duplicate retries until a fresh review", async ({ page }) => {
+  await login(page, "owner");
+  const name = "Synthetic uncertain creation " + Date.now();
+  await page.getByRole("button", { name: "Create schedule", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create schedule", exact: true });
+  await dialog.getByLabel("Schedule name").fill(name);
+  await dialog.getByLabel("Synthetic employee", { exact: true }).check();
+  let writes = 0;
+  await page.route("**/api/rotas", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    writes++;
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    // Commit against the real local API/database, then discard its acknowledgement.
+    await route.abort("connectionfailed");
+  });
+  await dialog.getByRole("button", { name: "Create schedule", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("confirmation was lost");
+  await expect(dialog.getByRole("button", { name: "Create schedule", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await dialog.locator("form").evaluate(form => (form as HTMLFormElement).requestSubmit());
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  const saved = await (await page.request.get("/api/rotas?tenantId=" + fixtures.tenantA)).json();
+  expect(saved.schedules.filter((schedule: { name: string }) => schedule.name === name)).toHaveLength(1);
+  expect(writes).toBe(1);
+  await page.route("**/api/rotas?*", route => route.fulfill({ status: 503, json: { error: "Temporary read failure" } }));
+  await dialog.getByRole("button", { name: "Reload schedules to review" }).click();
+  await expect(dialog.getByRole("button", { name: "Create schedule", exact: true })).toBeDisabled();
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Temporary read failure" })).toBeVisible();
+  await page.unroute("**/api/rotas?*");
+  await dialog.getByRole("button", { name: "Reload schedules to review" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("button", { name, exact: true })).toHaveCount(1);
+  expect(writes).toBe(1);
+});
+
+test("acknowledged settings followed by a lost response stay locked until a successful review", async ({ page }) => {
+  await login(page, "owner");
+  const name = "Synthetic settings recovery " + Date.now();
+  await page.getByRole("button", { name: "Create schedule", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Schedule name").fill(name);
+  await dialog.getByLabel("Time zone", { exact: true }).fill("Europe/London");
+  await dialog.getByLabel("Synthetic employee", { exact: true }).check();
+  await dialog.getByRole("button", { name: "Create schedule", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await dialog.getByLabel("Schedule name").fill(name + " acknowledged");
+  await dialog.getByLabel("Time zone", { exact: true }).fill("America/New_York");
+  await dialog.getByRole("button", { name: "Save settings", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: name + " acknowledged", exact: true })).toBeVisible();
+  const fetchData = async () => (await page.request.get("/api/rotas?tenantId=" + fixtures.tenantA)).json();
+  const acknowledged = (await fetchData()).schedules.find((schedule: { name: string }) => schedule.name === name + " acknowledged");
+  expect(acknowledged).toMatchObject({ revision: 2, time_zone: "America/New_York" });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await dialog.getByLabel("Schedule name").fill(name + " unconfirmed");
+  await dialog.getByLabel("Time zone", { exact: true }).fill("UTC");
+  let writes = 0;
+  await page.route("**/api/rotas", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    expect(route.request().postDataJSON().change.action).toBe("update_schedule");
+    writes++;
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.abort("connectionfailed");
+  });
+  await dialog.getByRole("button", { name: "Save settings", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("confirmation was lost");
+  await expect(dialog.getByLabel("Schedule name")).toBeDisabled();
+  await expect(dialog.getByLabel("Time zone", { exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Save settings", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await dialog.locator("form").evaluate(form => (form as HTMLFormElement).requestSubmit());
+  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  expect((await fetchData()).schedules.find((schedule: { id: string }) => schedule.id === acknowledged.id)).toMatchObject({ name: name + " unconfirmed", revision: 3, time_zone: "UTC" });
+  expect(writes).toBe(1);
+  await page.route("**/api/rotas?*", route => route.fulfill({ status: 503, json: { error: "Temporary settings read failure" } }));
+  await dialog.getByRole("button", { name: "Reload schedules to review" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Temporary settings read failure" })).toBeVisible();
+  await expect(dialog.getByLabel("Schedule name")).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Save settings", exact: true })).toBeDisabled();
+  await expect(dialog).toBeVisible();
+  await page.unroute("**/api/rotas?*");
+  await dialog.getByRole("button", { name: "Reload schedules to review" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: name + " unconfirmed", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(dialog.getByLabel("Schedule name")).toHaveValue(name + " unconfirmed");
+  await expect(dialog.getByLabel("Time zone", { exact: true })).toHaveValue("UTC");
+  await expect(dialog.getByRole("button", { name: "Save settings", exact: true })).toBeEnabled();
+  expect((await fetchData()).schedules.find((schedule: { id: string }) => schedule.id === acknowledged.id)?.revision).toBe(3);
+  expect(writes).toBe(1);
+  await page.unroute("**/api/rotas");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 });

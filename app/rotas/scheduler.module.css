@@ -3,7 +3,8 @@
   padding: 28px 32px;
   color: #24313d;
   background: #f7f9fc;
-  min-height: 100vh;
+  min-height: calc(100vh - 60px);
+  width: 100%;
   font-size: 14px;
 }
 .shell h1 {
@@ -13,21 +14,6 @@
 }
 .shell h2 {
   font-size: 21px;
-}
-.header {
-  border-bottom: 1px solid #dce3ea;
-  padding-bottom: 22px;
-  gap: 20px;
-  font-size: 17px;
-}
-.brand {
-  font-weight: 800;
-  text-decoration: none;
-  color: #285c4c;
-}
-.company {
-  margin-left: auto;
-  font-size: 12px;
 }
 .shell label {
   display: flex;
@@ -259,6 +245,17 @@
   border: 1px solid #dbe3ec;
   border-radius: 8px;
 }
+.dialog .formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
 .dialog .checkbox {
   display: flex;
   flex-direction: row;
@@ -298,13 +295,6 @@
 @media (max-width: 600px) {
   .shell {
     padding: 18px 14px;
-  }
-  .header {
-    flex-wrap: wrap;
-  }
-  .company {
-    margin-left: 0;
-    width: 100%;
   }
   .toolbar {
     gap: 10px;

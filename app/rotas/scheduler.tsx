@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import AppShell from "../components/app-shell";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -107,6 +107,8 @@ export default function Scheduler({
   >("");
   const [editing, setEditing] = useState<RotaShift | null>(null);
   const [formError, setFormError] = useState("");
+  const [uncertain, setUncertain] = useState(false);
+  const writeLock = useRef(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -224,13 +226,16 @@ export default function Scheduler({
     setModal(kind);
   };
   const close = () => {
-    if (!busy) setModal("");
+    if (!writeLock.current && !uncertain) setModal("");
   };
   async function save(change: Record<string, unknown>) {
-    if (busy) return;
+    if (writeLock.current || uncertain) return;
+    writeLock.current = true;
     setBusy(true);
     setFormError("");
     setNotice("");
+    let rejected = false;
+    let acknowledged = false;
     try {
       const response = await fetch("/api/rotas", {
         method: "POST",
@@ -239,6 +244,7 @@ export default function Scheduler({
       });
       const result = await response.json();
       if (!response.ok) {
+        rejected = response.status >= 400 && response.status < 500;
         if (
           change.action === "save_shift" &&
           response.status === 409 &&
@@ -247,6 +253,12 @@ export default function Scheduler({
           setOverlapWarning(true);
         throw new Error(result.error);
       }
+      if (
+        !result.saved ||
+        (change.action === "create_schedule" && typeof result.saved.schedule_id !== "string")
+      )
+        throw new Error("The save acknowledgement could not be verified.");
+      acknowledged = true;
       setModal("");
       setNotice(
         change.action === "publish"
@@ -260,16 +272,40 @@ export default function Scheduler({
       setLoading(true);
       await load();
     } catch (e) {
-      setFormError(
-        e instanceof Error ? e.message : "The change could not be saved.",
-      );
+      if (!rejected && !acknowledged) {
+        setUncertain(true);
+        setFormError(
+          "This change may have been saved, but confirmation was lost. Reload schedules and review the result before making another change.",
+        );
+      } else {
+        setFormError(
+          e instanceof Error ? e.message : "The change could not be saved.",
+        );
+      }
     } finally {
+      writeLock.current = false;
+      setBusy(false);
+    }
+  }
+  async function reviewSavedChanges() {
+    if (writeLock.current) return;
+    writeLock.current = true;
+    setBusy(true);
+    try {
+      if (await load()) {
+        setUncertain(false);
+        setFormError("");
+        setModal("");
+        setNotice("Schedules reloaded. Review the latest saved changes before trying again.");
+      }
+    } finally {
+      writeLock.current = false;
       setBusy(false);
     }
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (writeLock.current || uncertain) return;
     const form = new FormData(event.currentTarget);
     const text = (key: string) => String(form.get(key) || "");
     const base = { schedule_id: selected, revision: schedule?.revision };
@@ -335,28 +371,21 @@ export default function Scheduler({
     setNotice("");
   };
   return (
-    <main className={styles.shell}>
-      <header className={styles.header}>
-        <Link href="/agents" className={styles.brand}>
-          CT Alt
-        </Link>
-        <span>Client rotas</span>
-        <label className={styles.company}>
-          Company
-          <select
-            value={company.id}
-            onChange={(e) => {
-              router.push("/rotas?company=" + e.target.value);
-            }}
-          >
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+    <AppShell
+      activeModule="rotas"
+      companyId={company.id}
+      companyName={company.name}
+      moduleLinks={{ rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      companyControl={
+        <label>
+          <span className="sr-only">Company</span>
+          <select value={company.id} onChange={(event) => router.push(`/rotas?company=${encodeURIComponent(event.target.value)}`)}>
+            {companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>
-      </header>
+      }
+    >
+    <main className={styles.shell}>
       <div className={styles.toolbar}>
         <h1>{schedule ? schedule.name : "Job scheduling"}</h1>
         {selected ? (
@@ -827,6 +856,7 @@ export default function Scheduler({
           close={close}
         >
           <form onSubmit={submit}>
+            <fieldset className={styles.formFields} disabled={busy || uncertain}>
             {(modal === "schedule" || modal === "settings") && (
               <>
                 <label>
@@ -1073,18 +1103,24 @@ export default function Scheduler({
               </p>
             )}
             {modal === "restore" && <p>Return this schedule to Active?</p>}
+            </fieldset>
             {formError && (
               <p className={styles.error} role="alert">
                 {formError}
               </p>
             )}
+            {uncertain && (
+              <button type="button" disabled={busy} onClick={reviewSavedChanges}>
+                Reload schedules to review
+              </button>
+            )}
             <div className={styles.modalActions}>
-              <button type="button" disabled={busy} onClick={close}>
+              <button type="button" disabled={busy || uncertain} onClick={close}>
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={busy || loading}
+                disabled={busy || loading || uncertain}
                 className={styles.primary}
               >
                 {busy
@@ -1108,5 +1144,6 @@ export default function Scheduler({
         </Modal>
       )}
     </main>
+    </AppShell>
   );
 }

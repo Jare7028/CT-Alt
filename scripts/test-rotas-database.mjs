@@ -207,32 +207,36 @@ try {
       "utf8",
     ),
   );
-  const directory = new URL("../supabase/migrations/", import.meta.url);
-  for (const file of readdirSync(directory)
-    .filter((file) => file.endsWith(".sql"))
-    .sort()) {
-    sql(readFileSync(new URL(file, directory), "utf8"));
-  }
-  sql(
-    readFileSync(
-      new URL("../docs/proposals/client-rotas.sql", import.meta.url),
-      "utf8",
-    ),
-  );
   const checks = [];
-  for (const suite of ["rotas.sql", "rota-settings.sql"]) {
-    const result = sql(
-      readFileSync(
-        new URL("../tests/database/" + suite, import.meta.url),
-        "utf8",
-      ),
-    );
-    for (const line of result
-      .split("\n")
-      .filter((line) => line.includes("INFO:")))
-      console.log(line);
+  const runSuite = (suite) => {
+    const result = sql(readFileSync(new URL("../tests/database/" + suite, import.meta.url), "utf8"));
+    for (const line of result.split("\n").filter((line) => line.includes("INFO:"))) console.log(line);
     checks.push(...result.split("\n").filter((line) => line.includes("PASS:")));
+  };
+  const rotaTables = ["rota_schedules", "rota_agents", "rota_admins", "rota_jobs", "rota_shifts", "rota_audit"];
+  const records = (table) => `select coalesce(jsonb_agg(to_jsonb(r) order by to_jsonb(r)::text),'[]'::jsonb) from public.${table} r`;
+  const functionSecurity = `select jsonb_agg(jsonb_build_object('oid',oid,'owner',proowner,'acl',proacl,'definer',prosecdef,'config',proconfig) order by oid) from pg_proc where oid in ('workforce_private.save_rota(uuid,jsonb)'::regprocedure,'public.save_rota(uuid,jsonb)'::regprocedure)`;
+  const directory = new URL("../supabase/migrations/", import.meta.url);
+  let upgraded = false;
+  for (const file of readdirSync(directory).filter((file) => file.endsWith(".sql")).sort()) {
+    if (file.endsWith("_client_rota_schedule_settings.sql")) {
+      // Exercise the additive migration against real retained baseline records,
+      // including published shifts, assignments, jobs and historical audit rows.
+      runSuite("rotas.sql");
+      sql(`create table workforce_private.rota_upgrade_snapshot as ${rotaTables.map(table => `select '${table}'::text as table_name, (${records(table)}) as records`).join(' union all ')} union all select 'function_security', (${functionSecurity});`);
+      sql(readFileSync(new URL(file, directory), "utf8"));
+      const verification = sql(`do $$begin
+        ${rotaTables.map(table => `if (select records from workforce_private.rota_upgrade_snapshot where table_name='${table}') is distinct from (${records(table)}) then raise exception 'Migration changed retained ${table}'; end if;`).join('\n')}
+        if (select records from workforce_private.rota_upgrade_snapshot where table_name='function_security') is distinct from (${functionSecurity}) then raise exception 'Migration changed function identity or security'; end if;
+        raise notice 'PASS: additive settings migration preserves populated rota records and historical audit';
+        raise notice 'PASS: additive settings migration preserves function identity, ownership, ACL, definer and search path';
+      end;$$;drop table workforce_private.rota_upgrade_snapshot;`);
+      checks.push(...verification.split("\n").filter(line => line.includes("PASS:")));
+      upgraded = true;
+    } else sql(readFileSync(new URL(file, directory), "utf8"));
   }
+  if (!upgraded) throw new Error("Schedule settings migration was not exercised");
+  runSuite("rota-settings.sql");
   checks.push(...(await raceChecks()));
   console.log(checks.join("\n"));
   console.log(

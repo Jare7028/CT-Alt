@@ -199,8 +199,6 @@ try {
     verify(db);
     sql(readFileSync(root + "/supabase/migrations/" + file, "utf8"));
   }
-  verify(db);
-  sql(readFileSync(root + "/docs/proposals/client-rotas.sql", "utf8"));
   docker([
     "run",
     "-d",
