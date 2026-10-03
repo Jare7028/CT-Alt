@@ -6,7 +6,7 @@ An independently implemented workforce application. Agents and their access perm
 
 The live first slice provides real end-user password sign-in and a company-scoped Users directory: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
 
-This is an initial Users slice, not competitor feature parity. Invites, imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
+This is an initial Users slice, not competitor feature parity. Invites, add/update and update-only imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
 
 The independent hosted foundation and Agents slice are live. The recorded migration versions are `20261003143058` and `20261003153745`; no remote migration is required for this Auth change. Local browser verification uses actual isolated Supabase Auth and synthetic data, not the hosted database.
 
@@ -47,6 +47,18 @@ npm run test:browser
 The setup uses `supabase` from PATH, or `CT_ALT_SUPABASE_CLI` for an explicitly chosen CLI binary. Browser tests use Chromium at `/usr/bin/chromium`, overridable with `CT_ALT_CHROMIUM`. They use plain HTTP on loopback only; no certificate validation bypass is configured. Test screenshots/results stay ignored and are not uploaded by CI.
 
 CI runs lint, TypeScript, project-boundary assertions, isolated SQL assertions and a production build. The full local Auth/browser suite requires the explicit local stack and is not yet run in CI.
+
+## Add-only CSV import (review slice)
+
+Owners/admins can upload a comma-separated UTF-8 CSV, map columns to supported existing user/custom fields, inspect validation, review the summary and explicitly confirm. Preview performs no writes. Unknown columns are visibly ignored unless mapped; required company custom fields must be mapped. New custom fields, invitations, archive actions and role/access changes are not supported by import.
+
+The parser supports a UTF-8 BOM, quoted commas/newlines, doubled quotes and CRLF/LF/CR records, and reports source lines. Invalid encoding/quoting, mismatched column counts, duplicate headers and null characters are rejected. Limits are 128 KiB per file, 25 nonblank data rows, 40 columns, 2,000 characters per decoded cell, 8 KiB per decoded row and 48 KiB for the mapped batch. Names/title/team/custom fields retain the API's own length limits. Employment dates must be finite ISO calendar dates.
+
+Phone values normalize common formatting and use an explicit mapped/default country code for national numbers. Preserve phone digits as spreadsheet text; phone syntax validation does not verify real ownership or deliverability. Duplicate normalized numbers within the file block confirmation. Known existing numbers, including archived records, are shown as skipped and are never updated or restored. Preview checks the loaded directory (currently up to 1,000 records); database uniqueness is authoritative for every company record and catches unseen existing numbers or races.
+
+All new records use one existing signed-user create batch. A conflict or server validation failure rejects the whole batch; files are never silently chunked. Confirmation success reports the acknowledged count even if the subsequent directory refresh fails. Network/unknown server outcomes block another confirmation and ask the user to inspect the directory before retrying. Formula/HTML-like text is stored as ordinary text, rendered with React escaping, and remains subject to CSV export neutralization.
+
+This original implementation follows the documented mapping, validation, summary and confirmation sequence in [Connecteam's CSV import guide](https://help.connecteam.com/en/articles/6463571-import-users-via-an-excel-csv-file). Add/update, update-only, blank-cell overwrite policies, larger imports, inline correction and template downloads remain future increments. No hosted migration or new service is needed.
 
 ## Delivery sequence
 
