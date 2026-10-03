@@ -12,7 +12,7 @@ export default function Home() {
           <div><p className="eyebrow">Workforce tools</p><h2>Your team, connected</h2><p>Manage users, plan client rotas and keep conversations together.</p></div>
         </div>
         <p className="notice">Sign in with an account provided by your company owner.</p>
-      <p><Link href="/overview">Open Overview</Link> · <Link href="/agents">Open Users</Link> · <Link href="/rotas">Client Rotas</Link> · <Link href="/chat">Chat</Link> · <Link href="/time-clock">Time Clock</Link></p>
+      <p><Link href="/overview">Open Overview</Link> · <Link href="/agents">Open Users</Link> · <Link href="/rotas">Client Rotas</Link> · <Link href="/chat">Chat</Link> · <Link href="/time-clock">Time Clock</Link> · <Link href="/quick-tasks">Quick Tasks</Link></p>
       </section>
       <footer>Built step by step, around the working day.</footer>
     </main>

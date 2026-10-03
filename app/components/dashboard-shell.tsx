@@ -6,7 +6,7 @@ import type { Company, Member } from '../../lib/agent-types';
 import AppShell from './app-shell';
 
 export default function DashboardShell({ company, companies, role, module, children }: {
-  company: Company; companies: Company[]; role: Member['role']; module: 'overview' | 'activity' | 'time-clock'; children: ReactNode;
+  company: Company; companies: Company[]; role: Member['role']; module: 'overview' | 'activity' | 'time-clock' | 'quick-tasks'; children: ReactNode;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -21,7 +21,7 @@ export default function DashboardShell({ company, companies, role, module, child
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Sign out failed.'); setBusy(false); }
   }
   return <AppShell companyName={company.name} companyId={company.id} activeModule={module}
-    moduleLinks={{ 'time-clock': `/time-clock${suffix}`, overview: role !== 'employee' ? `/overview${suffix}` : undefined, activity: role === 'owner' || role === 'admin' ? `/activity${suffix}` : undefined, chat: `/chat${suffix}`, rotas: `/rotas${suffix}` }}
+    moduleLinks={{ 'quick-tasks': `/quick-tasks${suffix}`, 'time-clock': `/time-clock${suffix}`, overview: role !== 'employee' ? `/overview${suffix}` : undefined, activity: role === 'owner' || role === 'admin' ? `/activity${suffix}` : undefined, chat: `/chat${suffix}`, rotas: `/rotas${suffix}` }}
     companyControl={<label><span className="sr-only">Company</span><select value={company.id} onChange={event => router.push(`/${module}?company=${encodeURIComponent(event.target.value)}`)}>{companies.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
     accountControls={<><button onClick={signout} disabled={busy}>Sign out</button>{error && <p role="alert">{error}</p>}</>}
   ><main className="ct-dashboard-main">{children}</main></AppShell>;
