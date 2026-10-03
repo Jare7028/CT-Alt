@@ -28,10 +28,12 @@ New releases after CT Alt access was restored:
 | 14 Complete Chat | a74e196b015641d49caed28bd29badfc9742dd64 | 35954c78b5cb92ec8a782c9620f7287e08766093 | Original PR5 work retained; both migrations applied once; five RLS tables, no anon or direct browser writes;274 combined SQL assertions,134 rota assertions,34 config and both real Auth acceptance runners; CI37154426688 |
 | 15 Overview/Activity | 93f2f44cfb1a211d3f6408748e0de048f56ede49 | bdf5ddb53f305ecbdebf47e0b553b8323eb8684d | Signed-user counts/activity, current access rechecks, safe bigint/keyset/calendar handling;40 config/query tests and4 real Auth/API/browser cases; CI37155117506 |
 
-All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview counts now share one STABLE SECURITY INVOKER statement snapshot; the follow-up is reviewed and its consumer awaits verified release. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
+PR16 consistent Overview counts reviewed headc5beca7d72b42aded9512bc63eea8f2bbcff76ea mergedcc68777b51877cf0f734fdd7a19751fff0dfd20d; CI37156487306 and productiondpl_5ovK7pn9PuzdkTn6LmJFkmqKWbBG READY/alias verified.
+
+All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview counts now share one STABLE SECURITY INVOKER statement snapshot; PR16 mergecc68777b51877cf0f734fdd7a19751fff0dfd20d is READY on production dpl_5ovK7pn9PuzdkTn6LmJFkmqKWbBG with ct-alt.vercel.app alias; CI37156487306 passed. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
 
 ## Actual applied database history
-All seven hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
+All eight hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
 
 - 20261003143058_workforce_foundation
 - 20261003153745_agents_records
@@ -40,6 +42,7 @@ All seven hosted migration statements were reread and matched released repositor
 - 20261003210622_chat_conversations
 - 20261003210624_chat_group_permissions
 - 20261003215100_workforce_overview_snapshot
+- 20261003215840_time_clock_baseline
 
 The migration endpoint assigns the actual recorded timestamp. The previously unapplied settings and Chat filenames were matched to those returned versions after application; SQL bytes did not change. Settings preserves existing data and mutation-function identity/owner/ACL/definer/search path. Security advisory findings are unchanged from the pre-migration baseline (the existing rls_auto_enable executable-definer warnings and leaked-password protection setting). Do not silently change unrelated Auth/advisory configuration. No production fixture records or messages were created.
 
@@ -47,7 +50,7 @@ CT Alt Management API access now works with the owner's authorised credential. T
 
 ## Work in progress and next delivery
 - Consistent Overview counts: reviewed one STABLE SECURITY INVOKER read with signed-user RLS, unchanged API shape/access rechecks;47 isolated snapshot/concurrency checks and4 fresh real Auth/browser cases passed. Additive migration applied once and metadata verified; exact consumer release verification is next.
-- Time Clock: jobs, personal clock-in/out, manual paid/unpaid breaks, company Today attendance and own completed timesheets. Server-recorded time, tenant/current-membership/active-linked-agent checks, revisions, idempotent UUID actions, retained history and uncertain-write recovery. New code/migration remains local until full integration/review. Payroll, GPS/geofencing, approvals/manual edits and full Time Clock parity are future work.
+- Time Clock: jobs, personal clock-in/out, manual paid/unpaid breaks, company Today attendance and own completed timesheets. Server-recorded time, tenant/current-membership/active-linked-agent checks, revisions, idempotent UUID actions, retained history and uncertain-write recovery. Final integration/review/check/build passed,48 config,111 isolated SQL/race and6 real Auth/API/browser cases passed. Migration20261003215840 applied once with exact SQL/retained count/function verification. Consumer release pending. Payroll, GPS/geofencing, approvals/manual edits and full Time Clock parity are future work.
 - Continue the wider roadmap after these slices. Desktop functional workflows take priority over mobile polish.
 
 Integration owner controls hosted SQL, shared navigation/pages, release and expected production SHAs. Workers must not apply hosted migrations or replay baselines. Existing applied history remains immutable.
@@ -70,3 +73,5 @@ Connecteam account access is read-only: do not change schedules/users/settings o
 - https://help.connecteam.com/en/articles/10086009-getting-started-with-the-time-clock
 
 The historical2023 admin-shell image cannot establish current pixel parity. Existing private controls observations informed Users layout, but their source crop is not public or reliably available in worker containers. All committed app screenshots are our own synthetic outputs; no competitor workforce image was imported.
+
+Time Clock adds one INFO advisory for RLS enabled without policies on private time_clock_operations. This is intentional default-deny storage with anonymous/authenticated direct table privileges revoked. Existing warnings were unchanged. Do not add browser policies to silence it. Quick Tasks is underway in an isolated worktree, based on official desktop/task-permission/group-completion guides; SQL remains unapplied.

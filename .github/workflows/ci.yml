@@ -34,4 +34,6 @@ jobs:
         run: npm run test:rotas:db
       - name: Test consistent overview snapshots
         run: npm run test:overview:db
+      - name: Test Time Clock migrations and permissions
+        run: npm run test:time-clock:db
       - run: npm run build

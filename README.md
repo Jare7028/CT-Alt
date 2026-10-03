@@ -146,4 +146,8 @@ The target remains full Connecteam feature and screen coverage, delivered module
 
 ## Overview and Activity
 
-Overview shows signed-user workforce counts and recent owner/admin user-change activity; Activity supports company-calendar filters and stable older-history pagination. Managers see counts without audit data; employees and foreign/revoked memberships are denied. See [Overview review](docs/OVERVIEW_REVIEW.md) and run `node scripts/test-overview-integration.mjs` for isolated real Auth acceptance. Individual summary counts currently lack a shared transactional snapshot; a consistency follow-up is tracked.
+Overview shows signed-user workforce counts and recent owner/admin user-change activity; Activity supports company-calendar filters and stable older-history pagination. Managers see counts without audit data; employees and foreign/revoked memberships are denied. See [Overview review](docs/OVERVIEW_REVIEW.md) and run `node scripts/test-overview-integration.mjs` for isolated real Auth acceptance. All summary counts use one signed-user statement snapshot with existing RLS and current access checks.
+
+## Time Clock
+
+Desktop Time Clock supports jobs, personal clock-in/out, paid/unpaid manual breaks, own completed timesheets and owner/admin Today attendance. Server-recorded times, current linked-user authorization, revisions and operation UUIDs protect writes and recovery. See [Time Clock acceptance](docs/time-clock-acceptance.md); run `node scripts/test-time-clock-integration.mjs` for real isolated Auth/API/browser checks. Payroll, approvals, editing, GPS/geofencing and automatic breaks remain future work.
