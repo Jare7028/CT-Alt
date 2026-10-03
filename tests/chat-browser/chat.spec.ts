@@ -12,7 +12,12 @@ const message = (sequence: number) => ({
   client_id: `40000000-0000-4000-8000-${String(sequence).padStart(12, "0")}`,
   created_at: "2026-10-03T00:00:00Z",
 });
-async function harness(page: Page, initial = [message(1)], second = false) {
+async function harness(
+  page: Page,
+  initial = [message(1)],
+  second = false,
+  group = false,
+) {
   const messages = [...initial];
   const sends: Record<string, unknown>[] = [];
   const reads: number[] = [];
@@ -51,7 +56,10 @@ async function harness(page: Page, initial = [message(1)], second = false) {
             {
               id: conversationId,
               name: "Synthetic Employee",
-              kind: "direct",
+              kind: group ? "group" : "direct",
+              can_manage: group,
+              can_post: true,
+              member_count: 2,
               description: "Synthetic context",
               management_only: false,
               unread: 1,
@@ -452,4 +460,91 @@ test("repeated Add New actions retain only the latest directory result", async (
   await expect(page.getByRole("form", { name: "New Group" })).toBeVisible();
   await expect(page.getByRole("form", { name: "New Chat" })).toHaveCount(0);
   await expect(page.getByText("Stale directory person")).toHaveCount(0);
+});
+
+test("new posting restriction preserves readable history and hides composer", async ({
+  page,
+}) => {
+  await harness(page, [message(1)], false, true);
+  await page.getByRole("button", { name: "Synthetic Employee" }).click();
+  await expect(page.getByRole("log")).toContainText("Synthetic message 1");
+  await page.route("**/api/chat", async (route) => {
+    if (route.request().postDataJSON().payload.action !== "send")
+      return route.fallback();
+    await route.fulfill({
+      status: 403,
+      json: {
+        error: "Only group admins can send messages in this group.",
+        kind: "posting_restricted",
+      },
+    });
+  });
+  await page.getByLabel("Message", { exact: true }).fill("Denied draft");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByLabel("Message", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("log")).toContainText("Synthetic message 1");
+  await expect(
+    page.getByRole("button", { name: "Synthetic Employee" }),
+  ).toBeVisible();
+});
+test("delayed Chat Info cannot restore member names after access revocation", async ({
+  page,
+}) => {
+  const state = await harness(page, [message(1)], false, true);
+  await page.getByRole("button", { name: "Synthetic Employee" }).click();
+  await expect(page.getByRole("log")).toContainText("Synthetic message 1");
+  let release!: () => void;
+  let started!: () => void;
+  const waiting = new Promise<void>((resolve) => (release = resolve));
+  const requested = new Promise<void>((resolve) => (started = resolve));
+  await page.route("**/api/chat", async (route) => {
+    if (route.request().postDataJSON().payload.action !== "group_info")
+      return route.fallback();
+    started();
+    await waiting;
+    await route.fulfill({
+      json: {
+        data: {
+          id: conversationId,
+          name: "Stale group",
+          description: "",
+          management_only: false,
+          allow_member_messages: true,
+          settings_revision: 1,
+          can_manage: false,
+          members: [
+            {
+              user_id: employee,
+              display_name: "Stale group member",
+              role: "employee",
+              status: "active",
+              group_admin: false,
+            },
+          ],
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Chat Info", exact: true }).click();
+  await requested;
+  state.deny();
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "Conversation access is unavailable",
+  );
+  const delayed = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/chat") &&
+      response.request().postDataJSON().payload.action === "group_info",
+  );
+  release();
+  await delayed;
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await expect(page.getByRole("form", { name: "Chat Info" })).toHaveCount(0);
+  await expect(page.getByText("Stale group member")).toHaveCount(0);
 });

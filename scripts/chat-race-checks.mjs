@@ -1,3 +1,4 @@
+import { chatGroupRaceChecks } from "./chat-group-race-checks.mjs";
 // All statements run only in test-database's fresh network-disabled container.
 export async function chatRaceChecks({ sql, asyncSql, waitingTransaction }) {
   const actor =
@@ -75,6 +76,9 @@ export async function chatRaceChecks({ sql, asyncSql, waitingTransaction }) {
     );
   notes.push(
     "PASS: direct reopening cannot restore an entirely removed membership",
+  );
+  notes.push(
+    ...(await chatGroupRaceChecks({ sql, asyncSql, waitingTransaction })),
   );
   return notes;
 }

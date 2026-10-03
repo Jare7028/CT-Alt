@@ -6,12 +6,15 @@ import type {
   ChatMessage,
   ChatPerson,
   Conversation,
+  GroupInfo,
+  GroupMember,
 } from "../../lib/chat-types";
 import { mergeMessages } from "../../lib/chat-state";
 import "./chat.css";
 type Company = { id: string; name: string };
 type Pending = { conversationId: string; clientId: string; body: string };
 class AccessError extends Error {}
+class PostingError extends Error {}
 export default function Chat({
   company,
   companies,
@@ -25,6 +28,11 @@ export default function Chat({
 }) {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [info, setInfo] = useState<GroupInfo | null>(null);
+  const [editPeople, setEditPeople] = useState<GroupMember[]>([]);
+  const [editMembers, setEditMembers] = useState<string[]>([]);
+  const [editAdmins, setEditAdmins] = useState<string[]>([]);
+  const [allowPosting, setAllowPosting] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -37,6 +45,7 @@ export default function Chat({
   const [error, setError] = useState("");
   const [hasOlder, setHasOlder] = useState(false);
   const generation = useRef(0);
+  const selectedRef = useRef(selected);
   const bottom = useRef<HTMLDivElement>(null);
   const request = useCallback(
     async <T,>(payload: object): Promise<T> => {
@@ -48,6 +57,8 @@ export default function Chat({
       });
       const response = await result.json();
       if (!result.ok) {
+        if (response.kind === "posting_restricted")
+          throw new PostingError(response.error);
         if (result.status === 401 || result.status === 403)
           throw new AccessError(response.error);
         throw new Error(response.error || "Chat is unavailable.");
@@ -58,8 +69,19 @@ export default function Chat({
   );
   const fail = useCallback((reason: unknown) => {
     setError(reason instanceof Error ? reason.message : "Chat is unavailable.");
+    if (reason instanceof PostingError) {
+      setConversations((current) =>
+        current.map((item) =>
+          item.id === selectedRef.current ? { ...item, can_post: false } : item,
+        ),
+      );
+      setPending(null);
+    }
     if (reason instanceof AccessError) {
+      setInfo(null);
+      setEditPeople([]);
       generation.current++;
+      selectedRef.current = "";
       setSelected("");
       setMessages([]);
       setConversations([]);
@@ -137,7 +159,10 @@ export default function Chat({
     generation.current++;
     setBusy(false);
     setCreating(null);
+    setInfo(null);
+    setEditPeople([]);
     setPeople([]);
+    selectedRef.current = id;
     setSelected(id);
     setMessages([]);
     setBody("");
@@ -150,6 +175,8 @@ export default function Chat({
     const token = ++generation.current;
     setBusy(false);
     setError("");
+    setInfo(null);
+    setEditPeople([]);
     try {
       const directory = await request<ChatPerson[]>({ action: "directory" });
       if (token !== generation.current) return;
@@ -180,6 +207,8 @@ export default function Chat({
         name: creating === "direct" ? "Direct chat" : form.get("name"),
         description: form.get("description") || "",
         management_only: restricted,
+        allow_member_messages:
+          creating === "direct" || form.get("allowPosting") === "on",
         members: form.getAll("members"),
       });
       if (token !== generation.current) return;
@@ -212,6 +241,89 @@ export default function Chat({
       setMessages((current) => mergeMessages(current, [message]));
       setPending(null);
       setBody("");
+    } catch (reason) {
+      if (token === generation.current) fail(reason);
+    } finally {
+      if (token === generation.current) setBusy(false);
+    }
+  }
+  function closeInfo() {
+    generation.current++;
+    setInfo(null);
+    setEditPeople([]);
+    setBusy(false);
+  }
+  async function openInfo() {
+    const token = ++generation.current;
+    setBusy(true);
+    setError("");
+    setCreating(null);
+    try {
+      const details = await request<GroupInfo>({
+        action: "group_info",
+        conversationId: selected,
+      });
+      if (token !== generation.current) return;
+      const directory = details.can_manage
+        ? await request<ChatPerson[]>({ action: "directory" })
+        : [];
+      if (token !== generation.current) return;
+      const merged = new Map<string, GroupMember>(
+        details.members.map((person) => [person.user_id, person]),
+      );
+      directory
+        .filter(
+          (person) =>
+            !details.management_only ||
+            ["owner", "admin", "manager"].includes(person.role),
+        )
+        .forEach((person) => {
+          if (!merged.has(person.user_id))
+            merged.set(person.user_id, {
+              ...person,
+              status: "active",
+              group_admin: false,
+            });
+        });
+      setInfo(details);
+      setEditPeople([...merged.values()]);
+      setEditMembers(details.members.map((person) => person.user_id));
+      setEditAdmins(
+        details.members
+          .filter((person) => person.group_admin)
+          .map((person) => person.user_id),
+      );
+      setAllowPosting(details.allow_member_messages);
+    } catch (reason) {
+      if (token === generation.current) fail(reason);
+    } finally {
+      if (token === generation.current) setBusy(false);
+    }
+  }
+  async function saveGroup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!info || busy) return;
+    const token = ++generation.current;
+    setBusy(true);
+    setError("");
+    try {
+      await request({
+        action: "manage_group",
+        conversationId: info.id,
+        revision: info.settings_revision,
+        members: editMembers,
+        group_admins: editAdmins.filter((id) => editMembers.includes(id)),
+        allow_member_messages: allowPosting,
+      });
+      if (token !== generation.current) return;
+      setInfo(null);
+      setEditPeople([]);
+      if (!editMembers.includes(actorId)) choose("");
+      else {
+        const list = await request<Conversation[]>({ action: "list" });
+        if (token !== generation.current) return;
+        setConversations(list);
+      }
     } catch (reason) {
       if (token === generation.current) fail(reason);
     } finally {
@@ -276,6 +388,10 @@ export default function Chat({
                 Description
                 <textarea name="description" maxLength={1000} />
               </label>
+              <label>
+                <input type="checkbox" name="allowPosting" defaultChecked />
+                Allow members to send messages
+              </label>
               {management && (
                 <label>
                   <input
@@ -311,6 +427,96 @@ export default function Chat({
           <button disabled={busy}>Create</button>
           <button type="button" onClick={cancelCreate}>
             Cancel
+          </button>
+        </form>
+      )}
+      {info && (
+        <form className="chat-info" aria-label="Chat Info" onSubmit={saveGroup}>
+          <h2>Chat Info — {info.name}</h2>
+          <p>{info.description}</p>
+          <p>New members can read earlier messages.</p>
+          <fieldset>
+            <legend>{info.can_manage ? "Edit Team" : "Members"}</legend>
+            {editPeople
+              .filter(
+                (person) =>
+                  info.can_manage || editMembers.includes(person.user_id),
+              )
+              .map((person) => (
+                <div key={person.user_id} className="chat-info-person">
+                  <label>
+                    {info.can_manage && (
+                      <input
+                        type="checkbox"
+                        aria-label={person.display_name}
+                        checked={editMembers.includes(person.user_id)}
+                        onChange={(event) => {
+                          setEditMembers((current) =>
+                            event.target.checked
+                              ? [...current, person.user_id]
+                              : current.filter((id) => id !== person.user_id),
+                          );
+                          if (!event.target.checked)
+                            setEditAdmins((current) =>
+                              current.filter((id) => id !== person.user_id),
+                            );
+                        }}
+                      />
+                    )}
+                    {person.display_name}
+                    {person.status !== "active" && " (Suspended)"}
+                    {["owner", "admin"].includes(person.role) &&
+                      " (Company admin access)"}
+                  </label>
+                  {info.can_manage ? (
+                    <label>
+                      <input
+                        type="checkbox"
+                        aria-label={`Group admin: ${person.display_name}`}
+                        checked={editAdmins.includes(person.user_id)}
+                        disabled={
+                          !editMembers.includes(person.user_id) ||
+                          (person.status !== "active" && !person.group_admin)
+                        }
+                        onChange={(event) =>
+                          setEditAdmins((current) =>
+                            event.target.checked
+                              ? [...current, person.user_id]
+                              : current.filter((id) => id !== person.user_id),
+                          )
+                        }
+                      />
+                      Group admin
+                    </label>
+                  ) : (
+                    person.group_admin && <span>Group admin</span>
+                  )}
+                </div>
+              ))}
+          </fieldset>
+          {info.can_manage ? (
+            <label>
+              <input
+                type="checkbox"
+                checked={allowPosting}
+                onChange={(event) => setAllowPosting(event.target.checked)}
+              />
+              Allow members to send messages
+            </label>
+          ) : (
+            <p>
+              {info.allow_member_messages
+                ? "Members can send messages."
+                : "Only group admins can send messages."}
+            </p>
+          )}
+          {info.can_manage && (
+            <button disabled={busy || editMembers.length === 0}>
+              Save changes
+            </button>
+          )}
+          <button type="button" onClick={closeInfo}>
+            Close Chat Info
           </button>
         </form>
       )}
@@ -383,6 +589,11 @@ export default function Chat({
                     )}
                   </div>
                 </div>
+                {active.kind === "group" && (
+                  <button disabled={busy} onClick={() => void openInfo()}>
+                    Chat Info
+                  </button>
+                )}
                 {active.description && <p>{active.description}</p>}
               </div>
               <div className="chat-history" role="log" aria-label="Messages">
@@ -409,29 +620,35 @@ export default function Chat({
                 ))}
                 <div ref={bottom} />
               </div>
-              <form
-                className="chat-compose"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void send();
-                }}
-              >
-                <label htmlFor="chat-message">Message</label>
-                <textarea
-                  id="chat-message"
-                  value={pending?.body ?? body}
-                  readOnly={!!pending}
-                  onChange={(event) => setBody(event.target.value)}
-                  maxLength={4000}
-                  placeholder="Write a message…"
-                />
-                <button disabled={busy || !(pending?.body ?? body).trim()}>
-                  {busy ? "Sending…" : pending ? "Retry send" : "Send"}
-                </button>
-                {pending && !busy && (
-                  <p>Retry uses the same message ID to prevent duplicates.</p>
-                )}
-              </form>
+              {active.can_post === false ? (
+                <p className="chat-posting-notice">
+                  Only group admins can send messages in this group.
+                </p>
+              ) : (
+                <form
+                  className="chat-compose"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void send();
+                  }}
+                >
+                  <label htmlFor="chat-message">Message</label>
+                  <textarea
+                    id="chat-message"
+                    value={pending?.body ?? body}
+                    readOnly={!!pending}
+                    onChange={(event) => setBody(event.target.value)}
+                    maxLength={4000}
+                    placeholder="Write a message…"
+                  />
+                  <button disabled={busy || !(pending?.body ?? body).trim()}>
+                    {busy ? "Sending…" : pending ? "Retry send" : "Send"}
+                  </button>
+                  {pending && !busy && (
+                    <p>Retry uses the same message ID to prevent duplicates.</p>
+                  )}
+                </form>
+              )}
             </>
           ) : (
             <p>Select a conversation or start a new chat.</p>

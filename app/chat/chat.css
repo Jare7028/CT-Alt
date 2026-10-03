@@ -323,3 +323,30 @@
 .chat-list-copy strong {
   overflow-wrap: anywhere;
 }
+
+.chat-app .chat-info {
+  background: white;
+  border: 1px solid #dcdee0;
+  padding: 20px;
+  margin: 16px;
+  border-radius: 8px;
+}
+.chat-app .chat-info fieldset {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid #dcdee0;
+}
+.chat-app .chat-info-person {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px;
+}
+.chat-app .chat-info button {
+  margin: 12px 12px 0 0;
+}
+.chat-app .chat-posting-notice {
+  padding: 16px;
+  text-align: center;
+  background: #eaf5ff;
+}

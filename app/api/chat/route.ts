@@ -4,6 +4,19 @@ import { configured, supabase } from "../../../lib/supabase";
 import { validOrigin } from "../../../lib/request-security";
 
 const payload = z.discriminatedUnion("action", [
+  z
+    .object({ action: z.literal("group_info"), conversationId: z.uuid() })
+    .strict(),
+  z
+    .object({
+      action: z.literal("manage_group"),
+      conversationId: z.uuid(),
+      revision: z.number().int().positive(),
+      members: z.array(z.uuid()).min(1).max(100),
+      group_admins: z.array(z.uuid()).max(100),
+      allow_member_messages: z.boolean(),
+    })
+    .strict(),
   z.object({ action: z.enum(["list", "directory"]) }).strict(),
   z
     .object({
@@ -12,6 +25,7 @@ const payload = z.discriminatedUnion("action", [
       name: z.string().trim().min(1).max(100),
       description: z.string().max(1000),
       management_only: z.boolean(),
+      allow_member_messages: z.boolean().optional(),
       members: z.array(z.uuid()).min(1).max(99),
     })
     .strict(),
@@ -94,6 +108,27 @@ export async function POST(request: Request) {
     payload: parsed.data.payload,
   });
   if (!error) return response({ data });
+  if (error.code === "P0001" && error.message === "Only group admins can post")
+    return response(
+      {
+        error: "Only group admins can send messages in this group.",
+        kind: "posting_restricted",
+      },
+      403,
+    );
+  if (error.code === "40001")
+    return response(
+      {
+        error:
+          "This group changed. Close Chat Info and reopen it before saving.",
+      },
+      409,
+    );
+  if (
+    error.code === "22023" &&
+    error.message === "Keep at least one active group admin"
+  )
+    return response({ error: "Keep at least one active group admin." }, 400);
   if (error.code === "42501")
     return response(
       { error: "Company or conversation access is unavailable." },

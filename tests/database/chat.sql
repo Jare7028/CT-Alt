@@ -78,3 +78,74 @@ set role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000306',false);
 select pg_temp.denied($q$select pg_temp.act('{"action":"list"}')$q$,'42501','editable metadata cannot grant chat access');
 reset role;
+
+-- Group permissions use a fresh synthetic tenant, never real account data.
+reset role;
+insert into auth.users(id,email_confirmed_at) select ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,now() from generate_series(401,405)n;
+insert into public.tenants(id,name) values ('40000000-0000-0000-0000-000000000001','Group permissions synthetic');
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role) values
+ ('40000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000401','Employee creator','employee'),
+ ('40000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000402','Employee member','employee'),
+ ('40000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000403','Private admin outsider','admin'),
+ ('40000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000404','New member','employee');
+create function pg_temp.groupact(p jsonb) returns jsonb language sql as $$ select public.chat_action('40000000-0000-0000-0000-000000000001',p) $$;
+create function pg_temp.groupmanage(rev int, members jsonb, admins jsonb, posting boolean) returns jsonb language sql as $$ select pg_temp.groupact(jsonb_build_object('action','manage_group','conversationId',current_setting('chat.permissions.group'),'revision',rev,'members',members,'group_admins',admins,'allow_member_messages',posting)) $$;
+select pg_temp.check_true(not has_function_privilege('authenticated','chat_private.act(uuid,jsonb)','EXECUTE'),'old core cannot bypass group posting gates');
+select pg_temp.check_true((select relrowsecurity from pg_class where oid='public.chat_group_audit'::regclass),'group audit RLS enabled');
+select pg_temp.check_true(not has_table_privilege('authenticated','public.chat_group_audit','INSERT') and not has_table_privilege('anon','public.chat_group_audit','SELECT'),'group audit browser mutation and anonymous reads denied');
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000401',false);
+select set_config('chat.permissions.group',pg_temp.groupact('{"action":"create","kind":"group","name":"Synthetic team","members":["00000000-0000-0000-0000-000000000402"]}')->>'id',false);
+select pg_temp.check_true((pg_temp.groupact('{"action":"list"}')->0->>'can_manage')::boolean,'employee creator is explicit group admin');
+select pg_temp.groupact(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.group'),'clientId','60000000-0000-0000-0000-000000000001','body','Earlier history'));
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000402',false);
+select pg_temp.check_true(not (pg_temp.groupact('{"action":"list"}')->0->>'can_manage')::boolean,'ordinary group member cannot manage');
+select pg_temp.groupact(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.group'),'clientId','60000000-0000-0000-0000-000000000002','body','Member before restriction'));
+select pg_temp.denied($q$select pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000402"]','["00000000-0000-0000-0000-000000000402"]',false)$q$,'42501','member cannot promote self');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000403',false);
+select pg_temp.denied($q$select pg_temp.groupact(jsonb_build_object('action','group_info','conversationId',current_setting('chat.permissions.group')))$q$,'42501','tenant admin outsider cannot inspect group');
+select pg_temp.denied($q$select pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000403"]','[]',false)$q$,'42501','tenant admin outsider cannot manage group');
+select pg_temp.check_true((select count(*)=0 from public.chat_group_audit),'outsider cannot read group audit');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000401',false);
+select pg_temp.denied($q$select pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000305"]','["00000000-0000-0000-0000-000000000401"]',true)$q$,'42501','cannot add foreign tenant member');
+select pg_temp.denied($q$select pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000402"]','[]',false)$q$,'22023','last active group admin cannot be removed');
+select pg_temp.check_true(pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000402","00000000-0000-0000-0000-000000000404"]','["00000000-0000-0000-0000-000000000401"]',false)->>'settings_revision'='2','group admin adds member and restricts posting atomically');
+select pg_temp.check_true((select count(*)=1 from public.chat_group_audit),'authorized changes audited once');
+select pg_temp.denied($q$select pg_temp.groupmanage(1,'["00000000-0000-0000-0000-000000000401"]','["00000000-0000-0000-0000-000000000401"]',true)$q$,'40001','stale settings revision rejected');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000404',false);
+select pg_temp.check_true(jsonb_array_length(pg_temp.groupact(jsonb_build_object('action','history','conversationId',current_setting('chat.permissions.group'))))=2,'newly added member can read all earlier messages');
+select pg_temp.check_true((pg_temp.groupact('{"action":"list"}')->0->>'can_post')::boolean=false,'restricted posting listed as read only');
+select pg_temp.denied($q$select pg_temp.groupact(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.group'),'clientId','60000000-0000-0000-0000-000000000003','body','Denied'))$q$,'P0001','ordinary member cannot post to admin only group');
+select pg_temp.check_true((select count(*)=0 from public.chat_group_audit),'ordinary member cannot read group audit');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000402',false);
+select pg_temp.denied($q$select pg_temp.groupact(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.group'),'clientId','60000000-0000-0000-0000-000000000002','body','Member before restriction'))$q$,'P0001','retry checks current posting permission before dedup');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000401',false);
+select pg_temp.check_true(pg_temp.groupact(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.group'),'clientId','60000000-0000-0000-0000-000000000003','body','Admin announcement'))->>'sequence'='3','explicit employee group admin can post');
+select pg_temp.groupmanage(2,'["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000404"]','["00000000-0000-0000-0000-000000000401","00000000-0000-0000-0000-000000000404"]',false);
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000402',false);
+select pg_temp.check_true((select count(*)=0 from public.chat_messages where conversation_id=current_setting('chat.permissions.group')::uuid),'removed group member immediately loses table history');
+select pg_temp.denied($q$select pg_temp.groupact(jsonb_build_object('action','history','conversationId',current_setting('chat.permissions.group')))$q$,'42501','removed group member immediately loses RPC history');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000404',false);
+select pg_temp.groupmanage(3,'["00000000-0000-0000-0000-000000000404"]','["00000000-0000-0000-0000-000000000404"]',true);
+select pg_temp.check_true(jsonb_array_length(pg_temp.groupact(jsonb_build_object('action','group_info','conversationId',current_setting('chat.permissions.group')))->'members')=1,'newly assigned group admin can remove former creator');
+reset role;
+update public.tenant_memberships set status='suspended' where user_id='00000000-0000-0000-0000-000000000404';
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000404',false);
+select pg_temp.denied($q$select pg_temp.groupmanage(4,'["00000000-0000-0000-0000-000000000404"]','["00000000-0000-0000-0000-000000000404"]',true)$q$,'42501','suspended group admin immediately loses management');
+reset role;
+-- Group-admin flags never override restricted-management eligibility.
+update public.tenant_memberships set role='manager' where user_id='00000000-0000-0000-0000-000000000304';
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000301',false);
+select set_config('chat.permissions.management',pg_temp.act('{"action":"create","kind":"group","name":"Restricted posting synthetic","management_only":true,"allow_member_messages":false,"members":["00000000-0000-0000-0000-000000000304"]}')->>'id',false);
+select pg_temp.act(jsonb_build_object('action','manage_group','conversationId',current_setting('chat.permissions.management'),'revision',1,'members',jsonb_build_array('00000000-0000-0000-0000-000000000301','00000000-0000-0000-0000-000000000304'),'group_admins',jsonb_build_array('00000000-0000-0000-0000-000000000304'),'allow_member_messages',false));
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000304',false);
+select pg_temp.check_true((pg_temp.act('{"action":"list"}') @> jsonb_build_array(jsonb_build_object('id',current_setting('chat.permissions.management'),'can_post',true))),'explicit management group admin can post');
+reset role;
+update public.tenant_memberships set role='employee' where user_id='00000000-0000-0000-0000-000000000304';
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000304',false);
+select pg_temp.denied($q$select pg_temp.act(jsonb_build_object('action','send','conversationId',current_setting('chat.permissions.management'),'clientId','80000000-0000-0000-0000-000000000001','body','Demoted explicit group admin'))$q$,'42501','group admin flag cannot bypass management role demotion');
+select pg_temp.denied($q$select pg_temp.act(jsonb_build_object('action','group_info','conversationId',current_setting('chat.permissions.management')))$q$,'42501','demoted group admin cannot inspect restricted group');
+reset role;
