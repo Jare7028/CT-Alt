@@ -48,3 +48,15 @@ test('custom fields, empty values and per-account preferences work for read-only
  expect((await page.request.get('/api/agents?tenantId='+f.tenantB)).status()).toBe(403);
  await page.goto('/agents?company='+f.tenantB);await expect(page.getByText('Your account has no active access to this company.')).toBeVisible();
 });
+
+test('a removed saved custom field warns above the directory and export until explicitly reset',async({page})=>{
+ await login(page,'owner');const key=preferenceKey(f.tenantA,f.accounts.owner.id);
+ await page.evaluate(key=>localStorage.setItem(key,JSON.stringify({version:1,mode:'advanced',join:'and',rules:[{id:'removed-custom',field:'custom:retired',operator:'is',value:'No longer available',end:''}]})),key);
+ await page.reload();const notice=page.locator('p[role=alert]').filter({hasText:'Some saved filter conditions were removed'});
+ await expect(notice).toBeVisible();await expect(notice).toContainText('results and export may include more users');
+ await page.reload();await expect(notice).toBeVisible();
+ await page.getByLabel('Filter users',{exact:true}).click();const panel=page.getByRole('region',{name:'User filters'});
+ await panel.getByRole('button',{name:'+ Add filter',exact:true}).click();await page.reload();await expect(notice).toBeVisible();
+ await page.getByLabel('Filter users',{exact:true}).click();await panel.getByRole('button',{name:'Reset all',exact:true}).click();
+ await expect(notice).toHaveCount(0);await page.reload();await expect(notice).toHaveCount(0);
+});

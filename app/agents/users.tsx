@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { csvCell } from '../../lib/csv';
 import { formatEmploymentDate, formatTimestamp, compareDateValues } from '../../lib/agent-dates';
@@ -41,7 +41,7 @@ export default function Users({ companies,company,members,agents: initial,fields
     ...(tab==='admins' ? [{ key:'role',label:'Access level',value:(a:Agent)=>member(a)?.role==='owner' ? 'Owner' : 'Admin' }] : []),
     ...fields.map(field=>({ key:field.key,label:field.label,value:(a:Agent)=>a.custom_fields[field.key] || '—' })),
   ];
-  const supportedFilters=filterFields(fields,currentMembers,company.time_zone);
+  const supportedFilters=useMemo(()=>filterFields(fields,currentMembers,company.time_zone),[fields,currentMembers,company.time_zone]);
   const directoryFilters=useDirectoryFilters(company.id,actorId,supportedFilters);
   const displayed=columns.filter(column=>!hidden.includes(column.key));
   const filtered=filterAgents(agents,directoryFilters.state,supportedFilters).filter(agent=>(tab==='archived' ? agent.status==='archived' : agent.status==='active' && (tab!=='admins' || admin(agent))) && (!unjoined || !agent.user_id) && `${agent.first_name} ${agent.last_name} ${agent.phone} ${agent.title} ${agent.team} ${Object.values(agent.custom_fields).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
@@ -94,6 +94,7 @@ export default function Users({ companies,company,members,agents: initial,fields
     <aside className="rail" aria-label="Modules"><Link href="/agents" aria-label="Users" aria-current="page">♙</Link></aside>
     <main className="users-main"><header className="users-heading"><span className="users-icon" aria-hidden="true">♙</span><h1>Users</h1></header>
       {notice ? <p role="status" className="feedback">{notice}</p> : null}{error && !dialog ? <p role="alert" className="error">{error}</p> : null}
+      {directoryFilters.state.restored ? <p role="alert" className="error">{directoryFilters.state.restored==='removed' ? 'Some saved filter conditions were removed because their fields or operators are no longer available.' : 'Saved filter conditions could not be restored and were reset.'} Your results and export may include more users. Review the filters or choose Reset all to clear this notice.</p> : null}
       <div className="directory-card"><div role="tablist" aria-label="User status" className="tabs">{(['users','admins','archived'] as const).map(value=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>{setTab(value);setPage(0);}}>{value[0].toUpperCase()+value.slice(1)} <span>({agents.filter(a=>value==='archived'?a.status==='archived':a.status==='active'&&(value!=='admins'||admin(a))).length})</span></button>)}</div>
         <div className="toolbar"><label className="search"><span aria-hidden="true">⌕</span><span className="sr-only">Search users</span><input type="search" placeholder="Search" value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}} /></label>
           <Filters fields={supportedFilters} agents={agents} state={directoryFilters.state} onChange={state=>{directoryFilters.change(state);setPage(0);}} onReset={()=>{directoryFilters.change(blankFilters());setSearch('');setUnjoined(false);setPage(0);}}/>

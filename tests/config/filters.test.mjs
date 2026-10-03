@@ -38,7 +38,17 @@ test('unsupported/stale criteria cannot silently become another field and quick 
  assert.equal(quickCompatible(state([rule('team','is','North')],'or'),fields),false);
  assert.deepEqual(restoreFilters(JSON.stringify({...original,mode:'quick'}),fields).rules,original.rules);
  assert.equal(restoreFilters(JSON.stringify(state([rule('groups','is','private'),rule('first_name','before','Ada')])),fields).rules.length,0);
- for(const raw of ['not json','null',JSON.stringify({version:2}),JSON.stringify({...original,rules:Array(11).fill(original.rules[0])}),JSON.stringify({...original,rules:[original.rules[0],original.rules[0]]})])assert.deepEqual(restoreFilters(raw,fields),blankFilters());
+ for(const raw of ['not json','null',JSON.stringify({version:2}),JSON.stringify({...original,rules:Array(11).fill(original.rules[0])}),JSON.stringify({...original,rules:[original.rules[0],original.rules[0]]})])assert.deepEqual(restoreFilters(raw,fields),{...blankFilters(),restored:'reset'});
  assert.notEqual(preferenceKey('company-a','user-a'),preferenceKey('company-b','user-a'));
  assert.notEqual(preferenceKey('company-a','user-a'),preferenceKey('company-a','user-b'));
+});
+
+test('removed saved fields/operators warn and the warning survives saving valid remaining criteria',()=>{
+ const saved=state([rule('custom:retired','is','Previously restricted'),rule('team','is','North')]);
+ const restored=restoreFilters(JSON.stringify(saved),fields);assert.equal(restored.restored,'removed');assert.equal(restored.rules.length,1);
+ assert.equal(restoreFilters(JSON.stringify(restored),fields).restored,'removed');
+ assert.equal(restoreFilters(JSON.stringify(state([rule('team','before','North')])),fields).restored,'removed');
+ assert.equal(restoreFilters(JSON.stringify(blankFilters()),fields).restored,undefined);
+ const record=agent(),dateField=fields.find(field=>field.key==='created_at');
+ assert.equal(dateField.read(record),'2026-10-03');record.created_at='2026-10-05T00:30:00Z';assert.equal(dateField.read(record),'2026-10-04');
 });
