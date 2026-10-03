@@ -90,16 +90,17 @@
 .directory-card { border-radius:20px; }
 .directory-card .tabs { padding:0;gap:0;height:53px; }
 .directory-card .tabs button { flex:0 0 140px;padding:0 16px;text-align:left; }
+.directory-card .tabs button:nth-child(2) { flex-basis:110px; }
 .directory-card .tabs button[aria-selected=true] { color:#2b98fe;border-bottom-color:#2b98fe; }
-.directory-card .toolbar { padding:16px 20px;gap:10px; }
-.directory-card .search { width:254px;height:42px;flex:0 1 254px;border-radius:22px; }
+.directory-card .toolbar { padding:16px 15px;gap:10px; }
+.directory-card .search { width:254px;height:42px;flex:0 1 254px;border-radius:12px; }
 .directory-card .search svg { flex:0 0 18px;color:#748393; }
 .directory-card .toolbar-right { gap:10px; }
-.directory-card .unjoined { height:42px;display:flex;align-items:center;gap:8px;white-space:nowrap;border:1px solid #d5dce3!important;border-radius:22px;color:#e34b52!important;font-size:12px!important;padding:0 12px; }
+.directory-card .unjoined { height:42px;display:flex;align-items:center;gap:8px;white-space:nowrap;border:1px solid #d5dce3!important;border-radius:22px;color:#e34b52!important;font-size:14px!important;min-width:203px;padding:0 10px; }
 .directory-card .unjoined.selected { background:#fff0f0!important;border-color:#e34b52!important;color:#e34b52!important; }
 .unjoined-count { min-width:22px;height:22px;padding:0 5px;border-radius:50%;display:inline-grid;place-items:center;background:#e34b52;color:white;font-size:11px; }
-.toolbar-divider { width:1px;height:24px;background:#dce2e8;margin:0 3px; }
-.directory-card .export-users { width:40px;height:40px;border-radius:50%;padding:0;display:inline-grid;place-items:center;flex:0 0 40px; }
+.toolbar-divider { width:1px;height:40px;background:#dce2e8;margin:0 3px; }
+.directory-card .export-users { color:#2b98fe;width:40px;height:40px;border-radius:50%;padding:0;display:inline-grid;place-items:center;flex:0 0 40px; }
 .directory-card .add-menu>summary { display:flex;align-items:center;justify-content:center;gap:7px;min-width:114px;height:42px;padding:0 13px;background:#2b98fe;border-color:#2b98fe; }
 .directory-card th { background:#f6f8f7;font-size:14px; }
 .directory-card th button { font-size:14px; }
@@ -109,6 +110,18 @@
 .selection-status { font-size:12px;color:#526476;white-space:nowrap; }
 .selection-status button { border:0;padding:0 4px;color:#1473d3; }
 @media(max-width:700px) { .directory-card .toolbar { padding:14px; }.directory-card .toolbar-right { justify-content:flex-start;flex-wrap:wrap; }.directory-card .search { flex:1 1 180px; }.directory-card .tabs button { flex:1 1 auto;min-width:0;padding:0 12px; }.directory-card .unjoined { font-size:11px!important;padding:0 9px; }.toolbar-divider { margin:0; } }
-.directory-card .unjoined-count { width:24px;min-width:24px;height:24px;padding:0;flex:0 0 24px;font-size:10px; }
+.directory-card .unjoined-count { min-width:20px;height:20px;padding:0 4px;flex:0 0 auto;border-radius:10px;font-size:10px; }
 .directory-card thead th:last-child { position:sticky;right:0;z-index:2; }
 .directory-card .column-picker { width:44px;margin-left:auto; }
+
+/* Parent-measured current crop: 15px table inset; name headings at 139px/240px. */
+.directory-card .table-scroll { margin:0 15px; }
+.directory-card .directory-table { table-layout:fixed;min-width:1054px; }
+.directory-card .directory-table .selection-cell { width:72px; }
+.directory-card .directory-table th[data-column=first_name] { padding-left:52px; }
+.directory-card .directory-table th button { display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.directory-card .directory-table td:not(:last-child) { overflow:hidden;text-overflow:ellipsis; }
+.directory-card .person { min-width:0; }
+.directory-card .person .avatar { flex:none; }
+.directory-card .person .profile-name { overflow:hidden;text-overflow:ellipsis; }
+@media(max-width:700px) { .directory-card .tabs button:nth-child(2) { flex:1 1 auto; }.directory-card .table-scroll { margin:0 14px; }.directory-card .unjoined { min-width:0; } }

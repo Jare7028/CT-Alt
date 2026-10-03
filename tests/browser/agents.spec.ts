@@ -35,7 +35,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
  await expect(row).toContainText('Changed title');
  const download=page.waitForEvent('download');
- await page.getByRole('button',{name:'Export visible users'}).click();
+ await page.getByRole('button',{name:'Export all matching users'}).click();
  expect((await download).suggestedFilename()).toBe('users.csv');
  await row.getByRole('button',{name:'Archive',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'Archive',exact:true}).click();
