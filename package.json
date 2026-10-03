@@ -10,14 +10,14 @@
     "dev": "next dev --hostname 127.0.0.1 --port 5180",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 5180",
+    "test:shell": "node scripts/review-shell.mjs",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
     "test:db": "node scripts/test-database.mjs",
     "test:local:setup": "node scripts/setup-local-tests.mjs",
     "test:browser": "playwright test",
-    "test:config": "node --test tests/config/*.test.mjs",
-    "test:shell": "node scripts/review-shell.mjs"
+    "test:config": "node --test tests/config/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
