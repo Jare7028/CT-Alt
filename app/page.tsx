@@ -8,7 +8,7 @@ export default function Home() {
         <p className="intro">An independent home for schedules, conversations and the work that connects your team.</p>
         <div className="next-up">
           <span className="step" aria-hidden="true">01</span>
-          <div><p className="eyebrow">First module</p><h2>Client rotas</h2><p>Plan shifts, assign the right people and give everyone a clear view of their week.</p></div>
+          <div><p className="eyebrow">First module</p><h2>Agents</h2><p>Bring your people together and give each person the right access. Client rotas come next.</p></div>
         </div>
         <p className="notice">The project foundation is ready. Scheduling and account features are not available yet.</p>
       </section>
