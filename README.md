@@ -130,6 +130,12 @@ Invalid input never submits. Escape discards only the current unsaved field and 
 
 Profile links wait for acknowledgement before navigating. Browser Back cannot reliably be cancelled, so pending saves use keepalive and an outcome marker scoped to the Auth user, company and record. The marker contains only status and revision, never field values or credentials. A subsequent visit requires review if its outcome is unknown or its cached record predates a confirmed save. Hard unload uses the browser's unsaved-change warning. These browser recovery paths were verified in local Chromium; browser policy and session-storage availability can limit recovery. The database's revision and authorization checks always remain authoritative. No schema or permission grants change.
 
+
+## Chat and group permissions
+
+The integrated Chat branch includes company-scoped direct and selected-user group conversations, text history, unread counts, earlier-history pagination and retry-safe sends. Chat Info supports member selection, explicit group admins and admin-only posting with revision conflicts and audit records. The existing shared shell contains Chat's company selector and tenant-aware Users navigation. Live company/group membership and posting checks remain enforced in PostgreSQL.
+
+Both reviewed Chat migrations have been applied once to CT Alt, and shared module links are enabled. Local checks cover tenant isolation, current-role revocation, concurrent changes and stale client responses; authenticated hosted acceptance and full appearance parity remain unverified. See [Chat review and integration](docs/CHAT_REVIEW.md) for verification and the complete remaining feature scope.
 ## Client Rotas integration
 
 The integration branch adds named schedules, selected Agents, manager delegation, coloured jobs, draft shifts and explicit publication. Day/Week/Month boards show elapsed hours across overnight and daylight-saving changes. Employees can read only their own published shifts. Users and Agent profiles link to Client Rotas through the shared desktop/mobile shell.

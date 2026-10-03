@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { chatRaceChecks } from './chat-race-checks.mjs';
 
 // No supplied database URL or remote connection is accepted. Every run owns a
 // new network-disabled, unpublished container and removes only that container.
@@ -70,10 +71,11 @@ try {
     sql(readFileSync(new URL(file, directory), 'utf8'));
   }
   const checks = [];
-  for (const suite of ['foundation.sql', 'agents.sql']) {
+  for (const suite of ['foundation.sql', 'agents.sql', 'chat.sql']) {
     const result = sql(readFileSync(new URL('../tests/database/' + suite, import.meta.url), 'utf8'));
     checks.push(...result.split('\n').filter(line => line.includes('PASS:')));
   }
+  checks.push(...await chatRaceChecks({ sql, asyncSql, waitingTransaction }));
   checks.push(...await raceChecks());
   console.log(checks.join('\n'));
   console.log(`${checks.length} database assertions passed in isolated PostgreSQL 17.`);
