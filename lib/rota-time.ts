@@ -1,8 +1,30 @@
+const zoneCache = new Map<string, boolean>();
+export function supportedRotaZone(zone: string) {
+  if (zoneCache.has(zone)) return zoneCache.get(zone)!;
+  let supported =
+    zone === "UTC" ||
+    /^(Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific|Etc)\/[A-Za-z0-9_+/-]+$/.test(
+      zone,
+    );
+  if (supported) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: zone }).format(0);
+    } catch {
+      supported = false;
+    }
+  }
+  if (zoneCache.size >= 512) zoneCache.clear();
+  zoneCache.set(zone, supported);
+  return supported;
+}
+export function displayRotaZone(zone: string) {
+  return supportedRotaZone(zone) ? zone : "UTC";
+}
 // Convert calendar input in the schedule's IANA zone without using the browser
 // zone. Enumerate possible offsets; reject gaps and require overlap choice.
 export function localDateTime(instant: string, zone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: zone,
+    timeZone: displayRotaZone(zone),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -18,6 +40,10 @@ export function zonedInstant(
   zone: string,
   occurrence: "" | "earlier" | "later" = "",
 ) {
+  if (!supportedRotaZone(zone))
+    throw new Error(
+      "Choose a supported IANA time zone before editing shift times.",
+    );
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local))
     throw new Error("Enter a date and time.");
   const wall = Date.parse(local + "Z");

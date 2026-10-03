@@ -312,6 +312,11 @@ try {
       `insert into public.tenant_memberships(tenant_id,user_id,display_name,role)values('${t}','${a.id}','Synthetic ${name}','${a.role}');insert into public.agents(tenant_id,user_id,first_name,last_name,phone,created_by)values('${t}','${a.id}','Synthetic','${name}','+447700900${{ owner: 201, admin: 202, manager: 203, employee: 204, foreign: 205 }[name]}','${name === "foreign" ? a.id : accounts.owner.id}');`,
     );
   }
+  // Legacy/corrupt stored zone regression uses real SQL, never mocked browser data.
+  verify(db);
+  sql(
+    "alter table public.rota_schedules disable trigger rota_supported_time_zone;alter table public.rota_schedules disable trigger rota_time_zone;insert into public.rota_schedules(id,tenant_id,name,time_zone)values('60000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001','Synthetic legacy unsupported zone','Factory');alter table public.rota_schedules enable trigger rota_supported_time_zone;alter table public.rota_schedules enable trigger rota_time_zone;",
+  );
   writeFileSync(
     root + "/.env.local",
     `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54821\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${key}\n`,

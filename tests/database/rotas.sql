@@ -72,3 +72,33 @@ set role authenticated;select pg_temp.change('{"action":"archive"}');select pg_t
 select pg_temp.change('{"action":"restore"}');select pg_temp.change('{"action":"publish"}');
 select pg_temp.check_true((select count(*)=4 from public.rota_shifts where status='published'),'restoring allows remaining drafts to publish');
 reset role;update public.tenant_memberships set status='active' where user_id='00000000-0000-0000-0000-000000000202';
+-- Archiving retains assignments and cannot be used to evade overlap review.
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000201',false);
+select pg_temp.change('{"action":"archive"}');
+select pg_temp.expect_error(format($q$select pg_temp.change('{"action":"save_shift","agent_id":"%s","job_id":"%s","starts_at":"2026-12-01T10:00:00Z","ends_at":"2026-12-01T14:00:00Z"}','Race two')$q$,(select id from public.agents where phone='+447700900203'),(select id from public.rota_jobs where name='Race two')),'P0001','archived published commitment still requires overlap acknowledgement');
+select pg_temp.change('{"action":"restore"}');
+select pg_temp.check_true((select count(*)=0 from public.rota_shifts where schedule_id=(select id from public.rota_schedules where name='Race two')),'restoration cannot silently introduce an unacknowledged conflicting shift');
+select pg_temp.change(jsonb_build_object('action','save_shift','agent_id',(select id from public.agents where phone='+447700900203'),'job_id',(select id from public.rota_jobs where name='Race two'),'starts_at','2027-01-01T09:00:00Z','ends_at','2027-01-01T17:00:00Z'),'Race two');
+select pg_temp.change('{"action":"archive"}','Race two');
+select pg_temp.expect_error($q$select pg_temp.shift('2027-01-01T10:00:00Z','2027-01-01T14:00:00Z')$q$,'P0001','archived draft also remains in overlap checks until a cancellation lifecycle exists');
+select pg_temp.change('{"action":"restore"}','Race two');
+reset role;
+do $$declare zone text;begin
+ foreach zone in array array['Factory','localtime','posixrules'] loop
+  raise notice 'INFO: PostgreSQL timezone % listed: %',zone,exists(select 1 from pg_timezone_names where name=zone);
+ end loop;
+end;$$;
+set role authenticated;
+do $$declare zone text;begin
+ foreach zone in array array['Factory','localtime','posixrules'] loop
+  perform pg_temp.expect_error(format($q$select public.save_rota('50000000-0000-0000-0000-000000000001',jsonb_build_object('action','create_schedule','name','Unsafe zone','time_zone',%L,'agent_ids',(select jsonb_agg(id) from public.agents where tenant_id='50000000-0000-0000-0000-000000000001'),'admin_ids','[]'::jsonb))$q$,zone),'22023','unsupported schedule zone rejected: '||zone);
+ end loop;
+end;$$;
+reset role;
+select pg_temp.check_true(not has_function_privilege('anon','public.read_rotas(uuid)','execute'),'anonymous cannot invoke consistent reads');
+select pg_temp.check_true((select not prosecdef and provolatile='s' from pg_proc where oid='public.read_rotas(uuid)'::regprocedure),'read RPC is stable and retains invoker RLS');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000205',false);
+select pg_temp.check_true(public.read_rotas('50000000-0000-0000-0000-000000000001') is null,'consistent read RPC denies foreign tenant');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000203',false);
+select pg_temp.check_true(jsonb_array_length(public.read_rotas('50000000-0000-0000-0000-000000000001')->'shifts')=4,'consistent read RPC exposes only own published shifts');
+reset role;

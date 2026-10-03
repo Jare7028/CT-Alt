@@ -110,3 +110,28 @@ test("calendar periods use Monday weeks and true month lengths", () => {
   assert.equal(viewDays("2028-02-29", "Month").length, 29);
   assert.equal(viewDays("2026-02-28", "Month").length, 28);
 });
+test("database-valid special names are rejected and display safely as UTC", async () => {
+  const { supportedRotaZone, displayRotaZone } = await import(
+    "../../lib/rota-time.ts"
+  );
+  for (const zone of [
+    "Factory",
+    "localtime",
+    "posixrules",
+    "posix/Europe/London",
+    "Etc/NoSuchZone",
+  ]) {
+    assert.equal(supportedRotaZone(zone), false);
+    assert.equal(displayRotaZone(zone), "UTC");
+    assert.equal(
+      localDateTime("2026-10-03T09:00:00Z", zone),
+      "2026-10-03T09:00",
+    );
+    assert.throws(
+      () => zonedInstant("2026-10-03T09:00", zone),
+      /supported IANA/,
+    );
+  }
+  assert.equal(supportedRotaZone("Europe/London"), true);
+  assert.equal(supportedRotaZone("UTC"), true);
+});

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import type { RotaData } from "../../../lib/rota-types";
+import { supportedRotaZone } from "../../../lib/rota-time";
 import { z } from "zod";
 import { configured, supabase } from "../../../lib/supabase";
 import { validOrigin } from "../../../lib/request-security";
@@ -9,7 +11,7 @@ const change = z.discriminatedUnion("action", [
     .object({
       action: z.literal("create_schedule"),
       name,
-      time_zone: z.string().min(1).max(100),
+      time_zone: z.string().min(1).max(100).refine(supportedRotaZone),
       agent_ids: z.array(z.uuid()).min(1).max(1000),
       admin_ids: z.array(z.uuid()).max(100),
     })
@@ -68,51 +70,10 @@ export async function GET(request: Request) {
   if (accessError)
     return response({ error: "Company access could not be checked." }, 503);
   if (!member) return response({ error: "Company access denied." }, 403);
-  const results = await Promise.all([
-    client
-      .from("rota_schedules")
-      .select("*", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .order("name")
-      .limit(1001),
-    client
-      .from("rota_jobs")
-      .select("id,schedule_id,name,color", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .limit(5001),
-    client
-      .from("rota_shifts")
-      .select(
-        "id,schedule_id,agent_id,job_id,starts_at,ends_at,title,status,revision",
-        { count: "exact" },
-      )
-      .eq("tenant_id", tenant.data)
-      .order("starts_at")
-      .limit(5001),
-    client
-      .from("agents")
-      .select("id,first_name,last_name,status", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .order("last_name")
-      .limit(1001),
-    client
-      .from("rota_agents")
-      .select("schedule_id,agent_id", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .limit(10001),
-    client
-      .from("rota_admins")
-      .select("schedule_id,user_id", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .limit(1001),
-    client
-      .from("tenant_memberships")
-      .select("user_id,display_name,role", { count: "exact" })
-      .eq("tenant_id", tenant.data)
-      .eq("status", "active")
-      .limit(1001),
-  ]);
-  if (results.some((result) => result.error))
+  const { data, error: readError } = await client.rpc("read_rotas", {
+    target_tenant: tenant.data,
+  });
+  if (readError)
     return response(
       {
         error:
@@ -120,11 +81,20 @@ export async function GET(request: Request) {
       },
       503,
     );
-  const limits = [1000, 5000, 5000, 1000, 10000, 1000, 1000];
+  if (!data) return response({ error: "Company access denied." }, 403);
+  const roster = data as RotaData;
+  const limits: Record<keyof RotaData, number> = {
+    schedules: 1000,
+    jobs: 5000,
+    shifts: 5000,
+    agents: 1000,
+    assignments: 10000,
+    admins: 1000,
+    members: 1000,
+  };
   if (
-    results.some(
-      (result, i) =>
-        result.data!.length > limits[i] || result.count !== result.data!.length,
+    (Object.keys(limits) as (keyof RotaData)[]).some(
+      (key) => roster[key].length > limits[key],
     )
   )
     return response(
@@ -134,19 +104,7 @@ export async function GET(request: Request) {
       },
       503,
     );
-  return response(
-    Object.fromEntries(
-      [
-        "schedules",
-        "jobs",
-        "shifts",
-        "agents",
-        "assignments",
-        "admins",
-        "members",
-      ].map((key, i) => [key, results[i].data]),
-    ),
-  );
+  return response(roster);
 }
 export async function POST(request: Request) {
   if (!validOrigin(request))
@@ -164,7 +122,16 @@ export async function POST(request: Request) {
   }
   const parsed = input.safeParse(value);
   if (!parsed.success)
-    return response({ error: "Complete the required schedule fields." }, 400);
+    return response(
+      {
+        error: parsed.error.issues.some((issue) =>
+          issue.path.includes("time_zone"),
+        )
+          ? "Choose UTC or a supported geographical IANA time zone."
+          : "Complete the required schedule fields.",
+      },
+      400,
+    );
   const client = await supabase();
   const {
     data: { user },

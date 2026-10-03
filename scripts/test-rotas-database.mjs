@@ -1,3 +1,4 @@
+import { reviewRaceChecks } from "../tests/database/rotas-races.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -57,14 +58,17 @@ function asyncSql(content) {
     "ct_alt_test",
   ]);
   let stderr = "";
-  child.stdout.resume();
+  let stdout = "";
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
   child.stderr.on("data", (chunk) => {
     stderr += chunk;
   });
   child.stdin.end(content);
   return new Promise((resolve, reject) => {
     child.on("error", reject);
-    child.on("close", (status) => resolve({ status, stderr }));
+    child.on("close", (status) => resolve({ status, stderr, stdout }));
   });
 }
 async function waitingTransaction() {
@@ -126,6 +130,17 @@ async function raceChecks() {
     throw new Error("Concurrent cross-schedule overlap failed");
   messages.push(
     "PASS: cross-schedule concurrent overlap requires explicit acknowledgement",
+  );
+  messages.push(
+    ...(await reviewRaceChecks({
+      actorSql,
+      sql,
+      asyncSql,
+      waitingTransaction,
+      docker,
+      name,
+      overlap,
+    })),
   );
   first = asyncSql(
     "set application_name='ct_alt_race';begin;update public.tenant_memberships set status='suspended' where tenant_id='50000000-0000-0000-0000-000000000001' and user_id='00000000-0000-0000-0000-000000000201';select pg_sleep(2);commit;",
@@ -212,6 +227,10 @@ try {
         "utf8",
       ),
     );
+    for (const line of result
+      .split("\n")
+      .filter((line) => line.includes("INFO:")))
+      console.log(line);
     checks.push(...result.split("\n").filter((line) => line.includes("PASS:")));
   }
   checks.push(...(await raceChecks()));

@@ -29,25 +29,15 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await login(page, "owner");
-  // Archive only this suite's prior synthetic schedules when rerunning locally.
   const prior = await (
     await page.request.get("/api/rotas?tenantId=" + fixtures.tenantA)
   ).json();
-  for (const s of prior.schedules.filter(
-    (s: { name: string; status: string }) =>
-      s.name.startsWith("Synthetic client rota ") && s.status === "active",
-  )) {
-    const archived = await page.request.post("/api/rotas", {
-      headers: { Origin: "http://127.0.0.1:5180" },
-      data: {
-        tenantId: fixtures.tenantA,
-        change: { action: "archive", schedule_id: s.id, revision: s.revision },
-      },
-    });
-    expect(archived.ok()).toBe(true);
-  }
-  await page.getByRole("button", { name: "Reload", exact: true }).click();
-  await expect(page.getByText("Loading schedules…")).not.toBeVisible();
+  expect(
+    prior.schedules.filter((s: { name: string }) =>
+      s.name.startsWith("Synthetic client rota "),
+    ),
+    "Restart the disposable browser fixture before each full suite run.",
+  ).toHaveLength(0);
   const name = "Synthetic client rota " + Date.now();
   await page
     .getByRole("button", { name: "Create schedule", exact: true })
@@ -55,6 +45,10 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   let dialog = page.getByRole("dialog");
   await dialog.getByLabel("Schedule name").fill(name);
   await dialog.getByLabel("Synthetic employee", { exact: true }).check();
+  await dialog
+    .getByRole("group", { name: "Assigned users" })
+    .getByLabel("Synthetic manager", { exact: true })
+    .check();
   await dialog
     .getByRole("group", { name: "Schedule administrators" })
     .getByLabel("Synthetic manager", { exact: true })
@@ -98,6 +92,37 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   });
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(dialog).not.toBeVisible();
+  // Put a real coworker's draft in the same schedule before publishing.
+  const ownerRead = await (
+    await page.request.get("/api/rotas?tenantId=" + fixtures.tenantA)
+  ).json();
+  const current = ownerRead.schedules.find(
+    (s: { name: string }) => s.name === name,
+  );
+  const coworker = ownerRead.agents.find(
+    (a: { last_name: string }) => a.last_name === "manager",
+  );
+  const job = ownerRead.jobs.find(
+    (j: { schedule_id: string }) => j.schedule_id === current.id,
+  );
+  const coworkerSave = await page.request.post("/api/rotas", {
+    headers: { Origin: "http://127.0.0.1:5180" },
+    data: {
+      tenantId: fixtures.tenantA,
+      change: {
+        action: "save_shift",
+        schedule_id: current.id,
+        revision: current.revision,
+        agent_id: coworker.id,
+        job_id: job.id,
+        starts_at: "2026-10-24T08:00:00Z",
+        ends_at: "2026-10-24T16:00:00Z",
+        title: "Coworker care",
+        allow_overlap: false,
+      },
+    },
+  });
+  expect(coworkerSave.ok()).toBe(true);
   const employeeContext = await browser.newContext();
   const employee = await employeeContext.newPage();
   await login(employee, "employee");
@@ -152,7 +177,7 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   ).toHaveCount(0);
   await manager.getByRole("button", { name, exact: true }).click();
   await manager
-    .getByRole("button", { name: "Publish (1)", exact: true })
+    .getByRole("button", { name: "Publish (2)", exact: true })
     .click();
   await manager
     .getByRole("dialog")
@@ -168,6 +193,21 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   await expect(
     employee.getByRole("button", { name: /Published Reviewed overnight care/ }),
   ).toHaveCount(2);
+  const employeeRead = await (
+    await employee.request.get("/api/rotas?tenantId=" + fixtures.tenantA)
+  ).json();
+  const ownShifts = employeeRead.shifts.filter(
+    (s: { schedule_id: string }) => s.schedule_id === schedule.id,
+  );
+  expect(ownShifts).toHaveLength(1);
+  expect(
+    employeeRead.shifts.some(
+      (s: { title: string }) => s.title === "Coworker care",
+    ),
+  ).toBe(false);
+  await expect(
+    employee.getByText("Coworker care", { exact: true }),
+  ).toHaveCount(0);
   await employee.getByRole("tab", { name: "Day", exact: true }).click();
   await expect(employee.getByLabel("Period summary")).toContainText(
     "1.0 hours",
@@ -331,4 +371,38 @@ test("expired access cookie refreshes and persists on direct rota navigation", a
       await page.request.get("/api/rotas?tenantId=" + fixtures.tenantA)
     ).status(),
   ).toBe(200);
+});
+
+test("unsupported legacy timezone renders a warning and blocks editing; API rejects new invalid zone", async ({
+  page,
+}) => {
+  await login(page, "owner");
+  await page
+    .getByRole("button", {
+      name: "Synthetic legacy unsupported zone",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("alert").filter({hasText:"This schedule’s time zone"})).toContainText(
+    "Times are shown in UTC and editing is disabled",
+  );
+  await expect(
+    page.getByRole("button", { name: "Add ▾", exact: true }),
+  ).toHaveCount(0);
+  const result = await page.request.post("/api/rotas", {
+    headers: { Origin: "http://127.0.0.1:5180" },
+    data: {
+      tenantId: fixtures.tenantA,
+      change: {
+        action: "create_schedule",
+        name: "Unsupported zone",
+        time_zone: "Factory",
+        agent_ids: ["60000000-0000-4000-8000-000000000001"],
+        admin_ids: [],
+      },
+    },
+  });
+  expect(result.status()).toBe(400);
+  expect((await result.json()).error).toContain("supported");
+  await page.screenshot({path:"test-results/rotas-unsupported-zone.png",fullPage:true});
 });

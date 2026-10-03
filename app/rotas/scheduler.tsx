@@ -7,6 +7,8 @@ import type { Company } from "../../lib/agent-types";
 import type { RotaData, RotaShift } from "../../lib/rota-types";
 import {
   addDays,
+  supportedRotaZone,
+  displayRotaZone,
   dayBoundary,
   dateInZone,
   localDateTime,
@@ -136,7 +138,10 @@ export default function Scheduler({
       data.admins.some(
         (a) => a.schedule_id === selected && a.user_id === actorId,
       ));
-  const editable = canManage && schedule?.status === "active";
+  const editable =
+    canManage &&
+    schedule?.status === "active" &&
+    supportedRotaZone(schedule.time_zone);
   const jobs = data.jobs.filter((j) => j.schedule_id === selected);
   const shifts = data.shifts.filter((s) => s.schedule_id === selected);
   const assigned = data.agents.filter((a) =>
@@ -146,7 +151,8 @@ export default function Scheduler({
   );
   const activeAssigned = assigned.filter((a) => a.status === "active");
   const days = viewDays(day, view);
-  const zone = schedule?.time_zone || company.time_zone;
+  const requestedZone = schedule?.time_zone || company.time_zone;
+  const zone = displayRotaZone(requestedZone);
   const boundaries = useMemo(
     () =>
       new Map(
@@ -476,6 +482,13 @@ export default function Scheduler({
       )}
       {schedule && (
         <>
+          {!supportedRotaZone(requestedZone) && (
+            <p role="alert" className={styles.error}>
+              This schedule’s time zone cannot be displayed safely. Times are
+              shown in UTC and editing is disabled. Ask an administrator to use
+              a supported IANA time zone.
+            </p>
+          )}
           <div className={styles.toolbar}>
             <p className={styles.zone}>
               {zone} ·{" "}
@@ -971,8 +984,9 @@ export default function Scheduler({
             {modal === "archive" && (
               <p>
                 Move this schedule to Archived? Shifts are retained and remain
-                readable. Managers cannot add or publish shifts until it is
-                restored.
+                readable. Retained drafts and published shifts still count in
+                overlap warnings. Managers cannot add or publish shifts until it
+                is restored.
               </p>
             )}
             {modal === "restore" && <p>Return this schedule to Active?</p>}

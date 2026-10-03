@@ -6,6 +6,17 @@ create table public.rota_schedules (
  time_zone text not null, status text not null default 'active' check (status in ('active','archived')),
  revision integer not null default 1 check (revision>0), unique(tenant_id,id)
 );
+create function workforce_private.check_rota_time_zone() returns trigger
+language plpgsql security invoker set search_path='' as $$
+begin
+ if new.time_zone <> 'UTC' and new.time_zone !~ '^(Africa|America|Antarctica|Arctic|Asia|Atlantic|Australia|Europe|Indian|Pacific|Etc)/[A-Za-z0-9_+/-]+$' then
+  raise exception using errcode='22023',message='Use UTC or a supported geographical IANA time zone';
+ end if;
+ return new;
+end;
+$$;
+revoke all on function workforce_private.check_rota_time_zone() from public,anon,authenticated;
+create trigger rota_supported_time_zone before insert or update of time_zone on public.rota_schedules for each row execute function workforce_private.check_rota_time_zone();
 create trigger rota_time_zone before insert or update of time_zone on public.rota_schedules for each row execute function workforce_private.check_time_zone();
 create table public.rota_admins (
  tenant_id uuid not null, schedule_id uuid not null, user_id uuid not null,
@@ -134,8 +145,9 @@ begin
     if not found then raise exception using errcode='P0002',message='Shift not found'; end if;
     if shift.status<>'draft' then raise exception using errcode='22023',message='Published shift editing is not available yet'; end if;
    end if;
-   select exists(select 1 from public.rota_shifts r where r.tenant_id=target_tenant and r.agent_id=aid and r.id is distinct from shift.id and r.starts_at<end_time and r.ends_at>start_time
-    and exists(select 1 from public.rota_schedules rs where rs.tenant_id=r.tenant_id and rs.id=r.schedule_id and rs.status='active')) into has_overlap;
+   -- Archiving preserves assignments; it is not cancellation. Include retained
+   -- drafts and published commitments, so restoration cannot introduce a hidden overlap.
+   select exists(select 1 from public.rota_shifts r where r.tenant_id=target_tenant and r.agent_id=aid and r.id is distinct from shift.id and r.starts_at<end_time and r.ends_at>start_time) into has_overlap;
    if has_overlap and coalesce((change->>'allow_overlap')::boolean,false) is not true then raise exception using errcode='P0001',message='This user has an overlapping shift. Review and explicitly allow overlap'; end if;
    if shift.id is null then
     insert into public.rota_shifts(tenant_id,schedule_id,agent_id,job_id,starts_at,ends_at,title) values(target_tenant,sid,aid,jid,start_time,end_time,coalesce(change->>'title',''));
@@ -163,4 +175,23 @@ grant execute on function workforce_private.save_rota(uuid,jsonb) to authenticat
 create function public.save_rota(target_tenant uuid, change jsonb) returns jsonb language sql security invoker set search_path='' as $$select workforce_private.save_rota(target_tenant,change)$$;
 revoke all on function public.save_rota(uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.save_rota(uuid,jsonb) to authenticated;
+
+-- One stable SQL statement supplies shifts and their schedule revisions from
+-- the same MVCC snapshot. Invoker security preserves all table RLS policies.
+create function public.read_rotas(target_tenant uuid) returns jsonb
+language sql stable security invoker set search_path='' as $$
+ select case when exists(select 1 from public.tenants where id=target_tenant) then
+ jsonb_build_object(
+ 'schedules',coalesce((select jsonb_agg(x) from (select id,tenant_id,name,time_zone,status,revision from public.rota_schedules where tenant_id=target_tenant order by name,id limit 1001)x),'[]'::jsonb),
+ 'jobs',coalesce((select jsonb_agg(x) from (select id,schedule_id,name,color from public.rota_jobs where tenant_id=target_tenant order by id limit 5001)x),'[]'::jsonb),
+ 'shifts',coalesce((select jsonb_agg(x) from (select id,schedule_id,agent_id,job_id,starts_at,ends_at,title,status,revision from public.rota_shifts where tenant_id=target_tenant order by starts_at,id limit 5001)x),'[]'::jsonb),
+ 'agents',coalesce((select jsonb_agg(x) from (select id,first_name,last_name,status from public.agents where tenant_id=target_tenant order by last_name,id limit 1001)x),'[]'::jsonb),
+ 'assignments',coalesce((select jsonb_agg(x) from (select schedule_id,agent_id from public.rota_agents where tenant_id=target_tenant order by schedule_id,agent_id limit 10001)x),'[]'::jsonb),
+ 'admins',coalesce((select jsonb_agg(x) from (select schedule_id,user_id from public.rota_admins where tenant_id=target_tenant order by schedule_id,user_id limit 1001)x),'[]'::jsonb),
+ 'members',coalesce((select jsonb_agg(x) from (select user_id,display_name,role from public.tenant_memberships where tenant_id=target_tenant and status='active' order by user_id limit 1001)x),'[]'::jsonb)
+ ) end
+$$;
+revoke all on function public.read_rotas(uuid) from public,anon,authenticated;
+grant execute on function public.read_rotas(uuid) to authenticated;
+
 commit;
