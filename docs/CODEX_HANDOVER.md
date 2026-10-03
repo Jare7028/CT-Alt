@@ -28,10 +28,10 @@ New releases after CT Alt access was restored:
 | 14 Complete Chat | a74e196b015641d49caed28bd29badfc9742dd64 | 35954c78b5cb92ec8a782c9620f7287e08766093 | Original PR5 work retained; both migrations applied once; five RLS tables, no anon or direct browser writes;274 combined SQL assertions,134 rota assertions,34 config and both real Auth acceptance runners; CI37154426688 |
 | 15 Overview/Activity | 93f2f44cfb1a211d3f6408748e0de048f56ede49 | bdf5ddb53f305ecbdebf47e0b553b8323eb8684d | Signed-user counts/activity, current access rechecks, safe bigint/keyset/calendar handling;40 config/query tests and4 real Auth/API/browser cases; CI37155117506 |
 
-All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview currently has individually exact counts but no shared transactional snapshot; a dedicated follow-up is being implemented. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
+All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview counts now share one STABLE SECURITY INVOKER statement snapshot; the follow-up is reviewed and its consumer awaits verified release. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
 
 ## Actual applied database history
-All six hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
+All seven hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
 
 - 20261003143058_workforce_foundation
 - 20261003153745_agents_records
@@ -39,13 +39,14 @@ All six hosted migration statements were reread and matched released repository 
 - 20261003210226_client_rota_schedule_settings
 - 20261003210622_chat_conversations
 - 20261003210624_chat_group_permissions
+- 20261003215100_workforce_overview_snapshot
 
 The migration endpoint assigns the actual recorded timestamp. The previously unapplied settings and Chat filenames were matched to those returned versions after application; SQL bytes did not change. Settings preserves existing data and mutation-function identity/owner/ACL/definer/search path. Security advisory findings are unchanged from the pre-migration baseline (the existing rls_auto_enable executable-definer warnings and leaked-password protection setting). Do not silently change unrelated Auth/advisory configuration. No production fixture records or messages were created.
 
 CT Alt Management API access now works with the owner's authorised credential. The installed Supabase app connection may still be bound to the unrelated account/org; do not assume it targets CT Alt, and never use another project as fallback. Recheck the exact project, history and permissions before hosted changes. Use current documented read-only query endpoints for inspections and tracked migration application for reviewed additive SQL. Auth login/callback behaviour remains unchanged.
 
 ## Work in progress and next delivery
-- Consistent Overview counts: one STABLE SECURITY INVOKER read with signed-user RLS, unchanged API shape/access rechecks, and concurrency/snapshot tests. New additive migration is local only until root review/application.
+- Consistent Overview counts: reviewed one STABLE SECURITY INVOKER read with signed-user RLS, unchanged API shape/access rechecks;47 isolated snapshot/concurrency checks and4 fresh real Auth/browser cases passed. Additive migration applied once and metadata verified; exact consumer release verification is next.
 - Time Clock: jobs, personal clock-in/out, manual paid/unpaid breaks, company Today attendance and own completed timesheets. Server-recorded time, tenant/current-membership/active-linked-agent checks, revisions, idempotent UUID actions, retained history and uncertain-write recovery. New code/migration remains local until full integration/review. Payroll, GPS/geofencing, approvals/manual edits and full Time Clock parity are future work.
 - Continue the wider roadmap after these slices. Desktop functional workflows take priority over mobile polish.
 

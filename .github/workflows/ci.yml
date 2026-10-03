@@ -32,4 +32,6 @@ jobs:
       - run: npm run test:db
       - name: Test rota migrations and permissions
         run: npm run test:rotas:db
+      - name: Test consistent overview snapshots
+        run: npm run test:overview:db
       - run: npm run build
