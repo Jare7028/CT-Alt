@@ -14,3 +14,7 @@
 .filter-switch { display:block;margin-top:14px;border:0!important;color:#1473d3!important; }
 .filter-dot { display:inline-block;width:7px;height:7px;border-radius:50%;background:#1473d3;vertical-align:middle;margin-left:4px; }
 .quick-is { color:#647588; }
+
+.directory-filter>summary { display:flex;align-items:center;justify-content:center;gap:4px;width:60px;height:42px;padding:0;color:#2b98fe;position:relative; }
+.directory-filter>summary .filter-dot { position:absolute;top:5px;right:6px;margin:0;background:#2b98fe; }
+.directory-filter>summary svg:last-of-type { width:14px;height:14px;color:#526476; }
