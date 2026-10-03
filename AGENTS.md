@@ -1,3 +1,7 @@
+# Takeover and release queue
+
+Read docs/CODEX_HANDOVER.md before starting new work. It records the verified live release, open pull requests, concrete review blockers, and the already-applied Client Rotas migration that must not be replayed. Recheck current remote state because the handover is a dated snapshot.
+
 # Project boundaries
 
 - Work only in this independent repository and its explicitly verified resources.
