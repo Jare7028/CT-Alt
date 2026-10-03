@@ -56,7 +56,7 @@ test('existing owner uses a magic link with identical response and keeps only ex
  await page.goto(link);
  await expect(page.getByRole('heading',{name:'Users',exact:true})).toBeVisible();
  expect((await page.request.get('/api/agents?tenantId='+f.tenantB)).status()).toBe(403);
- await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await page.getByLabel('Account menu').click();await page.getByRole('button',{name:'Sign out',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Sign in to your company'})).toBeVisible();
 });
 

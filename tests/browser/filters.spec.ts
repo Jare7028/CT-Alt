@@ -43,7 +43,7 @@ test('custom fields, empty values and per-account preferences work for read-only
  await expect(page.locator('.table-scroll tbody')).not.toContainText('Foreign');await expect(page.getByRole('button',{name:/^Edit /})).toHaveCount(0);
  await page.reload();await page.getByLabel('Filter users',{exact:true}).click();await expect(panel.getByLabel('Value filter 1',{exact:true})).toHaveValue('Demo');
  await panel.getByLabel('Search fields',{exact:true}).fill('');await panel.getByLabel('Field filter 1',{exact:true}).selectOption('employment_start_date');await panel.getByLabel('Operator filter 1',{exact:true}).selectOption('empty');await expect(panel.getByLabel('Value filter 1',{exact:true})).toHaveCount(0);await expect(page.locator('.pagination')).not.toContainText('of 0');
- await page.getByRole('button',{name:'Sign out',exact:true}).click();await login(page,'owner');await page.getByLabel('Filter users',{exact:true}).click();await expect(panel.getByLabel('Field filter 1',{exact:true})).toHaveCount(0);
+ await page.getByLabel('Account menu').click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await login(page,'owner');await page.getByLabel('Filter users',{exact:true}).click();await expect(panel.getByLabel('Field filter 1',{exact:true})).toHaveCount(0);
  const key=preferenceKey(f.tenantB,f.accounts.owner.id);await page.evaluate(key=>localStorage.setItem(key,JSON.stringify({version:1,mode:'advanced',join:'or',rules:[{id:'forged',field:'team',operator:'is',value:'South',end:''}]})),key);
  expect((await page.request.get('/api/agents?tenantId='+f.tenantB)).status()).toBe(403);
  await page.goto('/agents?company='+f.tenantB);await expect(page.getByText('Your account has no active access to this company.')).toBeVisible();
