@@ -6,6 +6,7 @@ import { formatEmploymentDate, formatTimestamp } from '../../../lib/agent-dates'
 import type { Agent, AgentField, Member } from '../../../lib/agent-types';
 import '../users.css';
 import './profile.css';
+import EditDetails from './edit-details';
 
 export const dynamic='force-dynamic';
 export default async function AgentProfile({params,searchParams}:{params:Promise<{agentId:string}>;searchParams:Promise<{company?:string}>}) {
@@ -38,6 +39,7 @@ export default async function AgentProfile({params,searchParams}:{params:Promise
   const access=[['Directory status',agent.status==='archived'?'Archived':'Active'],['Account',agent.user_id?'Account linked':'No linked account'],['Company access',linked ? linked.status==='active'?'Active':'Suspended' : 'No linked membership'],['Access level',linked ? linked.role[0].toUpperCase()+linked.role.slice(1) : 'Not assigned']];
   return <div className="users-app profile-app"><div className="app-bar"><Link className="brand" href="/">CT Alt</Link><span className="profile-company">{company.name}</span>{canReadDirectory ? <Link className="profile-back" href={`/agents?company=${company.id}`}>Back to Users</Link> : <Link className="profile-back" href="/login">Sign-in options</Link>}</div>
     <main className="profile-main"><header className="profile-heading"><span className="avatar" aria-hidden="true">{agent.first_name[0]}{agent.last_name[0]}</span><div><h1>{agent.first_name} {agent.last_name}</h1><p>Agent details · {company.name}</p></div><span className="profile-status">{agent.status==='archived'?'Archived':'Active'}</span></header>
+      {['owner','admin'].includes(actor.role) && agent.status==='active' ? <EditDetails agent={agent} fields={fieldsResult.data as AgentField[]}/> : null}
       <section className="profile-card" aria-labelledby="user-details"><h2 id="user-details">User details</h2><dl>{basic.map(([label,text])=><div key={label}><dt>{label}</dt><dd>{label==='Mobile phone'?<a href={`tel:${agent.phone}`}>{text}</a>:text}</dd></div>)}</dl></section>
       {(fieldsResult.data as AgentField[]).length ? <section className="profile-card" aria-labelledby="company-fields"><h2 id="company-fields">Company fields</h2><dl>{(fieldsResult.data as AgentField[]).map(field=><div key={field.key}><dt>{field.label}</dt><dd>{value(typeof agent.custom_fields[field.key]==='string'?agent.custom_fields[field.key]:null)}</dd></div>)}</dl></section> : null}
       <section className="profile-card" aria-labelledby="company-access"><h2 id="company-access">Company access</h2><dl>{access.map(([label,text])=><div key={label}><dt>{label}</dt><dd>{text}</dd></div>)}</dl><p>These details describe this company only. {canReadDirectory?'Owners and admins can edit supported user details from the Users directory.':'Your role allows viewing your own active record.'}</p></section>

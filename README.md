@@ -115,3 +115,9 @@ User names open addressable `/agents/{id}?company={companyId}` pages. When the F
 Every profile read uses the authenticated user and existing RLS, with explicit company filters. Owners/admins/managers can read their company records, including archived records. Employees can read only their own linked active record; another employee's membership and the creator's identity remain hidden by RLS. Unknown, malformed, foreign-company and unauthorized records use the same unavailable page. No schema, permission grant, privileged credential or write endpoint is added.
 
 `tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1440 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+
+## Profile editing
+
+Owners/admins can explicitly edit active Agent profiles with Personal details and Company details sections. Supported fields are existing names, canonical international mobile number, title, team, calendar employment start date and configured custom text fields. Company/record/linked-account identity, roles, membership access, status and audit metadata are not editable. Archived records require the existing directory restore workflow first.
+
+Cancel and Escape discard unsaved input without a write. Save submits one existing signed-user update with the draft's original revision; successful acknowledgement must identify that record and the next revision. Conflicts keep the draft visible and require discard/reload before another edit. Unknown/network/server outcomes block a blind retry; cancellation in those states also refreshes the latest details. The editor stays disabled during refresh. API validation, owner/admin permissions, revision locking and atomic audit behavior remain unchanged.
