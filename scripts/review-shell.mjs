@@ -55,6 +55,7 @@ try {
       await page.screenshot({path:new URL('../docs/screenshots/shell-after-mobile-navigation.png',import.meta.url).pathname});
     }
     assert.equal(await nav.getByRole('link',{name:'Users',exact:true}).getAttribute('href'),'/agents?company=11111111-1111-4111-8111-111111111111');
+    assert.equal(await nav.getByRole('link',{name:'Client Rotas',exact:true}).getAttribute('href'),'/rotas?company=11111111-1111-4111-8111-111111111111');
     for(const name of ['Communication','Operations','HR & Skills']) assert.ok(await nav.getByText(name,{exact:true}).count());
     assert.equal(await nav.locator('[aria-disabled=true]').filter({hasText:'Chat'}).count(),1);
     assert.equal(await nav.locator('a').filter({hasText:'Chat'}).count(),0,'Unfinished Chat has no fake route');
