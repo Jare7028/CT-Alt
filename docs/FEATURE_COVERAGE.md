@@ -4,7 +4,7 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `bdf5ddb53f305ecbdebf47e0b553b8323eb8684d`. Vercel production `dpl_9HgMuGZsy4mPDc5a74X1RMhrCcDy` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents redirects to login. Real-account authenticated production workflows were not exercised.
+Latest application release: `2f14a9c8e13e87edf9e3b191c5f17d4b3ec8b6ff`. Vercel production `dpl_8VmHpU4mpDhov7wr5UKRaEJeorBf` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock redirect to login. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -13,13 +13,12 @@ Latest application release: `bdf5ddb53f305ecbdebf47e0b553b8323eb8684d`. Vercel p
 | Shared navigation | Topbar, grouped sidebar, collapse, mobile dialog and keyboard checks | On main and production | Enable each real module as released; full visual reference review |
 | Client Rotas | PR7 baseline and PR12 settings/recovery; 32 config, 134 combined rota SQL assertions, populated upgrade preservation and seven real local Auth/API/browser cases pass | On main and production; baseline/settings history verified | open shifts, swaps, templates, repeats, requests and pagination |
 | Chat | PR5/14 persistent direct/group messages, unread history, group administration and posting permissions; 28 config, 274 SQL, 13 component regressions and both real local Auth acceptance runners pass | On main and production; both migration histories verified | attachments, replies, search, moderation, Realtime and complete appearance/mobile fidelity |
-
-| Overview/Activity | Exact counts, owner/admin audit, action/calendar filters, safe bigint keyset, access rechecks;40 config/query tests and4 real local Auth/browser cases | On main and production | Consistent signed-user statement counts verified; attendance, engagement, alerts, other audit streams and full reference parity |
-| Time Clock | Desktop jobs, personal clock-in/out, manual paid/unpaid breaks, Today and own timesheets;48 config,111 SQL/race and6 real Auth/API/browser cases | Reviewed additive SQL applied; consumer release pending | Payroll/GPS/approvals/manual edits, automatic breaks and full reference parity |
+| Overview/Activity | Exact counts, owner/admin audit, action/calendar filters, safe bigint keyset, access rechecks;41 query/config and47 snapshot/concurrency assertions plus4 real local Auth/browser cases | On main and production | Consistent signed-user statement counts verified; attendance, engagement, alerts, other audit streams and full reference parity |
+| Time Clock | Desktop jobs, personal clock-in/out, manual paid/unpaid breaks, Today and own timesheets;48 config,111 SQL/race and6 real Auth/API/browser cases | On main and production; PR17 CI37157079995 passed | Payroll/GPS/approvals/manual edits, automatic breaks and full reference parity |
 
 ## Wider workforce scope
 
-These areas remain unimplemented unless a future release records specific evidence here:
+These areas remain incomplete unless a release records specific evidence here:
 
 - Attendance/engagement/alerts in Overview, wider Activity streams; global search, notifications and automations.
 - Smart groups, detailed administrator permissions, organisational directory and job catalogue.
@@ -35,3 +34,5 @@ These areas remain unimplemented unless a future release records specific eviden
 For every delivered slice, record functional scope, local checks, browser/API permission evidence, actual rendered desktop/mobile captures, deployed commit and hosted acceptance. Keep gaps explicit. Use synthetic fixtures and only verified CT Alt resources; all services remain free.
 
 Latest owner direction: prioritise desktop functionality and keep consulting official Connecteam docs; defer new mobile polish.
+
+Work underway: Quick Tasks lifecycle/assignment/permissions from official desktop guides, plus owner/admin team-timesheet review, exact range totals and bounded complete CSV export. These are local candidates until reviewed, tested, migrated and deployed.
