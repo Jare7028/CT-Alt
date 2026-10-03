@@ -1,5 +1,5 @@
 # CT Alt — Codex takeover
-Updated 3 October 2026, 22:08 UTC. Recheck remote heads, credentials and deployments before acting.
+Updated 3 October 2026, 22:26 UTC. Recheck remote heads, credentials and deployments before acting.
 
 ## Goal and working style
 Build the complete workforce application using Connecteam as the functional and visual reference, with original code/assets and CT Alt branding. The owner wants feature-by-feature and workflow parity, then later customisation. Do not silently narrow this to an MVP or claim affiliation. The latest direction prioritises desktop functionality; defer mobile polish while building supported workflows. Consult current public Connecteam guides for each module. Track actual implementation, tests, deployments and gaps in [FEATURE_COVERAGE.md](FEATURE_COVERAGE.md).
@@ -35,7 +35,7 @@ PR16 consistent Overview counts reviewed headc5beca7d72b42aded9512bc63eea8f2bbcf
 All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview counts now share one STABLE SECURITY INVOKER statement snapshot; PR16 mergecc68777b51877cf0f734fdd7a19751fff0dfd20d is READY on production dpl_5ovK7pn9PuzdkTn6LmJFkmqKWbBG with ct-alt.vercel.app alias; CI37156487306 passed. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
 
 ## Actual applied database history
-All eight hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
+All nine hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
 
 - 20261003143058_workforce_foundation
 - 20261003153745_agents_records
@@ -45,6 +45,7 @@ All eight hosted migration statements were reread and matched released repositor
 - 20261003210624_chat_group_permissions
 - 20261003215100_workforce_overview_snapshot
 - 20261003215840_time_clock_baseline
+- 20261003222455_quick_tasks
 
 The migration endpoint assigns the actual recorded timestamp. The previously unapplied settings and Chat filenames were matched to those returned versions after application; SQL bytes did not change. Settings preserves existing data and mutation-function identity/owner/ACL/definer/search path. Security advisory findings are unchanged from the pre-migration baseline (the existing rls_auto_enable executable-definer warnings and leaked-password protection setting). Do not silently change unrelated Auth/advisory configuration. No production fixture records or messages were created.
 
@@ -76,6 +77,8 @@ Connecteam account access is read-only: do not change schedules/users/settings o
 
 The historical2023 admin-shell image cannot establish current pixel parity. Existing private controls observations informed Users layout, but their source crop is not public or reliably available in worker containers. All committed app screenshots are our own synthetic outputs; no competitor workforce image was imported.
 
-Time Clock adds one INFO advisory for RLS enabled without policies on private time_clock_operations. This is intentional default-deny storage with anonymous/authenticated direct table privileges revoked. Existing warnings were unchanged. Do not add browser policies to silence it. Quick Tasks is underway in an isolated worktree, based on official desktop/task-permission/group-completion guides; SQL remains unapplied.
+Time Clock adds one INFO advisory for RLS enabled without policies on private time_clock_operations. This is intentional default-deny storage with anonymous/authenticated direct table privileges revoked. Existing warnings were unchanged. Do not add browser policies to silence it. Quick Tasks has passed signed desktop acceptance in its isolated worktree; its reviewed additive SQL is applied and the consumer awaits release.
 
-Next worktrees: /workspace/ct-alt-quick-tasks (API/SQL/types worker plus UI worker, uncommitted additive SQL); /workspace/ct-alt-team-timesheets (isolated owner/admin review/summary/export and additive per-row Auth policy optimisation). Integrator owns shared pages/navigation, migration application, real Auth acceptance and release. The private receipt advisory is intentional; a Time Clock auth_rls_initplan performance warning is being addressed through a new additive policy migration. Applied baselines remain immutable.
+Next worktrees: /workspace/ct-alt-quick-tasks (reviewed desktop consumer awaiting release); /workspace/ct-alt-team-timesheets (isolated owner/admin review/summary/export and additive per-row Auth policy optimisation). Integrator owns shared pages/navigation, migration application, real Auth acceptance and release. The private receipt advisory is intentional; a Time Clock auth_rls_initplan performance warning is being addressed through a new additive policy migration. Applied baselines remain immutable.
+
+Quick Tasks candidate passed independent final review,check/build,56 configs,82 SQL/race assertions and6 fresh real Auth/API/browser desktop cases. Its additive migration20261003222455 was applied once with exact SQL and all20 existing table counts/18 prior function definitions/owners/ACLs retained. The consumer awaits exact CI/merge/production verification; do not claim it live until recorded. Team-timesheet candidate remains in its separate worktree and unapplied.

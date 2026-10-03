@@ -356,7 +356,7 @@ export default function Chat({
       companyName={company.name}
       companyId={company.id}
       activeModule="chat"
-      moduleLinks={{'time-clock':`/time-clock?company=${encodeURIComponent(company.id)}`,  overview: management ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: canViewActivity ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      moduleLinks={{'quick-tasks':`/quick-tasks?company=${encodeURIComponent(company.id)}`, 'time-clock':`/time-clock?company=${encodeURIComponent(company.id)}`,  overview: management ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: canViewActivity ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
       companyControl={
         <label className="chat-company">
           Company{" "}

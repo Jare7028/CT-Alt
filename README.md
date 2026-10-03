@@ -151,3 +151,7 @@ Overview shows signed-user workforce counts and recent owner/admin user-change a
 ## Time Clock
 
 Desktop Time Clock supports jobs, personal clock-in/out, paid/unpaid manual breaks, own completed timesheets and owner/admin Today attendance. Server-recorded times, current linked-user authorization, revisions and operation UUIDs protect writes and recovery. See [Time Clock acceptance](docs/time-clock-acceptance.md); run `node scripts/test-time-clock-integration.mjs` for real isolated Auth/API/browser checks. Payroll, approvals, editing, GPS/geofencing and automatic breaks remain future work.
+
+## Quick Tasks
+
+Quick Tasks supports owner/admin drafts, publishing, edits, archive/restore and reopening; assigned users complete published work. Shared group tasks have one completion, while separate-per-user tasks remain independent. Desktop status/search/overdue filters, precise paging, exact counts and bounded searched assignee selection are available. See [Quick Tasks acceptance](docs/quick-tasks-acceptance.md); run `node scripts/test-quick-tasks-integration.mjs` for isolated real Auth acceptance. Comments, attachments, subtasks, recurring work and granular feature permissions remain further work.

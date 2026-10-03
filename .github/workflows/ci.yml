@@ -36,4 +36,6 @@ jobs:
         run: npm run test:overview:db
       - name: Test Time Clock migrations and permissions
         run: npm run test:time-clock:db
+      - name: Test Quick Tasks migrations and permissions
+        run: npm run test:quick-tasks:db
       - run: npm run build

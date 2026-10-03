@@ -1,0 +1,8 @@
+import {NextResponse} from 'next/server';
+import {configured,supabase} from '../../../lib/supabase';
+import {validOrigin} from '../../../lib/request-security';
+import {QuickTaskError,parseQuickTaskQuery,readQuickTasks,saveQuickTask,quickTaskMutation} from '../../../lib/quick-tasks';
+const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+const fail=(error:unknown)=>error instanceof QuickTaskError?response({error:error.message},error.status):response({error:'The task request could not be confirmed. Reload and review before making another change.'},503);
+export async function GET(request:Request){if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{return response(await readQuickTasks(await supabase(),parseQuickTaskQuery(new URL(request.url).searchParams)));}catch(error){return fail(error);}}
+export async function POST(request:Request){if(!validOrigin(request))return response({error:'Invalid request origin.'},403);if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{const raw=await request.text();if(new TextEncoder().encode(raw).length>16000)return response({error:'Task request is too large.'},413);let value:unknown;try{value=JSON.parse(raw);}catch{return response({error:'Invalid task request.'},400);}const parsed=quickTaskMutation.safeParse(value);if(!parsed.success)return response({error:'Choose valid task details and explicit group or separate assignment.'},400);return response({saved:await saveQuickTask(await supabase(),parsed.data)});}catch(error){return fail(error);}}

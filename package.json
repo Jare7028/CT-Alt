@@ -21,7 +21,8 @@
     "test:config": "node --test tests/config/*.test.mjs",
     "test:controls": "node scripts/review-directory-controls.mjs",
     "test:overview:db": "node scripts/test-overview-snapshot-database.mjs",
-    "test:time-clock:db": "node scripts/test-time-clock-database.mjs"
+    "test:time-clock:db": "node scripts/test-time-clock-database.mjs",
+    "test:quick-tasks:db": "node scripts/test-quick-tasks-database.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
