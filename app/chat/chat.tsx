@@ -67,6 +67,7 @@ export default function Chat({
       setBody("");
       setPending(null);
       setCreating(null);
+      setBusy(false);
     }
   }, []);
   useEffect(() => {
@@ -132,7 +133,11 @@ export default function Chat({
     bottom.current?.scrollIntoView({ block: "nearest" });
   }, [newestSequence]);
   const choose = (id: string) => {
+    if (id === selected) return;
     generation.current++;
+    setBusy(false);
+    setCreating(null);
+    setPeople([]);
     setSelected(id);
     setMessages([]);
     setBody("");
@@ -142,17 +147,29 @@ export default function Chat({
   };
   const active = conversations.find((item) => item.id === selected);
   async function start(kind: "direct" | "group") {
+    const token = ++generation.current;
+    setBusy(false);
     setError("");
     try {
-      setPeople(await request<ChatPerson[]>({ action: "directory" }));
+      const directory = await request<ChatPerson[]>({ action: "directory" });
+      if (token !== generation.current) return;
+      setPeople(directory);
       setCreating(kind);
       setRestricted(false);
     } catch (reason) {
-      fail(reason);
+      if (token === generation.current) fail(reason);
     }
   }
+  const cancelCreate = () => {
+    generation.current++;
+    setCreating(null);
+    setPeople([]);
+    setBusy(false);
+  };
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
+    const token = ++generation.current;
     const form = new FormData(event.currentTarget);
     setBusy(true);
     setError("");
@@ -165,12 +182,14 @@ export default function Chat({
         management_only: restricted,
         members: form.getAll("members"),
       });
+      if (token !== generation.current) return;
       setCreating(null);
+      setBusy(false);
       choose(result.id);
     } catch (reason) {
-      fail(reason);
+      if (token === generation.current) fail(reason);
     } finally {
-      setBusy(false);
+      if (token === generation.current) setBusy(false);
     }
   }
   async function send() {
@@ -196,7 +215,7 @@ export default function Chat({
     } catch (reason) {
       if (token === generation.current) fail(reason);
     } finally {
-      setBusy(false);
+      if (token === generation.current) setBusy(false);
     }
   }
   async function older() {
@@ -290,7 +309,7 @@ export default function Chat({
               ))}
           </fieldset>
           <button disabled={busy}>Create</button>
-          <button type="button" onClick={() => setCreating(null)}>
+          <button type="button" onClick={cancelCreate}>
             Cancel
           </button>
         </form>
