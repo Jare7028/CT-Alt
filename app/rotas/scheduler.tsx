@@ -96,7 +96,14 @@ export default function Scheduler({
   );
   const [addOpen, setAddOpen] = useState(false);
   const [modal, setModal] = useState<
-    "" | "schedule" | "job" | "shift" | "publish" | "archive" | "restore"
+    | ""
+    | "schedule"
+    | "settings"
+    | "job"
+    | "shift"
+    | "publish"
+    | "archive"
+    | "restore"
   >("");
   const [editing, setEditing] = useState<RotaShift | null>(null);
   const [formError, setFormError] = useState("");
@@ -266,9 +273,10 @@ export default function Scheduler({
     const form = new FormData(event.currentTarget);
     const text = (key: string) => String(form.get(key) || "");
     const base = { schedule_id: selected, revision: schedule?.revision };
-    if (modal === "schedule")
+    if (modal === "schedule" || modal === "settings")
       void save({
-        action: "create_schedule",
+        ...(modal === "settings" ? base : {}),
+        action: modal === "settings" ? "update_schedule" : "create_schedule",
         name: text("name"),
         time_zone: text("time_zone"),
         agent_ids: form.getAll("agent_ids"),
@@ -485,8 +493,8 @@ export default function Scheduler({
           {!supportedRotaZone(requestedZone) && (
             <p role="alert" className={styles.error}>
               This schedule’s time zone cannot be displayed safely. Times are
-              shown in UTC and editing is disabled. Ask an administrator to use
-              a supported IANA time zone.
+              shown in UTC and shift editing is disabled. Ask a company owner or
+              admin to choose a supported IANA time zone in Settings.
             </p>
           )}
           <div className={styles.toolbar}>
@@ -548,6 +556,14 @@ export default function Scheduler({
                     )
                   </button>
                 </>
+              )}
+              {owner && schedule.status === "active" && (
+                <button
+                  disabled={loading || busy || !!error}
+                  onClick={() => open("settings")}
+                >
+                  Settings
+                </button>
               )}
               {owner && (
                 <button
@@ -792,46 +808,85 @@ export default function Scheduler({
       {modal && (
         <Modal
           title={
-            modal === "schedule"
-              ? "Create schedule"
-              : modal === "job"
-                ? "Job list"
-                : modal === "shift"
-                  ? editing
-                    ? "Edit draft shift"
-                    : "Add draft shift"
-                  : modal === "publish"
-                    ? "Publish draft shifts"
-                    : modal === "archive"
-                      ? "Archive schedule"
-                      : "Restore schedule"
+            modal === "settings"
+              ? "Schedule settings"
+              : modal === "schedule"
+                ? "Create schedule"
+                : modal === "job"
+                  ? "Job list"
+                  : modal === "shift"
+                    ? editing
+                      ? "Edit draft shift"
+                      : "Add draft shift"
+                    : modal === "publish"
+                      ? "Publish draft shifts"
+                      : modal === "archive"
+                        ? "Archive schedule"
+                        : "Restore schedule"
           }
           close={close}
         >
           <form onSubmit={submit}>
-            {modal === "schedule" && (
+            {(modal === "schedule" || modal === "settings") && (
               <>
                 <label>
                   Schedule name
-                  <input name="name" required maxLength={100} />
+                  <input
+                    name="name"
+                    required
+                    maxLength={100}
+                    defaultValue={modal === "settings" ? schedule?.name : ""}
+                  />
                 </label>
                 <label>
                   Time zone
                   <input
                     name="time_zone"
                     required
-                    defaultValue={company.time_zone}
+                    defaultValue={
+                      modal === "settings"
+                        ? schedule?.time_zone
+                        : company.time_zone
+                    }
                     maxLength={100}
                   />
                 </label>
                 <p>Use an IANA time zone such as Europe/London.</p>
+                {modal === "settings" && (
+                  <p>
+                    Changing the time zone changes the displayed times. Existing
+                    shifts keep their absolute start and end times. Saving
+                    settings does not publish drafts. Users with retained shifts
+                    cannot be removed.
+                  </p>
+                )}
                 <fieldset>
                   <legend>Assigned users</legend>
                   {data.agents
-                    .filter((a) => a.status === "active")
+                    .filter(
+                      (a) =>
+                        a.status === "active" ||
+                        (modal === "settings" &&
+                          data.assignments.some(
+                            (r) =>
+                              r.schedule_id === selected && r.agent_id === a.id,
+                          )),
+                    )
                     .map((a) => (
                       <label className={styles.checkbox} key={a.id}>
-                        <input type="checkbox" name="agent_ids" value={a.id} />
+                        <input
+                          type="checkbox"
+                          name="agent_ids"
+                          value={a.id}
+                          defaultChecked={
+                            modal === "settings" &&
+                            data.assignments.some(
+                              (r) =>
+                                r.schedule_id === selected &&
+                                r.agent_id === a.id,
+                            )
+                          }
+                        />
                         {a.first_name} {a.last_name}
                       </label>
                     ))}
@@ -842,6 +897,26 @@ export default function Scheduler({
                     Company owners and admins always manage schedules. Select
                     managers who can also edit this schedule.
                   </p>
+                  {modal === "settings" &&
+                    data.admins
+                      .filter(
+                        (r) =>
+                          r.schedule_id === selected &&
+                          !data.members.some(
+                            (m) =>
+                              m.user_id === r.user_id && m.role === "manager",
+                          ),
+                      )
+                      .map((r) => (
+                        <p key={r.user_id}>
+                          Existing unavailable administrator retained.
+                          <input
+                            type="hidden"
+                            name="admin_ids"
+                            value={r.user_id}
+                          />
+                        </p>
+                      ))}
                   {data.members
                     .filter((m) => m.role === "manager")
                     .map((m) => (
@@ -850,6 +925,14 @@ export default function Scheduler({
                           type="checkbox"
                           name="admin_ids"
                           value={m.user_id}
+                          defaultChecked={
+                            modal === "settings" &&
+                            data.admins.some(
+                              (r) =>
+                                r.schedule_id === selected &&
+                                r.user_id === m.user_id,
+                            )
+                          }
                         />
                         {m.display_name}
                       </label>
@@ -1010,13 +1093,15 @@ export default function Scheduler({
                     ? "Save draft"
                     : modal === "job"
                       ? "Add job"
-                      : modal === "schedule"
-                        ? "Create schedule"
-                        : modal === "publish"
-                          ? "Publish all drafts"
-                          : modal === "archive"
-                            ? "Archive"
-                            : "Restore"}
+                      : modal === "settings"
+                        ? "Save settings"
+                        : modal === "schedule"
+                          ? "Create schedule"
+                          : modal === "publish"
+                            ? "Publish all drafts"
+                            : modal === "archive"
+                              ? "Archive"
+                              : "Restore"}
               </button>
             </div>
           </form>

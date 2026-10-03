@@ -220,7 +220,7 @@ try {
     ),
   );
   const checks = [];
-  for (const suite of ["rotas.sql"]) {
+  for (const suite of ["rotas.sql", "rota-settings.sql"]) {
     const result = sql(
       readFileSync(
         new URL("../tests/database/" + suite, import.meta.url),

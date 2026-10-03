@@ -85,6 +85,36 @@ export async function reviewRaceChecks({
   messages.push(
     "PASS: next read observes both changed shift and changed schedule revision",
   );
+  const settingsChange =
+    "select public.save_rota('50000000-0000-0000-0000-000000000001',jsonb_build_object('action','update_schedule','schedule_id',(select id from public.rota_schedules where name='Race'),'revision',(select revision from public.rota_schedules where name='Race'),'name','Race','time_zone','America/New_York','agent_ids',(select jsonb_agg(agent_id) from public.rota_agents where schedule_id=(select id from public.rota_schedules where name='Race')),'admin_ids',jsonb_build_array('00000000-0000-0000-0000-000000000202')));";
+  first = asyncSql(
+    "set application_name='ct_alt_race';begin;" +
+      actorSql +
+      settingsChange +
+      "select pg_sleep(2);commit;",
+  );
+  await waitingTransaction();
+  const competing = await Promise.all([
+    first,
+    asyncSql(actorSql + changeTitle("Stale after settings")),
+  ]);
+  if (
+    competing[0].status !== 0 ||
+    competing[1].status !== 3 ||
+    !competing[1].stderr.includes("40001")
+  )
+    throw Error("Settings/shift edit serialization failed");
+  messages.push(
+    "PASS: settings edit serializes with shift writes and rejects stale revision",
+  );
+  if (
+    read().shifts.find((s) => s.id === oldShift.id).title !==
+    "Second concurrent update"
+  )
+    throw Error("Settings race changed draft");
+  messages.push(
+    "PASS: settings concurrency preserves unchanged draft and publication state",
+  );
   sql(
     "insert into public.rota_shifts(tenant_id,schedule_id,agent_id,job_id,starts_at,ends_at,status,published_at)select '50000000-0000-0000-0000-000000000001',s.id,a.id,j.id,'2027-02-01T09:00:00Z','2027-02-01T17:00:00Z','published',now() from public.rota_schedules s join public.rota_jobs j on j.schedule_id=s.id cross join public.agents a where s.name='Main' and j.name='Care' and a.phone='+447700900203';update public.rota_schedules set status='archived' where name='Main';",
   );
@@ -137,7 +167,9 @@ export async function reviewRaceChecks({
       "select public.save_agents('50000000-0000-0000-0000-000000000001',jsonb_build_array(jsonb_build_object('action','restore','id',(select id from public.agents where phone='+447700900203'),'revision',(select revision from public.agents where phone='+447700900203'))));",
   );
   first = asyncSql(
-    "set application_name='ct_alt_race';begin;delete from public.rota_admins where schedule_id=(select id from public.rota_schedules where name='Main') and user_id='00000000-0000-0000-0000-000000000202';select pg_sleep(2);commit;",
+    "set application_name='ct_alt_race';begin;" +
+      actorSql +
+      "select public.save_rota('50000000-0000-0000-0000-000000000001',jsonb_build_object('action','update_schedule','schedule_id',(select id from public.rota_schedules where name='Main'),'revision',(select revision from public.rota_schedules where name='Main'),'name','Main','time_zone','Europe/London','agent_ids',(select jsonb_agg(agent_id) from public.rota_agents where schedule_id=(select id from public.rota_schedules where name='Main')),'admin_ids','[]'::jsonb));select pg_sleep(2);commit;",
   );
   await waitingTransaction();
   second = asyncSql(
@@ -151,7 +183,7 @@ export async function reviewRaceChecks({
   )
     throw Error("Delegated-grant revocation race failed");
   messages.push(
-    "PASS: delegated grant revocation blocks a queued manager mutation",
+    "PASS: schedule settings revoke delegated grant and block a queued manager mutation",
   );
   return messages;
 }

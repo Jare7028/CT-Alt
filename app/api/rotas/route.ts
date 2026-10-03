@@ -18,6 +18,16 @@ const change = z.discriminatedUnion("action", [
     .strict(),
   z
     .object({
+      action: z.literal("update_schedule"),
+      ...base,
+      name,
+      time_zone: z.string().min(1).max(100).refine(supportedRotaZone),
+      agent_ids: z.array(z.uuid()).min(1).max(1000),
+      admin_ids: z.array(z.uuid()).max(100),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal("add_job"),
       ...base,
       name,

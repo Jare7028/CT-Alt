@@ -52,7 +52,7 @@ create index rota_shift_agent_time on public.rota_shifts(tenant_id,agent_id,star
 create index rota_shift_schedule_time on public.rota_shifts(tenant_id,schedule_id,starts_at);
 create table public.rota_audit (
  id bigint generated always as identity primary key, tenant_id uuid not null, schedule_id uuid not null,
- actor_user_id uuid not null, action text not null check(action in ('create_schedule','add_job','save_shift','publish','archive','restore')),
+ actor_user_id uuid not null, action text not null check(action in ('create_schedule','update_schedule','add_job','save_shift','publish','archive','restore')),
  revision integer not null, occurred_at timestamptz not null default now(),
  foreign key(tenant_id,schedule_id) references public.rota_schedules(tenant_id,id),
  foreign key(tenant_id,actor_user_id) references public.tenant_memberships(tenant_id,user_id)
@@ -103,7 +103,7 @@ begin
  if not found then raise exception using errcode='42501',message='Company access denied'; end if;
  role_name:=workforce_private.membership_role(target_tenant);
  if role_name is null then raise exception using errcode='42501',message='Company access denied'; end if;
- if jsonb_typeof(change) is distinct from 'object' or octet_length(change::text)>16000 or op is null or op not in ('create_schedule','add_job','save_shift','publish','archive','restore') then
+ if jsonb_typeof(change) is distinct from 'object' or octet_length(change::text)>16000 or op is null or op not in ('create_schedule','update_schedule','add_job','save_shift','publish','archive','restore') then
  raise exception using errcode='22023',message='Invalid scheduling action'; end if;
  if exists(select 1 from jsonb_object_keys(change) k where k not in ('action','schedule_id','revision','name','time_zone','agent_ids','admin_ids','color','id','agent_id','job_id','starts_at','ends_at','title','allow_overlap')) then
  raise exception using errcode='22023',message='Unknown scheduling field'; end if;
@@ -130,7 +130,28 @@ begin
   if (change->>'revision')::integer is distinct from s.revision then raise exception using errcode='40001',message='Schedule changed. Reload before saving'; end if;
   if s.status='archived' and op<>'restore' then raise exception using errcode='22023',message='Restore the schedule first'; end if;
   if op='restore' and s.status<>'archived' then raise exception using errcode='22023',message='Schedule is already active'; end if;
-  if op='add_job' then
+   if op='update_schedule' then
+   if role_name not in ('owner','admin') then raise exception using errcode='42501',message='Only owners and admins edit schedule settings'; end if;
+   if jsonb_typeof(change->'agent_ids') is distinct from 'array' or jsonb_array_length(change->'agent_ids') not between 1 and 1000 or jsonb_typeof(change->'admin_ids') is distinct from 'array' or jsonb_array_length(change->'admin_ids')>100 then raise exception using errcode='22023',message='Choose users and administrators'; end if;
+   select array_agg(distinct value::uuid) into ids from jsonb_array_elements_text(change->'agent_ids');
+   select array_agg(distinct value::uuid) into admins from jsonb_array_elements_text(change->'admin_ids');
+   perform 1 from public.agents where tenant_id=target_tenant and id=any(ids) for share;
+   if (select count(*) from public.agents where tenant_id=target_tenant and id=any(ids))<>cardinality(ids) then raise exception using errcode='22023',message='Users must belong to this company'; end if;
+   perform 1 from public.tenant_memberships m join public.agents a on a.tenant_id=m.tenant_id and a.user_id=m.user_id where a.tenant_id=target_tenant and a.id=any(ids) for share of m;
+   if exists(select 1 from public.agents a left join public.tenant_memberships m on m.tenant_id=a.tenant_id and m.user_id=a.user_id where a.tenant_id=target_tenant and a.id=any(ids) and not exists(select 1 from public.rota_agents r where r.tenant_id=target_tenant and r.schedule_id=sid and r.agent_id=a.id) and (a.status<>'active' or (a.user_id is not null and m.status is distinct from 'active'))) then raise exception using errcode='22023',message='New users must be active in this company'; end if;
+   perform 1 from public.tenant_memberships where tenant_id=target_tenant and user_id=any(admins) for share;
+   if (select count(*) from public.tenant_memberships where tenant_id=target_tenant and user_id=any(admins) and ((status='active' and role in ('owner','admin','manager')) or exists(select 1 from public.rota_admins r where r.tenant_id=target_tenant and r.schedule_id=sid and r.user_id=tenant_memberships.user_id)))<>coalesce(cardinality(admins),0) then raise exception using errcode='22023',message='Invalid schedule administrator'; end if;
+   -- Retained shifts are commitments. Removing their assignment would either
+   -- hide them from the employee or violate the tenant-bound foreign key.
+   if exists(select 1 from public.rota_shifts where tenant_id=target_tenant and schedule_id=sid and not (agent_id=any(ids))) then
+    raise exception using errcode='22023',message='Cannot remove a user with retained shifts';
+   end if;
+   update public.rota_schedules set name=btrim(change->>'name'),time_zone=change->>'time_zone' where id=sid;
+   delete from public.rota_agents where tenant_id=target_tenant and schedule_id=sid and not (agent_id=any(ids));
+   insert into public.rota_agents select target_tenant,sid,unnest(ids) on conflict do nothing;
+   delete from public.rota_admins where tenant_id=target_tenant and schedule_id=sid and not (user_id=any(coalesce(admins,'{}'::uuid[])));
+   insert into public.rota_admins select target_tenant,sid,unnest(admins) on conflict do nothing;
+  elsif op='add_job' then
    insert into public.rota_jobs(tenant_id,schedule_id,name,color) values(target_tenant,sid,btrim(change->>'name'),change->>'color');
   elsif op='save_shift' then
    aid:=(change->>'agent_id')::uuid; jid:=(change->>'job_id')::uuid;
