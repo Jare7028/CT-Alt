@@ -1,8 +1,8 @@
 # Tenant and Agents foundation review
 
-Status: proposed migration, locally tested; not applied to a hosted database.
+Status: applied once to the independent CT Alt hosted project by the parent; recorded version `20261003143058`. Do not replay. This document describes the foundation migration; see `AGENTS_REVIEW.md` for the proposed record-management additions.
 
-Migration: `migrations/20261003141241_workforce_foundation.sql`.
+Migration: `migrations/20261003143058_workforce_foundation.sql`.
 
 ## Scope
 
@@ -33,7 +33,7 @@ PUBLIC/anon execution is revoked. Authenticated may execute this internal lookup
 - Suspensions are evaluated from stored membership/company state on subsequent database statements rather than JWT role metadata. Long-lived transactions retain PostgreSQL snapshot semantics; account-management transaction design is still pending.
 - Membership role values are constrained. No platform/global-admin role exists.
 - Active tenants require a recognized PostgreSQL timezone. Shift instants, overnight/DST behavior, scheduling conflicts and optimistic edit revisions belong to the scheduling migration and are not implemented or claimed here.
-- Owner transfer, last-owner preservation, deactivation audit, membership invitations and atomic account provisioning remain required parts of Agents. Service-role callers could violate business-level lifecycle rules today; do not enable a management UI before those operations are implemented and tested.
+- Owner transfer, last-owner preservation, deactivation audit, membership invitations and atomic account provisioning remain required parts of Agents. Service-role callers could violate business-level lifecycle rules; membership/ownership management must wait for those operations to be implemented and tested. The proposed Agents RPC protects owners and provides atomic archive/restore handling.
 
 ## Recorded local verification
 
@@ -43,6 +43,6 @@ Coverage includes explicit privilege denial, tenant isolation, per-company roles
 
 `npm run check`, `npm run build` and `git diff --check` also passed after these changes. The proposed CI step runs the isolated database suite without remote credentials; this branch's CI has not yet been run.
 
-## Parent application gate
+## Parent application gate (completed for foundation)
 
-Verify the exact independent target and its Free plan, inspect its current schema/migration history, then apply only the migration SQL through the parent-controlled connection. Never apply `tests/database/bootstrap.sql` remotely. Do not change another project's Auth or schema settings. After applying, verify table grants, policies, helper ownership/search_path, exposed schemas and database security advisors on the target. Preserve the migration's recorded version and do not replay it.
+The parent verified the exact independent target and Free plan, applied the foundation once and checked grants/RLS/helper exposure. For subsequent migrations, verify target identity and current history before parent-controlled application. Never apply `tests/database/bootstrap.sql` remotely. Do not change another project's Auth or schema settings. After applying, verify table grants, policies, helper ownership/search_path, exposed schemas and database security advisors on the target. Preserve the migration's recorded version and do not replay it.

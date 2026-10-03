@@ -1,0 +1,15 @@
+# Proposed initial Users slice
+
+Apply only `20261003143120_agents_records.sql` to the independently verified CT Alt project after the already-applied foundation (`20261003143058`). Do not apply test bootstrap/fixtures remotely. No Auth hook, account provisioning, invitation delivery, storage resource or paid dependency is added.
+
+The migration creates `agent_fields`, `agents`, `agent_audit` and a signed-user `save_agents` RPC. The public wrapper is an invoker; the internal definer has an empty search path and qualified references. API exposure must continue excluding `workforce_private`. Browser roles have SELECT only on tables and cannot forge audit events, roles, IDs, links or tenant ownership.
+
+Owners/admins can add/edit/archive/restore agents in their active company. Managers can read the directory; employees read only their own linked active record. Company-specific required custom fields are checked in SQL, including clients that bypass Next.js validation. Phone numbers are company-unique; a linked Auth identity is company-unique. Edits check expected revisions under row locks. Batch records and audit entries commit together or roll back together. Actor/company locks coordinate suspension with writes.
+
+Archive keeps record/history and suspends only the linked company membership. Auth accounts and other company memberships remain. Self archive/restore and every owner archive/restore are blocked; ownership transfer is deliberately absent. Restoring an admin gives employee membership, not previous admin privileges. Membership and audit changes happen in the same transaction as the record. Account linkage/role management remain privileged setup operations, absent from this UI/RPC.
+
+Verify after remote application: migration history, table/function grants, RLS policies, composite foreign keys/uniques, internal helper exposure, and unauthenticated denial. Use approved synthetic accounts only for hosted end-user acceptance; provisioning those accounts needs a separately authorized owner process. Runtime needs only the project URL and genuine public publishable key in the two documented env variables. No service-role environment variable is needed.
+
+Local SQL tests emulate the Auth identity contract and include two concurrent-transaction checks. Actual local Auth/browser/API tests additionally cover sign-in/out, required-field UI, add/edit/search/export/archive/restore, manager read-only UI, cross-company API denial, CSRF origin rejection, and an existing admin session losing access on archive and retaining only employee access on restore. These do not establish hosted configuration or email delivery.
+
+The source reference image could not be materialized: the authorized Library prepare call succeeded, but the prescribed downloader failed with a proxy tunnel `403 Forbidden`. The implementation uses the supplied text observations; no pixel comparison or visual parity claim is made. No private reference file is included in this public repository.

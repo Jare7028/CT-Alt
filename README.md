@@ -4,7 +4,11 @@ An independently implemented workforce application. Agents and their access perm
 
 ## Current state
 
-This repository contains an original Next.js/TypeScript foundation and a static development landing page. A proposed database migration defines tenant memberships and read-access policies; it has not been applied remotely or connected to the app. Authentication screens, Agents management and scheduling are not implemented yet. No database, hosting integration, external service or production data is connected to the app.
+The review branch adds real end-user sign-in and a company-scoped Users directory: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
+
+This is an initial Users slice, not competitor feature parity. Invites, imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
+
+The independent hosted foundation is established. The Agents migration is proposed for parent-controlled review/application; this branch does not apply remote migrations, merge or deploy main. Local browser verification uses actual isolated Supabase Auth and synthetic data, not the hosted database.
 
 ## Run locally
 
@@ -12,18 +16,29 @@ Use Node.js 24 and npm:
 
 ```sh
 npm ci
-npm run dev
+npm run check
+npm run test:config
+npm run test:db
+npm run build
 ```
 
-Open http://127.0.0.1:5180. No environment variables or provider accounts are needed for this scaffold.
+The app fails closed without approved configuration. Supply only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The URL must match the verified independent CT Alt project or its isolated local API. Never use another application's URL/key, a service key or a secret key. An inherited process environment overrides `.env.local`; clear conflicting variables explicitly when starting this project.
+
+For actual Auth/browser tests, start the isolated local Supabase stack defined by `supabase/config.toml` using Supabase CLI. Its project is `ct-alt-independent` and API port is 54821; do not reset or stop other projects. Use `SUPABASE_USE_SLIM_IMAGES=true` in limited executors. The test setup enforces this loopback project, creates only synthetic local fixtures and writes an ignored local public configuration. It never sends invitations. A local service key is held only in the setup process; it is neither added to the app nor written to the fixture file.
 
 ```sh
-npm run check
-npm run build
-npm start
+# Run setup afresh before each browser suite; it restores synthetic roles.
+npm run test:local:setup
+# Build and run with the local configuration, clearing inherited app settings.
+env -u NEXT_PUBLIC_SUPABASE_URL -u NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY npm run build
+env -u NEXT_PUBLIC_SUPABASE_URL -u NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY npm start
+# In another terminal:
+npm run test:browser
 ```
 
-`check` runs strict linting and TypeScript validation. The initial CI repeats these checks and builds the application. Feature acceptance tests will be added with the corresponding implementation; a successful scaffold build is not evidence of workforce functionality.
+The setup uses `supabase` from PATH, or `CT_ALT_SUPABASE_CLI` for an explicitly chosen CLI binary. Browser tests use Chromium at `/usr/bin/chromium`, overridable with `CT_ALT_CHROMIUM`. They use plain HTTP on loopback only; no certificate validation bypass is configured. Test screenshots/results stay ignored and are not uploaded by CI.
+
+CI runs lint, TypeScript, project-boundary assertions, isolated SQL assertions and a production build. The full local Auth/browser suite requires the explicit local stack and is not yet run in CI.
 
 ## Delivery sequence
 
@@ -39,17 +54,17 @@ npm start
 - Use synthetic test data. Keep credentials, session files, real people/company records and database exports out of source, logs and CI artifacts.
 - `.env.example` contains documentation only. Actual local environment files and provider bindings are ignored.
 - No existing application source, branding, proprietary documents or migration history has been imported.
-- Hosted deployment and database connection remain separate setup steps. Do not provision paid resources or enable billing automatically.
+- Hosted runtime configuration and each migration remain separate reviewed setup steps. Do not provision paid resources or enable billing automatically.
 
 CI uses a standard Ubuntu runner for this public repository, with no uploaded artifacts or persistent cache. It has read-only repository permissions and no deployment steps or provider secrets.
 
 Public visibility does not choose an open-source license. No license grant is added by this scaffold; dependency licenses remain their respective authors'.
 
-## Proposed database foundation
+## Database foundation and proposed Agents migration
 
-`supabase/migrations/20261003141241_workforce_foundation.sql` creates only `tenants`, `tenant_memberships`, RLS policies and internal helpers. Roles are owner, admin, manager and employee. Active members can read their companies; employees can read only their own membership; managers/admins/owners can read their company's directory. Suspended companies/memberships, anonymous Auth users and unconfirmed identities have no access. User-editable metadata cannot grant access.
+`supabase/migrations/20261003143058_workforce_foundation.sql` creates only `tenants`, `tenant_memberships`, RLS policies and internal helpers. Roles are owner, admin, manager and employee. Active members can read their companies; employees can read only their own membership; managers/admins/owners can read their company's directory. Suspended companies/memberships, anonymous Auth users and unconfirmed identities have no access. User-editable metadata cannot grant access.
 
-Browser roles cannot create or mutate tenants/memberships. No signup hook, invitation delivery, global-admin role, service credential or account-provisioning RPC is included. Those operations need tested server authorization and audit handling with the Agents implementation. Do not mistake this migration for a completed Agents module.
+Browser roles cannot create or mutate tenants/memberships. No signup hook, invitation delivery, global-admin role, application service credential or account-provisioning RPC is included. Those later operations need tested server authorization and audit handling. The Agents record RPC is added in a separate proposed migration.
 
 The privileged service role bypasses RLS. Never expose it to browsers, and never use it for ordinary user reads. Future scheduling records should use composite tenant-bound foreign keys to memberships; application filtering alone is insufficient.
 
