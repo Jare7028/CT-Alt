@@ -15,16 +15,15 @@
 .profile-name:hover { text-decoration:underline; }
 .profile-card p { color:#526476;line-height:1.6;margin:20px 0 0;font-size:12px; }
 .profile-editor { margin-bottom:18px; }
-.profile-edit-dialog { width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;border:0;border-radius:12px;padding:24px; }
-.profile-edit-dialog::backdrop { background:#21364e88; }
-.profile-edit-dialog h2 { margin:0;font-size:20px;letter-spacing:normal; }
-.profile-edit-dialog p { font-size:13px;line-height:1.6;color:#526476; }
-.profile-edit-dialog fieldset { margin:20px 0;border:1px solid #dce4ed;border-radius:8px;padding:16px; }
-.profile-edit-dialog legend { font-size:14px;font-weight:600;padding:0 6px; }
-.profile-edit-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
-.profile-edit-grid label { display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:0; }
-.profile-edit-grid input { width:100%;min-width:0;border:1px solid #c7d5e5;border-radius:6px;padding:9px;color:#21364e;font:inherit; }
-.profile-edit-grid span { color:#647588;font-size:11px;line-height:1.5; }
-.profile-edit-actions { display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px; }
-@media(max-width:500px) { .profile-edit-grid { grid-template-columns:1fr; }.profile-edit-dialog { padding:16px; } }
+
+.profile-card .profile-field-value { width:100%;text-align:left;border:1px solid transparent;border-radius:4px;background:transparent;padding:3px 5px;margin:-3px -5px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5; }
+.profile-card .profile-field-value:hover { border-color:#c7d5e5; }
+.profile-editor .profile-card input { width:100%;min-width:0;padding:6px 8px;font:inherit; }
+.profile-edit-help,.profile-save-status { color:#526476;font-size:13px;line-height:1.6; }
+.profile-save-status { display:flex;align-items:center;gap:8px; }
+.profile-saving-dot { width:7px;height:7px;border-radius:50%;background:#1473d3;animation:profile-save-bounce .7s ease-in-out infinite alternate; }
+.profile-navigation-notice { padding:14px;border:1px solid #d5dce3;border-radius:8px;margin:14px 0;line-height:1.5; }
+.profile-navigation-notice button { margin-right:8px; }
+@keyframes profile-save-bounce { from { transform:translateY(2px); } to { transform:translateY(-2px); } }
+@media(prefers-reduced-motion:reduce) { .profile-saving-dot { animation:none; } }
 @media(max-width:700px) { .profile-main { padding:12px; }.profile-heading,.profile-card { padding:18px; }.profile-heading { flex-wrap:wrap; }.profile-heading h1 { font-size:22px; }.profile-company { max-width:140px;font-size:12px; }.profile-card dl { grid-template-columns:1fr; }.profile-back { font-size:12px; } }
