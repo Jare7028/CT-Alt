@@ -39,7 +39,7 @@ export default function EditDetails({agent,fields,actorId}:{agent:Agent;fields:A
   function marker(value:'pending'|'unknown'|'saved'|null) {ownMarker.current=true;try{if(value)sessionStorage.setItem(storageKey,JSON.stringify({status:value,revision:revision.current}));else sessionStorage.removeItem(storageKey);}catch{/* Storage is optional; authorization and revision checks remain server-side. */}}
   function focus() {requestAnimationFrame(()=>{if(isLocked())alert.current?.focus();else input.current?.focus();});}
   function fail(message:string,stop=false) {if(stop){locked.current=true;marker('unknown');}if(mounted.current){setError(message);setStatus('Not saved.');setBlocked(stop);focus();}}
-  function navigate(href:string) {allowExit.current=true;if(hasSaved.current)marker('saved');const url=new URL(href,location.href);if(url.origin===location.origin)router.push(url.pathname+url.search+url.hash);else location.assign(url.href);}
+  function navigate(href:string) {allowExit.current=true;if(hasSaved.current && !isLocked())marker('saved');const url=new URL(href,location.href);if(url.origin===location.origin)router.push(url.pathname+url.search+url.hash);else location.assign(url.href);}
   function begin(key:string) {
     if(inFlight.current){nextField.current=key;return;}
     if(isLocked()){focus();return;}
@@ -87,7 +87,7 @@ export default function EditDetails({agent,fields,actorId}:{agent:Agent;fields:A
     mounted.current=true;
 
     const click=(event:MouseEvent)=>{const link=(event.target as Element)?.closest?.('a[href]') as HTMLAnchorElement|null;if(!link || event.defaultPrevented || event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target==='_blank' || link.hasAttribute('download') || allowExit.current)return;if(handlers.current.exit(link.href))event.preventDefault();};
-    const departure=()=>{if(allowExit.current)return;if(editing.current && changed(confirmed.current,editing.current))void handlers.current.save();if(inFlight.current)marker('pending');else if(hasSaved.current)marker('saved');};
+    const departure=()=>{if(allowExit.current || isLocked())return;if(editing.current && changed(confirmed.current,editing.current))void handlers.current.save();if(inFlight.current)marker('pending');else if(hasSaved.current)marker('saved');};
     const unload=(event:BeforeUnloadEvent)=>{if(allowExit.current)return;departure();if(inFlight.current || isLocked() || editing.current && changed(confirmed.current,editing.current)){event.preventDefault();event.returnValue='';}};
     const navigation=(event:Event)=>{const move=event as Event & {navigationType?:string};if(move.navigationType==='traverse')departure();};
     const navigationApi=(window as Window & {navigation?:EventTarget}).navigation;

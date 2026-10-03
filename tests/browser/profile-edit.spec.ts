@@ -53,6 +53,28 @@ test('native Back keeps the save alive and a lost acknowledgement requires revie
   const title=await field(page,'Title');await title.fill('Saved during native Back');await page.goBack();await expect(page).toHaveURL(origin+'/agents?company='+f.tenantA);await expect.poll(async()=>(await rows(page)).find(agent=>agent.id===original.id)?.title).toBe('Saved during native Back');release();await page.goForward();await expect(page.locator('.profile-editor').getByRole('alert')).toContainText('earlier save outcome');await expect(page.getByRole('button',{name:'Edit Title',exact:true})).toBeDisabled();await page.unroute('**/api/agents');await page.getByRole('button',{name:'Reload latest details',exact:true}).click();await expect(page.getByRole('button',{name:'Edit Title',exact:true})).toHaveText('Saved during native Back');await expect(page.getByRole('button',{name:'Edit Title',exact:true})).toBeEnabled();expect((await audit(page,original.id))).toHaveLength(2);
  } finally {release();await page.unroute('**/api/agents');}
 });
+for (const departure of ['explicit leave','browser Back'] as const) {
+ test(`an acknowledged save followed by a committed lost acknowledgement retains unknown recovery after ${departure} and return`,async({page})=>{
+  await login(page);const name=departure==='explicit leave'?'RecoveryLeave':'RecoveryBack',original=await create(page,name);
+  await page.goto('/agents?company='+f.tenantA);await page.getByRole('searchbox',{name:'Search users',exact:true}).fill(original.phone);await page.getByRole('link',{name:`View details for ${name} Synthetic`,exact:true}).click();
+  const title=await field(page,'Title');await title.fill('Acknowledged title');await title.press('Tab');await expect(page.getByRole('status')).toHaveText('Saved.');
+  const key=`ct-alt:profile-outcome:v1:${f.accounts.owner.id}:${f.tenantA}:${original.id}`;
+  const outcome=()=>page.evaluate(storageKey=>JSON.parse(sessionStorage.getItem(storageKey) || 'null'),key);
+  expect(await outcome()).toEqual({status:'saved',revision:2});
+  const team=await field(page,'Team');await team.fill('Committed unacknowledged team');
+  await page.route('**/api/agents',async route=>{await route.fetch();await route.abort();});
+  await team.press('Tab');await expect(page.locator('.profile-editor').getByRole('alert')).toContainText('save outcome is unknown');await page.unroute('**/api/agents');
+  expect((await rows(page)).find(agent=>agent.id===original.id)).toMatchObject({title:'Acknowledged title',team:'Committed unacknowledged team',revision:3});
+  expect(await outcome()).toEqual({status:'unknown',revision:2});
+  if(departure==='explicit leave') {
+   await page.getByRole('link',{name:'Back to Users',exact:true}).click();await expect(page.getByRole('region',{name:'Pending navigation'})).toBeVisible();await page.getByRole('button',{name:'Leave without further changes',exact:true}).click();
+  } else await page.goBack();
+  await expect(page).toHaveURL(origin+'/agents?company='+f.tenantA);expect(await outcome()).toEqual({status:'unknown',revision:2});
+  if(departure==='browser Back')await page.goForward();else await profile(page,original);
+  await expect(page.locator('.profile-editor').getByRole('alert')).toContainText(/save outcome (?:is unknown|was not confirmed)/);await expect(page.locator('.profile-editor').getByRole('alert')).toContainText('before editing');await expect(page.getByRole('button',{name:'Edit Title',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Edit Team',exact:true}).or(page.getByRole('textbox',{name:'Team',exact:true}))).toBeDisabled();expect(await outcome()).toEqual({status:'unknown',revision:2});
+  await page.getByRole('button',{name:'Reload latest details',exact:true}).click();await expect(page.getByRole('button',{name:'Edit Title',exact:true})).toHaveText('Acknowledged title');await expect(page.getByRole('button',{name:'Edit Team',exact:true})).toHaveText('Committed unacknowledged team');await expect(page.getByRole('button',{name:'Edit Team',exact:true})).toBeEnabled();expect((await audit(page,original.id))).toHaveLength(3);
+ });
+}
 test('manager and employee profile viewers have no field-edit controls or server mutation permission',async({page})=>{
  await login(page);const original=await create(page,'Permissions'),employee=(await rows(page)).find(agent=>agent.user_id===f.accounts.employee.id)!;
  for(const [role,agent] of [['manager',original],['employee',employee]] as const) {await login(page,role);await page.goto(`/agents/${agent.id}?company=${f.tenantA}`);await expect(page.getByRole('button',{name:/^Edit /})).toHaveCount(0);expect((await page.request.post('/api/agents',{headers:{Origin:origin},data:{tenantId:f.tenantA,changes:[{action:'update',id:agent.id,revision:agent.revision,...input(agent),title:'Denied'}]}})).status()).toBe(403);}
