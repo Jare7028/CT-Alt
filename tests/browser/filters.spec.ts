@@ -15,7 +15,7 @@ test('quick/advanced AND/OR, inclusive dates, remove/reset and CSV use the same 
  await page.getByLabel('Filter users',{exact:true}).click();const panel=page.getByRole('region',{name:'User filters'});
  await panel.getByRole('button',{name:'+ Add filter',exact:true}).click();await panel.getByLabel('Value filter 1',{exact:true}).selectOption(north);
  await expect(page.locator('.pagination')).toContainText('of 28');
- const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export visible users'}).click();
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export all matching users'}).click();
  const csv=readFileSync((await (await download).path())!,'utf8');expect(csv.trim().split('\r\n')).toHaveLength(29);expect(csv).toContain('Person 27');expect(csv).not.toContain('Person 28');
  await panel.getByRole('button',{name:'Advanced filters',exact:true}).click();
  await panel.getByRole('button',{name:'+ Add filter',exact:true}).click();
