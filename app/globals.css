@@ -1,0 +1,19 @@
+:root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; color: #192c2a; background: #f6f7f3; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1080px; margin: auto; padding: 36px 48px; }
+header { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; }
+.mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; color: white; background: #285c4c; }
+.status { margin-left: auto; padding: 8px 12px; border: 1px solid #cbd5cb; border-radius: 24px; font-size: 12px; font-weight: 500; }
+section { max-width: 760px; padding: 94px 0 72px; }
+.eyebrow { margin: 0 0 16px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #456152; }
+h1 { margin: 0; font-size: clamp(42px, 6.5vw, 76px); line-height: 1.05; letter-spacing: -.055em; font-weight: 600; }
+.intro { max-width: 550px; margin: 26px 0 40px; color: #52615a; font-size: 19px; line-height: 1.65; }
+.next-up { display: flex; align-items: flex-start; gap: 22px; padding: 28px; background: #fff; border: 1px solid #d6ddd4; border-radius: 16px; }
+.step { padding: 13px; background: #e7efe6; border-radius: 10px; color: #285c4c; font-size: 14px; }
+.next-up .eyebrow { margin: 0 0 8px; }
+h2 { margin: 0; font-size: 24px; letter-spacing: -.03em; }
+.next-up p:last-child { margin: 10px 0 0; line-height: 1.6; color: #52615a; max-width: 460px; }
+.notice { max-width: 560px; margin: 22px 0 0; font-size: 14px; line-height: 1.6; color: #52615a; }
+footer { border-top: 1px solid #d6ddd4; padding-top: 22px; color: #52615a; font-size: 13px; }
+@media (max-width: 560px) { main { padding: 24px; } section { padding: 65px 0 48px; } .next-up { padding: 22px 18px; gap: 14px; } .intro { font-size: 17px; } }
