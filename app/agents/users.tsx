@@ -8,6 +8,7 @@ import type { Agent, AgentField, AgentInput, Company, Member } from '../../lib/a
 import ImportUsers, { type ImportResult } from './import-users';
 import Filters, { useDirectoryFilters } from './filters';
 import { blankFilters, filterAgents, filterFields } from '../../lib/agent-filters';
+import AppShell, { ShellIcon } from '../components/app-shell';
 import './users.css';
 import './[agentId]/profile.css';
 
@@ -102,10 +103,8 @@ export default function Users({ companies,company,members,agents: initial,fields
     return {status:'saved',count:records.length,warning};
   }
   async function signout() {setBusy(true);try {const result=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(!result.ok)throw new Error('Sign out failed. Try again.');router.replace('/login');router.refresh();}catch(error){setError(error instanceof Error?error.message:'Sign out failed.');setBusy(false);}}
-  return <div className="users-app">
-    <div className="app-bar"><Link className="brand" href="/">CT Alt</Link><label className="company-switch"><span className="sr-only">Company</span><select value={company.id} onChange={event=>router.push(`/agents?company=${event.target.value}`)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><button onClick={signout} disabled={busy}>Sign out</button></div>
-    <aside className="rail" aria-label="Modules"><Link href="/agents" aria-label="Users" aria-current="page">♙</Link></aside>
-    <main className="users-main"><header className="users-heading"><span className="users-icon" aria-hidden="true">♙</span><h1>Users</h1></header>
+  return <AppShell activeModule="users" companyId={company.id} companyName={company.name} accountName={currentMembers.find(item=>item.user_id===actorId)?.display_name} companyControl={<label><span className="sr-only">Company</span><select value={company.id} onChange={event=>router.push(`/agents?company=${event.target.value}`)}>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>} accountControls={<button onClick={signout} disabled={busy}>Sign out</button>}><div className="users-app">
+    <main className="users-main"><header className="users-heading"><span className="users-icon"><ShellIcon name="users"/></span><h1>Users</h1></header>
       {notice ? <p role="status" className="feedback">{notice}</p> : null}{error && !dialog ? <p role="alert" className="error">{error}</p> : null}
       {directoryFilters.state.restored ? <p role="alert" className="error">{directoryFilters.state.restored==='removed' ? 'Some saved filter conditions were removed because their fields or operators are no longer available.' : 'Saved filter conditions could not be restored and were reset.'} Your results and export may include more users. Review the filters or choose Reset all to clear this notice.</p> : null}
       <div className="directory-card"><div role="tablist" aria-label="User status" className="tabs">{(['users','admins','archived'] as const).map(value=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>{setTab(value);setPage(0);}}>{value[0].toUpperCase()+value.slice(1)} <span>({agents.filter(a=>value==='archived'?a.status==='archived':a.status==='active'&&(value!=='admins'||admin(a))).length})</span></button>)}</div>
@@ -124,5 +123,5 @@ export default function Users({ companies,company,members,agents: initial,fields
       <div className="dialog-footer"><div>{error ? <p role="alert" className="error">{error}</p> : populated.some(row=>!valid(row,fields)) ? <p>Complete the names, a valid mobile number and required company fields in every started row.</p> : <p>{editing ? 'Changes apply to this company only.' : 'Blank rows will be ignored.'}</p>}</div><button type="button" disabled={busy} onClick={()=>form.current?.close()}>Cancel</button><button className="primary" disabled={!ready || busy}>{busy?'Saving…':'Confirm'}</button></div>
     </form></dialog>
     <dialog ref={confirmation} className="confirm-dialog" aria-labelledby="confirm-title" onClose={()=>setDialog(null)} onCancel={event=>{if(busy)event.preventDefault();}}><h2 id="confirm-title">{confirm?.action==='archive'?'Archive':'Restore'} {confirm?.agent.first_name} {confirm?.agent.last_name}?</h2><p>{confirm?.action==='archive'?'Their history is retained and linked company access will be suspended.':'Their history is retained. Linked access returns as an ordinary user; admin permissions require separate promotion.'}</p>{error?<p role="alert" className="error">{error}</p>:null}<div><button disabled={busy} onClick={()=>confirmation.current?.close()}>Cancel</button><button className="primary" disabled={busy} onClick={archive}>{busy?'Saving…':confirm?.action==='archive'?'Archive':'Restore'}</button></div></dialog>
-  </div>;
+  </div></AppShell>;
 }
