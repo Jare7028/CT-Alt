@@ -159,3 +159,7 @@ Quick Tasks supports owner/admin drafts, publishing, edits, archive/restore and 
 ## Team timesheets
 
 Owners/admins can review completed team time entries with inclusive company-calendar dates, retained user names, exact range totals and precise paging. Complete CSV uses the whole selected date/user scope, independently of displayed pages, and refuses scopes above10,000 entries. See [Team timesheets acceptance](docs/team-timesheets-acceptance.md); run `node scripts/test-team-timesheets-integration.mjs` for isolated real Auth/browser checks. Payroll, manual edits, approvals and full Time Clock parity remain further work.
+
+## Conversation message search
+
+Desktop Chat can search literal message text within a currently joined conversation, with exact counts and precise paged sequences. Search pauses read marking; Clear resumes normal Chat. Current actor/company/conversation checks preserve private groups and revoke access on subsequent reads. See [search acceptance](docs/chat-search-acceptance.md). Global search, attachments and full Chat parity remain further work.

@@ -1,5 +1,5 @@
 # CT Alt — Codex takeover
-Updated 3 October 2026, 22:53 UTC. Recheck remote heads, credentials and deployments before acting.
+Updated 3 October 2026, 23:27 UTC. Recheck remote heads, credentials and deployments before acting.
 
 ## Goal and working style
 Build the complete workforce application using Connecteam as the functional and visual reference, with original code/assets and CT Alt branding. The owner wants feature-by-feature and workflow parity, then later customisation. Do not silently narrow this to an MVP or claim affiliation. The latest direction prioritises desktop functionality; defer mobile polish while building supported workflows. Consult current public Connecteam guides for each module. Track actual implementation, tests, deployments and gaps in [FEATURE_COVERAGE.md](FEATURE_COVERAGE.md).
@@ -15,7 +15,7 @@ Own delivery: inspect a bounded reference area, implement, test, review, merge, 
 - Public source must contain no secrets, real workforce data, private screenshots or documents. Use synthetic fixtures only. App configuration permits only this verified project or the explicit isolated loopback stack; no application service-role credential.
 
 ## Latest verified release
-Main017c57b878c712ad444bdf353446b01dc920be74 is production READY on dpl_H4meT14svgMcZrpRtugKT5D1UnAe, aliased to ct-alt.vercel.app. Public login renders; unsigned Quick Tasks/Time Clock/Overview/Activity/Chat/Rotas pages redirect to login and valid unsigned API queries return401. Real-account authenticated production acceptance was not exercised. Exact current Connecteam visual parity remains unverified.
+Maincb3f6931ebf4773fe3cab9e8f19aaf7641987af8 is production READY on dpl_AU96UAmL3HK2XLVKyoGBqANYRhmh, aliased to ct-alt.vercel.app. Public login renders; unsigned Quick Tasks/Time Clock/Overview/Activity/Chat/Rotas pages redirect to login and valid unsigned API queries return401. Real-account authenticated production acceptance was not exercised. Exact current Connecteam visual parity remains unverified.
 
 PR18 reviewed head23641bc303ea33fe7a205c5731e2888969cb84e8/tree5cca66da62586f7a65b3538415afcc2c446ce32f merged017c57b878c712ad444bdf353446b01dc920be74. CI37158960575 passed. Quick Tasks desktop lifecycle, shared/individual assignments, role-scoped completion, exact counts/paging/search and bounded searched assignee selection are released. Final56 config/query,82 isolated SQL/race and6 fresh real Auth/API/browser cases passed, plus check/build and independent final review. Actualmigration20261003222455 is byte-identical and was applied once with20 prior public table counts and18 prior function definitions/owners/ACLs retained.
 
@@ -37,7 +37,7 @@ PR16 consistent Overview counts reviewed headc5beca7d72b42aded9512bc63eea8f2bbcf
 All final candidate trees passed check/build and independent review. Production READY/alias was verified per release. PR5 is merged through the preserved Chat work; no implementation was discarded. Chat posting denial invalidates earlier responses so delayed lists cannot restore composer permissions. Overview counts now share one STABLE SECURITY INVOKER statement snapshot; PR16 mergecc68777b51877cf0f734fdd7a19751fff0dfd20d is READY on production dpl_5ovK7pn9PuzdkTn6LmJFkmqKWbBG with ct-alt.vercel.app alias; CI37156487306 passed. Refreshed activity formatting follows the response timezone. Read [OVERVIEW_REVIEW.md](OVERVIEW_REVIEW.md), [CHAT_REVIEW.md](CHAT_REVIEW.md) and scheduling acceptance notes for limits.
 
 ## Actual applied database history
-All ten hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
+All twelve hosted migration statements were reread and matched released repository SQL byte-for-byte on3 October. Preserve their exact identities and contents; never replay or rename an applied baseline.
 
 - 20261003143058_workforce_foundation
 - 20261003153745_agents_records
@@ -49,6 +49,8 @@ All ten hosted migration statements were reread and matched released repository 
 - 20261003215840_time_clock_baseline
 - 20261003222455_quick_tasks
 - 20261003225247_team_timesheets
+- 20261003231213_chat_message_search
+- 20261003232647_chat_search_execute_permissions
 
 The migration endpoint assigns the actual recorded timestamp. The previously unapplied settings and Chat filenames were matched to those returned versions after application; SQL bytes did not change. Settings preserves existing data and mutation-function identity/owner/ACL/definer/search path. Security advisory findings are unchanged from the pre-migration baseline (the existing rls_auto_enable executable-definer warnings and leaked-password protection setting). Do not silently change unrelated Auth/advisory configuration. No production fixture records or messages were created.
 
@@ -84,4 +86,4 @@ Time Clock adds one INFO advisory for RLS enabled without policies on private ti
 
 Next worktrees: /workspace/ct-alt-quick-tasks (released reviewed desktop consumer); /workspace/ct-alt-team-timesheets (isolated owner/admin review/summary/export and additive per-row Auth policy optimisation). Integrator owns shared pages/navigation, migration application, real Auth acceptance and release. The private receipt advisory is intentional; the Time Clock auth_rls_initplan performance warning is resolved through the new semantically equivalent additive policy migration. Applied baselines remain immutable.
 
-Quick Tasks candidate passed independent final review,check/build,56 configs,82 SQL/race assertions and6 fresh real Auth/API/browser desktop cases. Its additive migration20261003222455 was applied once with exact SQL and all20 existing table counts/18 prior function definitions/owners/ACLs retained. PR18 consumer CI/merge/production verification is recorded above. Team-timesheet candidate passed independent final review, combined check/build,64 config/query,46 team SQL/upgrade/snapshot and111 retained Clock assertions plus6 fresh real Auth/API/browser cases. SQL20261003225247 was applied once with exact byte match;23 prior table counts and25 function definitions/owners/ACLs retained, security advisories unchanged and the Clock per-row Auth warning resolved. Consumer CI/merge/production verification remains pending. Conversation message search is next in /workspace/ct-alt-chat-search, with API and UI workers; preserve Chat membership by Auth user, rather than altering authorization on agent-record relinks.
+Quick Tasks candidate passed independent final review,check/build,56 configs,82 SQL/race assertions and6 fresh real Auth/API/browser desktop cases. Its additive migration20261003222455 was applied once with exact SQL and all20 existing table counts/18 prior function definitions/owners/ACLs retained. PR18 consumer CI/merge/production verification is recorded above. Team-timesheet candidate passed independent final review, combined check/build,64 config/query,46 team SQL/upgrade/snapshot and111 retained Clock assertions plus6 fresh real Auth/API/browser cases. SQL20261003225247 was applied once with exact byte match;23 prior table counts and25 function definitions/owners/ACLs retained, security advisories unchanged and the Clock per-row Auth warning resolved. PR19 CI37160469769 passed; reviewed headcf6d4aeddf63b38fb2347f1a5ac0a948127e8b16 mergedcb3f6931ebf4773fe3cab9e8f19aaf7641987af8 and productiondpl_AU96UAmL3HK2XLVKyoGBqANYRhmh is READY with expected SHA/alias. Conversation search now passes72 combined configs,37 isolated SQL,29 synthetic and6 fresh signed Auth/browser cases; both recorded migrations match reviewed bytes and preserve23 prior table counts/30 other function definitions/owners/ACLs. Consumer release remains pending. Time Off requests/types/approvals are underway in /workspace/ct-alt-time-off; preserve Chat membership by Auth user, rather than altering authorization on agent-record relinks.

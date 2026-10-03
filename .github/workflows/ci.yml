@@ -40,4 +40,6 @@ jobs:
         run: npm run test:quick-tasks:db
       - name: Test team timesheet snapshots and exports
         run: npm run test:team-timesheets:db
+      - name: Test joined-conversation message search
+        run: npm run test:chat-search:db
       - run: npm run build

@@ -21,8 +21,19 @@ if (existsSync(route))
 mkdirSync(route);
 writeFileSync(
   `${route}/page.tsx`,
-  `import Chat from '../chat/chat';
-export default function Fixture(){return <Chat company={{id:'40000000-0000-4000-8000-000000000001',name:'Synthetic Company'}} companies={[{id:'40000000-0000-4000-8000-000000000001',name:'Synthetic Company'}]} actorId="00000000-0000-4000-8000-000000000001" management={true}/>;}`,
+  `"use client";
+import {useState} from 'react';
+import Chat from '../chat/chat';
+const first = {id:'40000000-0000-4000-8000-000000000001',name:'Synthetic Company'};
+const second = {id:'40000000-0000-4000-8000-000000000099',name:'Second Synthetic Company'};
+export default function Fixture(){
+ const [company,setCompany] = useState(first);
+ const [actor,setActor] = useState('00000000-0000-4000-8000-000000000001');
+ return <><div aria-label="Synthetic scope controls">
+ <button onClick={()=>setCompany(current=>current.id===first.id?second:first)}>Switch synthetic company</button>
+ <button onClick={()=>setActor(current=>current.endsWith('001')?'00000000-0000-4000-8000-000000000099':'00000000-0000-4000-8000-000000000001')}>Switch synthetic actor</button>
+ </div><Chat company={company} companies={[first,second]} actorId={actor} management={true}/></>;
+}`,
 );
 const server = spawn(
   process.execPath,

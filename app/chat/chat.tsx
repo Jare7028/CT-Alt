@@ -9,25 +9,35 @@ import type {
   GroupInfo,
   GroupMember,
 } from "../../lib/chat-types";
+import type {
+  ChatSearchData,
+  ChatSearchMessage,
+} from "../../lib/chat-search-types";
 import { mergeMessages } from "../../lib/chat-state";
 import "./chat.css";
 type Company = { id: string; name: string };
 type Pending = { conversationId: string; clientId: string; body: string };
 class AccessError extends Error {}
 class PostingError extends Error {}
-export default function Chat({
-  company,
-  companies,
-  actorId,
-  management,
-  canViewActivity = false,
-}: {
+type ChatProps = {
   company: Company;
   companies: Company[];
   actorId: string;
   management: boolean;
   canViewActivity?: boolean;
-}) {
+};
+export default function Chat(props: ChatProps) {
+  return (
+    <ChatContent key={`${props.company.id}:${props.actorId}`} {...props} />
+  );
+}
+function ChatContent({
+  company,
+  companies,
+  actorId,
+  management,
+  canViewActivity = false,
+}: ChatProps) {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [info, setInfo] = useState<GroupInfo | null>(null);
@@ -46,6 +56,42 @@ export default function Chat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [hasOlder, setHasOlder] = useState(false);
+  const [messageQuery, setMessageQuery] = useState("");
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchedQuery, setSearchedQuery] = useState("");
+  const [searchMessages, setSearchMessages] = useState<ChatSearchMessage[]>([]);
+  const [searchTotal, setSearchTotal] = useState<number | null>(null);
+  const [searchCursor, setSearchCursor] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const searchEpoch = useRef(0);
+  const searchController = useRef<AbortController | null>(null);
+  const searchModeRef = useRef(false);
+  const mounted = useRef(true);
+  const invalidateSearch = useCallback(() => {
+    searchEpoch.current++;
+    searchController.current?.abort();
+    searchController.current = null;
+    setSearchLoading(false);
+    setSearchMessages([]);
+    setSearchTotal(null);
+    setSearchCursor(null);
+    setSearchedQuery("");
+    setSearchError("");
+  }, []);
+  const clearSearch = useCallback(() => {
+    invalidateSearch();
+    searchModeRef.current = false;
+    setSearchMode(false);
+    setMessageQuery("");
+  }, [invalidateSearch]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      searchController.current?.abort();
+    };
+  }, []);
   const generation = useRef(0);
   const selectedRef = useRef(selected);
   const bottom = useRef<HTMLDivElement>(null);
@@ -57,47 +103,61 @@ export default function Chat({
         body: JSON.stringify({ tenantId: company.id, payload }),
         cache: "no-store",
       });
-      const response = await result.json();
+      const response = (await result.json().catch(() => {
+        if (result.status === 401 || result.status === 403) return {};
+        throw new Error("Chat is unavailable.");
+      })) ?? {};
       if (!result.ok) {
         if (response.kind === "posting_restricted")
           throw new PostingError(response.error);
         if (result.status === 401 || result.status === 403)
-          throw new AccessError(response.error);
+          throw new AccessError(
+            response.error || "Conversation access is unavailable.",
+          );
         throw new Error(response.error || "Chat is unavailable.");
       }
       return response.data;
     },
     [company.id],
   );
-  const fail = useCallback((reason: unknown) => {
-    setError(reason instanceof Error ? reason.message : "Chat is unavailable.");
-    if (reason instanceof PostingError) {
-      // A list requested before this denial may still claim posting is allowed.
-      // Invalidate its response before hiding the composer.
-      generation.current++;
-      setBusy(false);
-      setConversations((current) =>
-        current.map((item) =>
-          item.id === selectedRef.current ? { ...item, can_post: false } : item,
-        ),
+  const fail = useCallback(
+    (reason: unknown) => {
+      setError(
+        reason instanceof Error ? reason.message : "Chat is unavailable.",
       );
-      setPending(null);
-    }
-    if (reason instanceof AccessError) {
-      setInfo(null);
-      setEditPeople([]);
-      generation.current++;
-      selectedRef.current = "";
-      setSelected("");
-      setMessages([]);
-      setConversations([]);
-      setPeople([]);
-      setBody("");
-      setPending(null);
-      setCreating(null);
-      setBusy(false);
-    }
-  }, []);
+      if (reason instanceof PostingError) {
+        // A list requested before this denial may still claim posting is allowed.
+        // Invalidate its response before hiding the composer.
+        generation.current++;
+        clearSearch();
+        setBusy(false);
+        setConversations((current) =>
+          current.map((item) =>
+            item.id === selectedRef.current
+              ? { ...item, can_post: false }
+              : item,
+          ),
+        );
+        setPending(null);
+      }
+      if (reason instanceof AccessError) {
+        clearSearch();
+        setInfo(null);
+        setEditPeople([]);
+        generation.current++;
+        selectedRef.current = "";
+        setSelected("");
+        setMessages([]);
+        setConversations([]);
+        setPeople([]);
+        setBody("");
+        setPending(null);
+        setCreating(null);
+        setBusy(false);
+      }
+    },
+    [clearSearch],
+  );
   useEffect(() => {
     let disposed = false;
     let running = false;
@@ -114,7 +174,7 @@ export default function Chat({
           fail(new AccessError("Conversation access is unavailable."));
           return;
         }
-        if (selected) {
+        if (selected && !searchModeRef.current) {
           let latest: ChatMessage[];
           do {
             const initial = lastSequence === 0;
@@ -123,14 +183,23 @@ export default function Chat({
               conversationId: selected,
               ...(initial ? {} : { after: lastSequence }),
             });
-            if (disposed || token !== generation.current) return;
+            if (
+              disposed ||
+              token !== generation.current ||
+              searchModeRef.current
+            )
+              return;
             setMessages((current) => mergeMessages(current, latest));
             if (initial) setHasOlder(latest.length === 100);
             if (latest.length) lastSequence = latest.at(-1)!.sequence;
             // Reconnect can miss more than a page. Drain every new sequence
             // before advancing the read position, without discarding history.
           } while (latest.length === 100);
-          if (lastSequence && document.visibilityState === "visible")
+          if (
+            lastSequence &&
+            !searchModeRef.current &&
+            document.visibilityState === "visible"
+          )
             await request({
               action: "read",
               conversationId: selected,
@@ -139,7 +208,15 @@ export default function Chat({
         }
         if (!disposed && token === generation.current) setError("");
       } catch (reason) {
-        if (!disposed && token === generation.current) fail(reason);
+        // Switching into search pauses history, but a denial from a history
+        // request already in flight still governs this same conversation.
+        if (
+          mounted.current &&
+          token === generation.current &&
+          (!disposed ||
+            (reason instanceof AccessError && selectedRef.current === selected))
+        )
+          fail(reason);
       } finally {
         running = false;
       }
@@ -155,7 +232,131 @@ export default function Chat({
       window.removeEventListener("online", reconnect);
       document.removeEventListener("visibilitychange", reconnect);
     };
-  }, [selected, request, fail]);
+  }, [selected, request, fail, searchMode]);
+  async function searchConversation(older = false) {
+    if (!selected || busy || (older && (!searchCursor || searchLoading)))
+      return;
+    const normalized = older ? searchedQuery : messageQuery.trim();
+    if (!normalized || normalized.length > 100) return;
+    const cursor = older ? searchCursor : null;
+    searchController.current?.abort();
+    const controller = new AbortController();
+    searchController.current = controller;
+    const epoch = ++searchEpoch.current;
+    const token = generation.current;
+    searchModeRef.current = true;
+    setSearchMode(true);
+    setSearchedQuery(normalized);
+    setSearchLoading(true);
+    setSearchError("");
+    if (!older) {
+      setSearchMessages([]);
+      setSearchTotal(null);
+      setSearchCursor(null);
+    }
+    try {
+      const params = new URLSearchParams({
+        tenantId: company.id,
+        conversationId: selected,
+        query: normalized,
+      });
+      if (cursor) params.set("cursor", cursor);
+      const result = await fetch(`/api/chat/search?${params}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const response = (await result.json().catch(() => ({}))) ?? {};
+      if (
+        controller.signal.aborted ||
+        epoch !== searchEpoch.current ||
+        token !== generation.current
+      )
+        return;
+      if (!result.ok) {
+        if (result.status === 401 || result.status === 403)
+          throw new AccessError(
+            response.error || "Conversation access is unavailable.",
+          );
+        throw new Error(
+          response.error || "Message search is unavailable. Try again.",
+        );
+      }
+      const data = response as ChatSearchData;
+      if (
+        !data ||
+        data.tenantId !== company.id ||
+        data.actorId !== actorId ||
+        data.conversationId !== selected ||
+        data.query !== normalized ||
+        !Number.isSafeInteger(data.total) ||
+        data.total < 0 ||
+        !Array.isArray(data.messages) ||
+        data.total < data.messages.length ||
+        !(
+          data.nextCursor === null ||
+          (typeof data.nextCursor === "string" && data.nextCursor.length > 0)
+        ) ||
+        (data.nextCursor !== null && data.messages.length === 0)
+      )
+        throw new Error(
+          "Message search returned an invalid response. Try again.",
+        );
+      let previous: bigint | null =
+        older && searchMessages.length
+          ? BigInt(searchMessages.at(-1)!.sequence)
+          : null;
+      for (const message of data.messages) {
+        if (
+          !message ||
+          typeof message !== "object" ||
+          message.conversation_id !== selected ||
+          typeof message.sequence !== "string" ||
+          !/^[1-9][0-9]{0,18}$/.test(message.sequence) ||
+          BigInt(message.sequence) > 9223372036854775807n ||
+          (previous !== null && BigInt(message.sequence) >= previous) ||
+          typeof message.body !== "string" ||
+          typeof message.sender_name !== "string" ||
+          typeof message.sender_id !== "string" ||
+          typeof message.created_at !== "string" ||
+          !Number.isFinite(Date.parse(message.created_at))
+        )
+          throw new Error(
+            "Message search returned an invalid response. Try again.",
+          );
+        previous = BigInt(message.sequence);
+      }
+      setSearchMessages((current) => {
+        const seen = new Set(current.map((message) => message.sequence));
+        return older
+          ? [
+              ...current,
+              ...data.messages.filter((message) => !seen.has(message.sequence)),
+            ]
+          : data.messages;
+      });
+      setSearchTotal(data.total);
+      setSearchCursor(data.nextCursor);
+    } catch (reason) {
+      if (
+        controller.signal.aborted ||
+        epoch !== searchEpoch.current ||
+        token !== generation.current
+      )
+        return;
+      if (reason instanceof AccessError) fail(reason);
+      else
+        setSearchError(
+          reason instanceof Error
+            ? reason.message
+            : "Message search is unavailable. Try again.",
+        );
+    } finally {
+      if (epoch === searchEpoch.current && token === generation.current) {
+        setSearchLoading(false);
+        searchController.current = null;
+      }
+    }
+  }
   const newestSequence = messages.at(-1)?.sequence;
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "nearest" });
@@ -163,6 +364,7 @@ export default function Chat({
   const choose = (id: string) => {
     if (id === selected) return;
     generation.current++;
+    clearSearch();
     setBusy(false);
     setCreating(null);
     setInfo(null);
@@ -178,6 +380,7 @@ export default function Chat({
   };
   const active = conversations.find((item) => item.id === selected);
   async function start(kind: "direct" | "group") {
+    clearSearch();
     const token = ++generation.current;
     setBusy(false);
     setError("");
@@ -194,6 +397,7 @@ export default function Chat({
     }
   }
   const cancelCreate = () => {
+    clearSearch();
     generation.current++;
     setCreating(null);
     setPeople([]);
@@ -254,12 +458,14 @@ export default function Chat({
     }
   }
   function closeInfo() {
+    clearSearch();
     generation.current++;
     setInfo(null);
     setEditPeople([]);
     setBusy(false);
   }
   async function openInfo() {
+    clearSearch();
     const token = ++generation.current;
     setBusy(true);
     setError("");
@@ -309,6 +515,7 @@ export default function Chat({
   async function saveGroup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!info || busy) return;
+    clearSearch();
     const token = ++generation.current;
     setBusy(true);
     setError("");
@@ -356,7 +563,18 @@ export default function Chat({
       companyName={company.name}
       companyId={company.id}
       activeModule="chat"
-      moduleLinks={{'quick-tasks':`/quick-tasks?company=${encodeURIComponent(company.id)}`, 'time-clock':`/time-clock?company=${encodeURIComponent(company.id)}`,  overview: management ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: canViewActivity ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      moduleLinks={{
+        "quick-tasks": `/quick-tasks?company=${encodeURIComponent(company.id)}`,
+        "time-clock": `/time-clock?company=${encodeURIComponent(company.id)}`,
+        overview: management
+          ? `/overview?company=${encodeURIComponent(company.id)}`
+          : undefined,
+        activity: canViewActivity
+          ? `/activity?company=${encodeURIComponent(company.id)}`
+          : undefined,
+        chat: `/chat?company=${encodeURIComponent(company.id)}`,
+        rotas: `/rotas?company=${encodeURIComponent(company.id)}`,
+      }}
       companyControl={
         <label className="chat-company">
           Company{" "}
@@ -440,7 +658,11 @@ export default function Chat({
         </form>
       )}
       {info && (
-        <form className="chat-info" aria-label="Chat Info" onSubmit={saveGroup}>
+        <form
+          className="chat-info"
+          aria-label="Chat Info"
+          onSubmit={saveGroup}
+        >
           <h2>Chat Info — {info.name}</h2>
           <p>{info.description}</p>
           <p>New members can read earlier messages.</p>
@@ -553,7 +775,9 @@ export default function Chat({
           )}
           {conversations
             .filter((item) =>
-              item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+              item.name
+                .toLocaleLowerCase()
+                .includes(query.toLocaleLowerCase()),
             )
             .map((item) => (
               <button
@@ -605,30 +829,132 @@ export default function Chat({
                 )}
                 {active.description && <p>{active.description}</p>}
               </div>
-              <div className="chat-history" role="log" aria-label="Messages">
-                {hasOlder && (
-                  <button onClick={() => void older()}>
-                    Load earlier messages
+              <form
+                className="chat-message-search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void searchConversation();
+                }}
+              >
+                <label htmlFor="chat-message-search">
+                  Search this conversation
+                </label>
+                <input
+                  id="chat-message-search"
+                  type="search"
+                  maxLength={100}
+                  value={messageQuery}
+                  placeholder="Find a message…"
+                  disabled={busy}
+                  onChange={(event) => {
+                    invalidateSearch();
+                    setMessageQuery(event.target.value);
+                    if (!event.target.value.trim()) clearSearch();
+                  }}
+                />
+                <button
+                  disabled={busy || !messageQuery.trim() || searchLoading}
+                >
+                  Search messages
+                </button>
+                {(messageQuery || searchMode) && (
+                  <button type="button" onClick={clearSearch}>
+                    Clear search
                   </button>
                 )}
-                {messages.length === 0 && <p>Start the conversation.</p>}
-                {messages.map((message) => (
-                  <article
-                    key={message.sequence}
-                    className={message.sender_id === actorId ? "mine" : ""}
-                  >
-                    <strong>{message.sender_name}</strong>
-                    <p>{message.body}</p>
-                    <time dateTime={message.created_at}>
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  </article>
-                ))}
-                <div ref={bottom} />
-              </div>
+              </form>
+              {searchMode ? (
+                <section
+                  className="chat-message-results"
+                  aria-label="Message search results"
+                  aria-busy={searchLoading}
+                >
+                  <div className="chat-results-heading">
+                    <h3>
+                      {searchedQuery
+                        ? `Results for “${searchedQuery}”`
+                        : "Message search"}
+                    </h3>
+                    {searchTotal !== null && (
+                      <p>
+                        {searchTotal}{" "}
+                        {searchTotal === 1
+                          ? "matching message"
+                          : "matching messages"}{" "}
+                        · Newest first
+                      </p>
+                    )}
+                    {!searchedQuery && (
+                      <p>
+                        Search to view matching messages in this conversation.
+                      </p>
+                    )}
+                    {searchError && <p role="alert">{searchError}</p>}
+                    {searchLoading && (
+                      <p role="status">
+                        {searchMessages.length
+                          ? "Loading older results…"
+                          : "Searching messages…"}
+                      </p>
+                    )}
+                    {searchTotal === 0 && !searchLoading && !searchError && (
+                      <p>No matching messages in this conversation.</p>
+                    )}
+                  </div>
+                  {searchMessages.map((message) => (
+                    <article
+                      key={message.sequence}
+                      data-sequence={message.sequence}
+                    >
+                      <strong>{message.sender_name}</strong>
+                      <time dateTime={message.created_at}>
+                        {new Date(message.created_at).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </time>
+                      <p>{message.body}</p>
+                    </article>
+                  ))}
+                  {searchCursor && (
+                    <button
+                      disabled={searchLoading || busy}
+                      onClick={() => void searchConversation(true)}
+                    >
+                      Load older results
+                    </button>
+                  )}
+                </section>
+              ) : (
+                <div
+                  className="chat-history"
+                  role="log"
+                  aria-label="Messages"
+                >
+                  {hasOlder && (
+                    <button onClick={() => void older()}>
+                      Load earlier messages
+                    </button>
+                  )}
+                  {messages.length === 0 && <p>Start the conversation.</p>}
+                  {messages.map((message) => (
+                    <article
+                      key={message.sequence}
+                      className={message.sender_id === actorId ? "mine" : ""}
+                    >
+                      <strong>{message.sender_name}</strong>
+                      <p>{message.body}</p>
+                      <time dateTime={message.created_at}>
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    </article>
+                  ))}
+                  <div ref={bottom} />
+                </div>
+              )}
               {active.can_post === false ? (
                 <p className="chat-posting-notice">
                   Only group admins can send messages in this group.
@@ -654,7 +980,9 @@ export default function Chat({
                     {busy ? "Sending…" : pending ? "Retry send" : "Send"}
                   </button>
                   {pending && !busy && (
-                    <p>Retry uses the same message ID to prevent duplicates.</p>
+                    <p>
+                      Retry uses the same message ID to prevent duplicates.
+                    </p>
                   )}
                 </form>
               )}
