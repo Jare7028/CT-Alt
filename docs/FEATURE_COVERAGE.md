@@ -14,8 +14,8 @@ Latest application release: `bdf5ddb53f305ecbdebf47e0b553b8323eb8684d`. Vercel p
 | Client Rotas | PR7 baseline and PR12 settings/recovery; 32 config, 134 combined rota SQL assertions, populated upgrade preservation and seven real local Auth/API/browser cases pass | On main and production; baseline/settings history verified | open shifts, swaps, templates, repeats, requests and pagination |
 | Chat | PR5/14 persistent direct/group messages, unread history, group administration and posting permissions; 28 config, 274 SQL, 13 component regressions and both real local Auth acceptance runners pass | On main and production; both migration histories verified | attachments, replies, search, moderation, Realtime and complete appearance/mobile fidelity |
 
-| Overview/Activity | Exact counts, owner/admin audit, action/calendar filters, safe bigint keyset, access rechecks;40 config/query tests and4 real local Auth/browser cases | On main and production | One-snapshot count consistency in progress; attendance, engagement, alerts, other audit streams and full reference parity |
-| Time Clock | Server/UI implementation in progress: jobs, clock-in/out, manual breaks, Today and personal timesheets | Local work only | Complete isolated/real Auth integration and review; apply additive migration, deploy; payroll/GPS/approvals/manual edits remain future work |
+| Overview/Activity | Exact counts, owner/admin audit, action/calendar filters, safe bigint keyset, access rechecks;40 config/query tests and4 real local Auth/browser cases | On main and production | Consistent signed-user statement counts verified; attendance, engagement, alerts, other audit streams and full reference parity |
+| Time Clock | Desktop jobs, personal clock-in/out, manual paid/unpaid breaks, Today and own timesheets;48 config,111 SQL/race and6 real Auth/API/browser cases | Reviewed additive SQL applied; consumer release pending | Payroll/GPS/approvals/manual edits, automatic breaks and full reference parity |
 
 ## Wider workforce scope
 
