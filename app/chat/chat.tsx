@@ -354,6 +354,7 @@ export default function Chat({
       companyName={company.name}
       companyId={company.id}
       activeModule="chat"
+      moduleLinks={{ chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
       companyControl={
         <label className="chat-company">
           Company{" "}

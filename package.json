@@ -15,6 +15,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
     "test:db": "node scripts/test-database.mjs",
+    "test:rotas:db": "node scripts/test-rotas-database.mjs",
     "test:local:setup": "node scripts/setup-local-tests.mjs",
     "test:browser": "playwright test",
     "test:config": "node --test tests/config/*.test.mjs",

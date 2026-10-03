@@ -171,7 +171,7 @@ docker(
 for (const file of [
   "20261003143058_workforce_foundation.sql",
   "20261003153745_agents_records.sql",
-  "20261003171238_chat_conversations.sql",
+  "20261003210622_chat_conversations.sql",
 ])
   docker(
     [

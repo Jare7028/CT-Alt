@@ -12,7 +12,7 @@ Independent CT Alt implementation. Reference: [Connecteam Starting Guide to the 
 
 ## Security and integration
 
-New proposed migration: `supabase/migrations/20261003171238_chat_conversations.sql`. **Not applied to hosted Supabase. Parent owns final migration version, independent review, integration and deployment.** Depends on the existing workforce foundation only; no existing migration was edited. No `lib/agent-types.ts`, shared navigation, hosted settings, publications or storage changes. The parent-authorized proxy matcher additionally includes `/chat/:path*` so expired sessions refresh cookies on direct chat navigation; other Auth and Agents behavior is preserved.
+Recorded baseline migration: `supabase/migrations/20261003210622_chat_conversations.sql`. Applied once to hosted CT Alt after independent review; the repository filename matches the actual recorded version. Depends on the existing workforce foundation only; no existing migration was edited. No `lib/agent-types.ts`, shared navigation, hosted settings, publications or storage changes. The parent-authorized proxy matcher additionally includes `/chat/:path*` so expired sessions refresh cookies on direct chat navigation; other Auth and Agents behavior is preserved.
 
 Tables: `chat_conversations`, `chat_members`, `chat_messages`, `chat_reads`. Every table enables RLS and revokes default browser writes. SELECT policies call a private membership check tied to `auth.uid()`, current active tenant/company membership and conversation membership. User-editable metadata never authorizes access. Even tenant admins cannot access private conversations they have not joined.
 
@@ -47,7 +47,7 @@ The original branch run passed 15 configuration tests; the parent's merge-candid
 
 ## Group membership and posting slice
 
-The next proposed migration is `supabase/migrations/20261003183901_chat_group_permissions.sql`; parent must coordinate its final version and review before applying it. This slice depends on the reviewed first Chat slice. Hosted databases, Realtime, Storage, Auth and deployment settings remain untouched.
+The recorded group-permissions migration is `supabase/migrations/20261003210624_chat_group_permissions.sql`; the integration owner applied its unchanged reviewed SQL once. This slice depends on the reviewed first Chat slice. Only the reviewed additive Chat database migrations were applied; Realtime, Storage and Auth configuration remain unchanged.
 
 [Chat admin permissions](https://help.connecteam.com/en/articles/11047963-chat-admin-permissions) documents group-member admins and Chat Info assignment. [Adding and deleting team members](https://help.connecteam.com/en/articles/6457211-team-chats-adding-and-deleting-team-members) documents Edit Team with previously selected users and earlier-message access for additions. [Editing a group chat](https://help.connecteam.com/en/articles/6452007-how-to-edit-a-group-chat) documents the Allow members to send messages setting. These workflows support the implemented controls; this slice does not claim unseen menu geometry or the complete global Chat permissions system.
 
@@ -74,3 +74,7 @@ Review inspected the API schemas/error mapping, private invoker/definer routing,
 
 
 The candidate includes main `37229f9640235a3c2d8d3d9f08baa6b3cbc76144`, preserving the released profile editor, directory selection and responsive Users controls. Chat module links remain disabled until the hosted migration gate is satisfied.
+
+## Hosted coordination
+
+The reviewed migrations were applied once to CT Alt. Supabase recorded versions20261003210622_chat_conversations and20261003210624_chat_group_permissions. Repository filenames and local runners match that history; SQL bytes are unchanged. All five Chat tables have RLS, authenticated SELECT-only table access and no anonymous table access. Security advisory findings are unchanged from the pre-migration baseline. Company-aware Chat navigation is now enabled. Real-account production Auth acceptance and full reference parity remain unverified.

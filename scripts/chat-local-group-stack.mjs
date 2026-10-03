@@ -14,7 +14,7 @@ const result = spawnSync(
   ["exec", "-i", name, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "postgres"],
   {
     input: readFileSync(
-      "supabase/migrations/20261003183901_chat_group_permissions.sql",
+      "supabase/migrations/20261003210624_chat_group_permissions.sql",
     ),
     encoding: "utf8",
   },
