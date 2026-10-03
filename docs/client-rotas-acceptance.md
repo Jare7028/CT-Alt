@@ -18,7 +18,7 @@ The [official starting guide](https://help.connecteam.com/en/articles/4100339-st
 
 ## Permission and concurrency boundary
 
-`supabase/migrations/20261003191154_client_rotas.sql` registers the exact SQL retained in `docs/proposals/client-rotas.sql` (blob `b9a02a8cd36d895f6359403f17b615bafd0fcb4f`). The takeover handover records this migration as already applied to CT Alt. Current hosted history cannot be rechecked with this session’s Supabase permissions; do not replay the migration. The local runners load migration history once and do not separately load the proposal.
+`supabase/migrations/20261003191154_client_rotas.sql` registers the exact SQL retained in `docs/proposals/client-rotas.sql` (blob `b9a02a8cd36d895f6359403f17b615bafd0fcb4f`). The takeover handover records this migration as already applied to CT Alt. Hosted history was rechecked and matches this SQL exactly; do not replay the migration. The local runners load migration history once and do not separately load the proposal.
 
 Every child foreign key contains its tenant and relevant schedule. Exposed tables have RLS and explicit read grants; direct browser writes and anonymous access are revoked. The public RPC is an invoker wrapper over a fixed-search-path private definer, matching the existing Agents mutation boundary. Actor identity comes from `auth.uid()`; roles come from active, confirmed tenant membership.
 
@@ -44,7 +44,7 @@ Run `node scripts/test-rotas-database.mjs` for a fresh network-disabled temporar
 
 ## Integration and remaining work
 
-Client Rotas uses the shared desktop/mobile shell. Users, Agent profiles and module search link to `/rotas?company=<tenant-id>`; scheduling preserves the selected company when navigating back to Users. The additive `/rotas/:path*` proxy matcher persists refreshed Auth cookies on direct navigation. Existing Auth behavior is preserved. Deployment and authenticated hosted acceptance remain pending.
+Client Rotas uses the shared desktop/mobile shell. Users, Agent profiles and module search link to `/rotas?company=<tenant-id>`; scheduling preserves the selected company when navigating back to Users. The additive `/rotas/:path*` proxy matcher persists refreshed Auth cookies on direct navigation. Existing Auth behavior is preserved. Deployment is verified READY in production; real-account authenticated hosted acceptance remains unverified.
 
 Remaining: roster/admin editing after creation; agent-group qualification/permissions; unassigned shifts and capacity; open-shift claim/unclaim; swaps; templates; requests; notifications; confirmation/completion; repeating/all-day/group shifts; location/notes/tasks; job editing; draft deletion; safe published-edit/re-publish lifecycle; calendar virtualization/pagination; richer view options and job/layer views. No inactive controls imply these features exist.
 

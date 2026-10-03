@@ -140,6 +140,10 @@ Both reviewed Chat migrations have been applied once to CT Alt, and shared modul
 
 The integration branch adds named schedules, selected Agents, manager delegation, coloured jobs, draft shifts and explicit publication. Day/Week/Month boards show elapsed hours across overnight and daylight-saving changes. Employees can read only their own published shifts. Users and Agent profiles link to Client Rotas through the shared desktop/mobile shell.
 
-The migration `20261003191154_client_rotas` is registered using the exact SQL recorded as already applied in [the takeover handover](docs/CODEX_HANDOVER.md). Local runners apply migration history once. Do not replay it against hosted Supabase. This session cannot recheck hosted history; scheduling is not claimed as live until the expected production commit and authenticated workflow are verified. Run `npm run test:rotas:db` and the disposable fixture/browser acceptance in [the coverage notes](docs/client-rotas-acceptance.md).
+The migration `20261003191154_client_rotas` is registered using the exact SQL recorded as already applied in [the takeover handover](docs/CODEX_HANDOVER.md). Local runners apply migration history once. Do not replay it against hosted Supabase. Hosted history now matches the repository exactly and scheduling is deployed in production; real-account authenticated production acceptance remains unverified. Run `npm run test:rotas:db` and the disposable fixture/browser acceptance in [the coverage notes](docs/client-rotas-acceptance.md).
 
 The target remains full Connecteam feature and screen coverage, delivered module by module. See [feature coverage](docs/FEATURE_COVERAGE.md) for the distinction between existing production features, locally implemented work and remaining scope.
+
+## Overview and Activity
+
+Overview shows signed-user workforce counts and recent owner/admin user-change activity; Activity supports company-calendar filters and stable older-history pagination. Managers see counts without audit data; employees and foreign/revoked memberships are denied. See [Overview review](docs/OVERVIEW_REVIEW.md) and run `node scripts/test-overview-integration.mjs` for isolated real Auth acceptance. Individual summary counts currently lack a shared transactional snapshot; a consistency follow-up is tracked.
