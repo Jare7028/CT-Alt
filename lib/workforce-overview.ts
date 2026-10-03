@@ -8,6 +8,11 @@ const actions = ['created', 'updated', 'archived', 'restored'] as const;
 const uuid = z.uuid();
 const date = z.iso.date().refine(value => !value.startsWith('0000-'));
 const auditId = z.string().regex(/^[1-9][0-9]{0,18}$/).refine(value => BigInt(value) <= 9223372036854775807n);
+const count = z.number().int().nonnegative().refine(Number.isSafeInteger);
+const overviewCounts = z.object({
+  agents: z.object({ active: count, archived: count, linked: count, unlinked: count }).strict(),
+  memberships: z.object({ owner: count, admin: count, manager: count, employee: count }).strict(),
+}).strict().refine(value => value.agents.active === value.agents.linked + value.agents.unlinked);
 const cursorSchema = z.object({
   v: z.literal(1), tenantId: uuid, timeZone: z.string().min(1).max(100),
   action: z.enum(actions).nullable(), startDate: date.nullable(), endDate: date.nullable(),
@@ -134,15 +139,12 @@ export async function readActivity(client: SupabaseClient, tenantId: string, fil
 }
 export async function readOverview(client: SupabaseClient, tenantId: string): Promise<OverviewData> {
   const current = await access(client, tenantId);
-  const agentCount = (status: string) => client.from('agents').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', status);
-  const results = await Promise.all([
-    agentCount('active'), agentCount('archived'), agentCount('active').not('user_id', 'is', null), agentCount('active').is('user_id', null),
-    ...roles.map(role => client.from('tenant_memberships').select('user_id', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active').eq('role', role)),
-  ]);
-  if (results.some(result => result.error || !Number.isSafeInteger(result.count) || result.count! < 0)) throw new OverviewReadError('Overview counts could not be loaded.');
-  const counts = results.map(result => result.count!);
+  const { data, error } = await client.rpc('read_workforce_overview', { target_tenant: tenantId });
+  if (error?.code === '42501') throw new OverviewReadError('You do not have permission to view this company overview.', 403);
+  const counts = overviewCounts.safeParse(data);
+  if (error || !counts.success) throw new OverviewReadError('Overview counts could not be loaded.');
   const recent = canViewActivity(current.role) ? (await activityRows(client, current, { limit: 6 })).events : [];
   const latest = await recheck(client, current);
-  return { company: latest.company, role: latest.role, canViewActivity: canViewActivity(latest.role), agents: { active: counts[0], archived: counts[1], linked: counts[2], unlinked: counts[3] },
-    memberships: { owner: counts[4], admin: counts[5], manager: counts[6], employee: counts[7] }, recentActivity: recent };
+  return { company: latest.company, role: latest.role, canViewActivity: canViewActivity(latest.role), agents: counts.data.agents,
+    memberships: counts.data.memberships, recentActivity: recent };
 }

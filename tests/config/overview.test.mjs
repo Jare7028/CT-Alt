@@ -6,19 +6,20 @@ const tenantId='10000000-0000-4000-8000-000000000001', userId='10000000-0000-400
 const company={id:tenantId,name:'Synthetic Company',time_zone:'Europe/London',status:'active'};
 const at='2026-10-25T01:30:00.123456+00:00';
 const events=['9007199254740995','9007199254740994','9007199254740993'].map(id=>({id,agent_id:agentId,actor_user_id:userId,actor_name:'Synthetic owner',action:'updated',revision:2,occurred_at:at,private_payload:'never expose'}));
-function fixture({role='owner', denied=false, failCount=false, nullCount=false, failActivity=false, revoke=false}={}) {
+const exactCounts={agents:{active:2500,archived:17,linked:2200,unlinked:300},memberships:{owner:1,admin:2,manager:3,employee:2494}};
+function fixture({role='owner', denied=false, failCount=false, counts=exactCounts, failActivity=false, revoke=false, rpcDenied=false, changedRole, changedZone}={}) {
  const requests=[];let checked=0;
  const client=createClient('http://127.0.0.1:54821','synthetic-publishable-key',{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(raw,init)=>{
   const url=new URL(String(raw)), table=url.pathname.split('/').at(-1), params=url.searchParams;
-  requests.push({table,params,method:init.method,headers:new Headers(init.headers)});
+  requests.push({table,params,method:init.method,body:init.body,headers:new Headers(init.headers)});
   const result=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json',...headers}});
-  if(init.method==='HEAD') {
+  if(table==='read_workforce_overview') {
+   if(rpcDenied)return result({message:'access denied',code:'42501'},403);
    if(failCount)return result({message:'read failed',code:'XX000'},503);
-   const counts=table==='agents'?(params.get('status')==='eq.archived'?17:params.get('user_id')==='is.null'?300:params.get('user_id')==='not.is.null'?2200:2500):{owner:1,admin:2,manager:3,employee:2494}[params.get('role')?.slice(3)];
-   return new Response(null,{status:200,headers:nullCount?{}:{'Content-Range':`*/${counts}`}});
+   return result(counts);
   }
-  if(table==='tenants')return result(denied?[]:[company]);
-  if(table==='tenant_memberships'){checked++;return result(denied||revoke&&checked>1?[]:[{role}]);}
+  if(table==='tenants')return result(denied?[]:[{...company,time_zone:checked>1&&changedZone?changedZone:company.time_zone}]);
+  if(table==='tenant_memberships'){checked++;return result(denied||revoke&&checked>1?[]:[{role:checked>1&&changedRole?changedRole:role}]);}
   if(table==='agent_audit')return failActivity?result({message:'failed',code:'XX000'},503):result(events);
   if(table==='agents')return result([{id:agentId,first_name:'Synthetic',last_name:'agent',phone:'private'}]);
   throw new Error('Unexpected fixture request '+url);
@@ -27,27 +28,38 @@ function fixture({role='owner', denied=false, failCount=false, nullCount=false, 
  return {client,requests};
 }
 const rejectsStatus=(promise,status)=>assert.rejects(promise,error=>error.status===status);
-test('overview uses eight exact scoped server counts above directory limits and bounded safe activity',async()=>{
+test('overview uses one scoped snapshot RPC above directory limits and bounded safe activity',async()=>{
  const {client,requests}=fixture();const data=await readOverview(client,tenantId);
  assert.deepEqual(data.agents,{active:2500,archived:17,linked:2200,unlinked:300});
  assert.deepEqual(data.memberships,{owner:1,admin:2,manager:3,employee:2494});assert.equal(data.role,'owner');assert.equal(data.canViewActivity,true);
  assert.equal(data.recentActivity[0].id,'9007199254740995');assert.equal(data.recentActivity[0].agent_name,'Synthetic agent');assert.equal('private_payload' in data.recentActivity[0],false);
- const counts=requests.filter(request=>request.method==='HEAD');assert.equal(counts.length,8);
- for(const request of counts){assert.equal(request.headers.get('Prefer'),'count=exact');assert.equal(request.params.get('tenant_id'),'eq.'+tenantId);assert.equal(request.params.get('limit'),null);}
+ const counts=requests.filter(request=>request.table==='read_workforce_overview');assert.equal(counts.length,1);
+ assert.equal(counts[0].method,'POST');assert.deepEqual(JSON.parse(counts[0].body),{target_tenant:tenantId});assert.equal(counts[0].params.size,0);
+ assert.equal(requests.some(request=>request.method==='HEAD'),false);
  const audit=requests.find(request=>request.table==='agent_audit');assert.equal(audit.params.get('limit'),'7');assert.equal(audit.params.get('select'),'id::text,agent_id,actor_user_id,actor_name,action,revision,occurred_at');
  assert.equal(requests.filter(request=>request.table==='tenant_memberships'&&request.method!=='HEAD').length,2);
 });
 test('manager counts remain available without audit; employee and foreign/revoked access never return summaries',async()=>{
  const manager=fixture({role:'manager'});const data=await readOverview(manager.client,tenantId);assert.equal(data.canViewActivity,false);assert.deepEqual(data.recentActivity,[]);assert.equal(manager.requests.some(request=>request.table==='agent_audit'),false);
- for(const options of [{role:'employee'},{denied:true}]){const f=fixture(options);await rejectsStatus(readOverview(f.client,tenantId),403);assert.equal(f.requests.some(request=>request.method==='HEAD'),false);}
- await rejectsStatus(readOverview(fixture({revoke:true}).client,tenantId),403);
+ for(const options of [{role:'employee'},{denied:true}]){const f=fixture(options);await rejectsStatus(readOverview(f.client,tenantId),403);assert.equal(f.requests.some(request=>request.table==='read_workforce_overview'),false);}
+ for(const options of [{revoke:true},{rpcDenied:true},{changedRole:'manager'},{changedZone:'UTC'}])await rejectsStatus(readOverview(fixture(options).client,tenantId),403);
  await rejectsStatus(readActivity(fixture({revoke:true}).client,tenantId,{limit:2}),403);
  const managerActivity=fixture({role:'manager'});await rejectsStatus(readActivity(managerActivity.client,tenantId,{limit:2}),403);assert.equal(managerActivity.requests.some(request=>request.table==='agent_audit'),false);
 });
 test('failed or missing counts and failed activity reads are errors, never apparent zero results',async()=>{
- for(const options of [{failCount:true},{nullCount:true},{failActivity:true}])await rejectsStatus(readOverview(fixture(options).client,tenantId),503);
+ for(const options of [{failCount:true},{counts:null},{failActivity:true}])await rejectsStatus(readOverview(fixture(options).client,tenantId),503);
  await rejectsStatus(readActivity(fixture({failActivity:true}).client,tenantId,{limit:2}),503);
  const f=fixture();f.client.auth.getUser=async()=>({data:{user:null},error:null});await rejectsStatus(readOverview(f.client,tenantId),401);assert.equal(f.requests.length,0);
+});
+test('snapshot response rejects absent, malformed, negative, fractional, unsafe and incoherent counts',async()=>{
+ for(const counts of [{},[],{...exactCounts,agents:{}},{...exactCounts,memberships:{owner:1,admin:2,manager:3}},
+  ...[-1,0.5,Number.MAX_SAFE_INTEGER+1,'2500',null].map(active=>({...exactCounts,agents:{...exactCounts.agents,active}})),
+  {...exactCounts,agents:{...exactCounts.agents,linked:2201}},
+  {...exactCounts,memberships:{...exactCounts.memberships,employee:-1}}]) {
+  const f=fixture({counts});await rejectsStatus(readOverview(f.client,tenantId),503);assert.equal(f.requests.some(request=>request.table==='agent_audit'),false);
+ }
+ const empty=fixture({counts:{agents:{active:0,archived:0,linked:0,unlinked:0},memberships:{owner:1,admin:0,manager:0,employee:0}}});
+ assert.equal((await readOverview(empty.client,tenantId)).agents.active,0);
 });
 test('company calendar boundaries include DST days, fractional offsets and a skipped date without UTC fallback',()=>{
  assert.equal(companyDateBoundary('2026-10-25','Europe/London'),'2026-10-24T23:00:00.000Z');
