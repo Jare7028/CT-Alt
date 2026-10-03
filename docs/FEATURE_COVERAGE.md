@@ -4,15 +4,15 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Production commit verified at takeover: `db609caacaaf5d869add30c0c6ca56b95aa0eb49`. Vercel reports READY for this commit. Production authentication end-to-end testing has not been repeated in this session.
+Latest application release: `37229f9640235a3c2d8d3d9f08baa6b3cbc76144`. Vercel production `dpl_7exAWu1mk9T2vJvBD4x6YW2YoLn5` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents redirects to login. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
 | Sign-in and company access | Password and passwordless flows, confirmed identities, tenant boundaries; existing test suites | On main and production | Preserve the owner’s working login; verify delivery/configuration only when needed |
-| Users/Agents | Directory, search, advanced filters, sorting, columns, add/edit, archive/restore, CSV export, add-only import, read-only profiles | On main and production | Review PR9 autosave; PR8/13 selection and visual controls; invitations, update imports, configurable fields and permissions |
+| Users/Agents | Directory, search, filters, sorting, columns, add/edit, archive/restore, CSV import/export, inline profile autosave/recovery, selected-user export; all 32 local Auth/API/browser cases and responsive controls reviews pass | On main and production | Invitations, update imports, configurable fields, detailed permissions and larger-directory pagination |
 | Shared navigation | Topbar, grouped sidebar, collapse, mobile dialog and keyboard checks | On main and production | Enable each real module as released; full visual reference review |
-| Client Rotas | PR7 draft/publish, jobs, assignments, delegated managers, privacy and timezone tests; current integration adds shared navigation and migration alignment | Integration pending; handover records schema already applied | Verify hosted migration history; PR12 settings; open shifts, swaps, templates, repeats, requests, lifecycle and pagination |
-| Chat | PR5 persistent direct/group messages, unread counts and access boundaries; PR14 group administration | Open branches; hosted migration pending | Independent final review, local acceptance, migration coordination, attachments, replies, search, moderation and Realtime |
+| Client Rotas | PR7 baseline and PR12 settings/recovery; 32 config, 134 combined rota SQL assertions, populated upgrade preservation and seven real local Auth/API/browser cases pass | Draft PR7/12; baseline schema previously applied, settings migration unapplied | Restore CT Alt Supabase access; verify history, apply reviewed additive settings migration; open shifts, swaps, templates, repeats, requests and pagination |
+| Chat | PR5/14 persistent direct/group messages, unread history, group administration and posting permissions; 28 config, 274 SQL, 13 component regressions and both real local Auth acceptance runners pass | Open branches; hosted migration pending | Restore Supabase access and coordinate reviewed migrations; attachments, replies, search, moderation, Realtime and complete appearance/mobile fidelity |
 
 ## Wider workforce scope
 

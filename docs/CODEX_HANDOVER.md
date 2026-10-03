@@ -1,138 +1,67 @@
 # CT Alt — Codex takeover
-Updated 3 October 2026, 20:25 BST. Re-verify remote heads and deployments before acting.
+Updated 3 October 2026, 20:38 UTC. Re-verify remote heads and deployments before acting.
 
 ## Goal and working style
-Build the complete workforce application using Connecteam as the functional and visual reference. The owner wants close feature-by-feature and screen-by-screen parity, including navigation, layout and workflow details, before later customisation. Implement original code and assets; do not copy trademarks or claim affiliation. Do not silently narrow the goal to an MVP. Maintain a feature-coverage checklist that distinguishes implemented, tested, deployed and incomplete.
+Build the complete workforce application using Connecteam as the functional and visual reference. The owner wants close feature-by-feature and screen-by-screen parity, before later customisation. Use original code/assets and CT Alt branding. Do not silently narrow this to an MVP or claim affiliation. Track implemented, tested, deployed and incomplete scope in [FEATURE_COVERAGE.md](FEATURE_COVERAGE.md).
 
-Own practical delivery: inspect a bounded reference area, implement it, test, merge, deploy, verify, then move to the next. Avoid long speculative planning. Use parallel workers for independent modules and one integrator for shared files/schema/releases. Default coding model: GPT-6.1 Sol medium; higher effort only when justified. Keep coherent work queued. Do not tell the owner something is live just because a branch or preview was pushed.
+Own delivery: inspect a bounded reference area, implement, test, review, merge, deploy, verify, then continue. Use parallel workers for independent modules and one integration owner for schema/shared files/releases. Default coding model: GPT-6.1 Sol medium. Keep coherent work queued; do not equate previews with live features. Everything must remain free. No paid services/upgrades or credentials requested in chat.
 
-All resources must stay free for now. No paid services or upgrades. Obtain any genuinely required owner-only access or security approval through the supported flow; explain the service and purpose before requesting login. Never request passwords in chat.
-
-## Repositories and services
-- Repository: https://github.com/Jare7028/CT-Alt (public by owner choice).
+## Resources and boundaries
+- Public repository: https://github.com/Jare7028/CT-Alt
 - Production: https://ct-alt.vercel.app
-- Vercel project: ct-alt / prj_vZtEYR5ihzJPziowsNitqVlgl3Gb
-- Vercel team: team_ts53ewLXSgnXNK0fPKOkCmOp
-- Supabase project: clytszmnrssgvnlwfbrm, CT Alt, region eu-west-1, organisation Jared, Free plan.
-- Dedicated cloud coding environment CT-Alt now exists and selects this repository's main branch.
-- Do not touch Training-App / Resolvable Assess, its Auth, database, environment variables or deployments. It is a separate live product.
-- Public repo must never contain credentials, tokens, real workforce data, private documents or private reference screenshots. Use synthetic fixtures.
-- Existing public development configuration uses only the intended publishable Supabase client configuration; no service-role key belongs in the application.
-- Connected tools/access available in one session may not be present in another. Verify access, never assume it from this handover.
+- Vercel project: prj_vZtEYR5ihzJPziowsNitqVlgl3Gb; team: team_ts53ewLXSgnXNK0fPKOkCmOp.
+- Supabase: clytszmnrssgvnlwfbrm, CT Alt, eu-west-1, organisation Jared, Free plan.
+- Dedicated coding environment selects this repository.
+- Never touch Training-App / Resolvable Assess, its Auth, database, environment or deployments. Keep the owner's existing Supabase connection; add the CT Alt connection separately.
+- Never commit secrets, private screenshots/documents or real workforce data. Use synthetic fixtures. App configuration accepts only this intended public Supabase binding or the explicit isolated loopback stack; never put a service-role key in the app.
+- Owner has working login and explicitly asked to leave it alone. Do not redesign Auth/reset credentials as unsolicited work.
 
-## Current verified release
-Main commit 5c244db1cadfd65dcb3418c1a74147ccb928ea71 has Vercel production READY, deployment dpl_4NXNvzaNbUSmh1AaUyFUsVoD1jmr, verified 3 October 2026.
-It includes:
-- PR1 Agents directory and permission boundaries.
-- PR2 passwordless email login alongside the existing login flow.
-- PR3 advanced directory filters.
-- PR4 add-only CSV import with preview/validation/atomic batches.
-- PR6 read-only agent profiles.
-- PR10 test database readiness correction.
-- PR11 shared topbar/sidebar, verified module hierarchy and mobile navigation.
+## Latest verified application release
+Main `37229f9640235a3c2d8d3d9f08baa6b3cbc76144` has production READY: `dpl_7exAWu1mk9T2vJvBD4x6YW2YoLn5`, aliased to ct-alt.vercel.app.
+Earlier releases include Agents permissions/CRUD, passwordless login, advanced filters, add-only CSV import, read-only profiles and shared topbar/sidebar/mobile navigation.
+This session delivered:
+- PR9 inline profile blur saves and durable uncertain-save recovery. Reviewed head 6902adf106cbc70e836387da1e2234e5e052ee39; merged 2939641149d78beaf08f3a17f82c7b57f6535e7b. All 30 local Auth/API/browser cases passed; CI 37150970218 passed.
+- PR8 selected-user export and accessible directory controls. Reviewed head e67a27e9b6c0d04264f1ec0f1c2f34d2c5ee32dd; merged 10e7b16accc8dbfadaa574c47354305fb3db1c65. All 32 browser/API cases passed; CI 37151342648 passed.
+- PR13 measured Users layout and contained row actions. Reviewed head 19e879612999397df4c3f2ca68810b90d4ff6056; merged 37229f9640235a3c2d8d3d9f08baa6b3cbc76144. All 32 browser/API cases passed; CI 37151633691 passed. Rendered controls reviews passed at 1314/1184/900/390px, including hidden First name, View/Edit/Archive, export/selection and keyboard cancellation. Shell desktop/mobile focus/navigation checks passed.
+All three releases passed check/build, 26 config tests and 153 isolated foundation/Agents assertions. Independent review found no remaining blocker. Live login renders and unauthenticated Agents redirects to login; real-account production end-to-end flows were not exercised. Exact current Connecteam pixel parity remains unverified; disabled modules remain incomplete.
 
-The shared shell is newly deployed. Exact current Connecteam full-screen pixel parity is NOT verified. Unimplemented modules remain visibly disabled; do not count them as completed.
+## Prepared branches and next delivery
+No duplicate PRs were created. Existing draft branches now include the released main and exact tested trees:
 
-Owner has successfully logged in and most recently said leave login alone and continue features. Do not redesign authentication or reset credentials as an unsolicited task. Previous magic-link frustration does not supersede that latest instruction.
+| PR | Head | Status |
+| --- | --- | --- |
+| [7 Client Rotas](https://github.com/Jare7028/CT-Alt/pull/7) | f21f728c4190bdbe06b7a7ad6496515cffb58066 | Shared shell, applied-migration registration, uncertain-save lock; hosted history verification pending |
+| [12 Schedule settings](https://github.com/Jare7028/CT-Alt/pull/12) | 4c41233977d3f583a80fae0c6f26e41d0f8f91be | Targets PR7; additive migration and all seven real Auth/browser cases verified locally |
+| [14 Chat permissions](https://github.com/Jare7028/CT-Alt/pull/14) | e5e9d91944aa46cb7cd9f8e399fa5fa9d00cb1bf | Includes baseline PR5 and shared shell; both hosted migrations unapplied; Chat module links disabled |
 
-## Immediate priority queue
-1. Integrate already-reviewed Client Rotas PR7 into migration history, rerun tests, merge and verify production. Hosted schema is ALREADY applied; do not replay.
-2. Fix PR9 autosave recovery defect, re-review, test and release.
-3. Correct PR13 Users controls (stacked on PR8), test with the now-live shell, merge in dependency order.
-4. Refresh/review Chat PR5 with the now-merged readiness fix; coordinate its unapplied migration carefully, test and release. PR14 adds Chat membership permissions and is a separate review.
-5. Review PR12 schedule editing, then continue Client Rotas, Chat and Agents feature coverage. Keep shared shell/module route integration consistent.
-Do not duplicate existing PRs or discard their work. Fetch current main first, inspect branch bases and preserve concurrent changes.
+PR7 baseline previously passed 112 rota SQL assertions and five real local Auth/browser cases. It registers exact `20261003191154_client_rotas.sql` (blob b9a02a8cd36d895f6359403f17b615bafd0fcb4f), identical to the already-applied proposal. Both local runners load migration history once. Refreshed shell/check/build pass with released Users/profile behavior preserved.
 
-## Open PRs and exact review state
-### PR7: Client Rotas baseline
-https://github.com/Jare7028/CT-Alt/pull/7
-Reviewed head f1d275750ed1c77bc6e500da5a55f02f92f94dba.
-Draft/publish shifts, named schedules, assigned agents, manager delegation, jobs, day/week/month boards, archive/search, employee own-published-shift privacy.
-Exact SQL proposal blob b9a02a8cd36d895f6359403f17b615bafd0fcb4f.
-This exact proposal was applied ONCE to the intended CT Alt Supabase project and verified as:
-20261003191154_client_rotas
-Six empty rota tables, RLS enabled, authenticated SELECT-only, no anonymous access, ten FKs and timezone triggers checked. Existing records preserved; no hosted fixtures created.
-Required repository alignment:
-- Add supabase/migrations/20261003191154_client_rotas.sql with the EXACT proposal SQL.
-- scripts/test-rotas-database.mjs currently applies all migrations then separately loads docs/proposals/client-rotas.sql; remove that separate load (around lines216–221).
-- scripts/rotas-browser-fixture.mjs also separately loads the proposal after migrations (around line203); remove it.
-- Preserve migration loops, assertions, proposal history if desired, and additive /rotas/:path* proxy matcher.
-- Update outdated proposal-only/no-hosted-migration docs and CI label.
-Otherwise CREATE TABLE runs twice and tests fail.
-Evidence before registration:112 rota SQL assertions,153 baseline/Agents SQL assertions, config/timezone tests, four real local Auth/browser/API tests. CI https://github.com/Jare7028/CT-Alt/actions/runs/37143879952.
-Read docs/client-rotas-acceptance.md for gaps.
-Performance-only advisories after hosted apply: two per-row auth RLS warnings, six unindexed FKs and two unused indexes. No further changes made; assess separately.
+PR12 keeps that baseline/proposal immutable. New `20261003202600_client_rota_schedule_settings.sql` widens the audit action CHECK and replaces only workforce_private.save_rota. It preserves function identity, owner, ACL, definer and search path. Tests cover populated upgrade preservation, races, retained shifts, timezone instant/publication preservation, revision/permission checks and committed-save/lost-response recovery. Passed 134 rota SQL assertions, 32 config, 153 foundation/Agents assertions,check/build and all seven real local Auth/API/browser cases. Independent final review found no blocker. Read docs/client-rotas-settings-acceptance.md before applying anything.
 
-### PR9: Agent profile blur-autosave
-https://github.com/Jare7028/CT-Alt/pull/9
-Head1591d578139586f5d47b49de265b06df607de3a9. CI and preview pass; author reports28 browser tests,26config,153SQL assertions.
-RELEASE BLOCKER: in app/agents/[agentId]/edit-details.tsx, fail() marks uncertain saves unknown, but navigate() and departure() overwrite that with saved whenever hasSaved.current is true.
-Reproduce: save Title successfully, save Team with a committed write but lost acknowledgement, leave explicitly or browser Back, then return. Recovery marker can incorrectly say saved at the older acknowledged revision.
-Preserve unknown/locked recovery across departure; regression must cover successful save THEN lost acknowledgement THEN leave/back THEN return.
-Server revisions still prevent stale overwrites, but UI recovery is wrong. Do not merge until corrected.
-The PR's test-database readiness change is identical to main PR10; preserve it, no duplicate fix needed.
+Chat baseline PR5 remains preserved in PR14. No Chat SQL was changed by this integration. Fixed stale list responses that could restore posting controls after denial; all asynchronous completions are generation-fenced. Passed 274 isolated SQL assertions, 28 config, 13 component regressions,check/build and both sequential real Auth acceptance runners. Coverage includes actual Set-Cookie refresh, persistence/retries, 205-message reconnect, tenant/private-group boundaries, membership removal/suspension, roles, group administration and posting restrictions. Real group UI containment at 1280/390px and synthetic screenshots inspected. Independent review found no blocker. Read docs/CHAT_REVIEW.md. Attachments, replies, search, moderation, Realtime and full UI/mobile fidelity remain incomplete.
 
-### PR8 + stacked PR13: Users controls
-https://github.com/Jare7028/CT-Alt/pull/8
-PR8 head905ce0abfd2bca30715edf05612564fa89c9afb4.
-https://github.com/Jare7028/CT-Alt/pull/13
-PR13 head31d9f756a2999a6352b3012036b2d675e5a5a9b4; targets PR8 branch.
-Review blockers:
-- Export accessible name becomes Export all matching users but tests/browser/selection.spec.ts still asks for Export visible users.
-- Fixed72px final column clips horizontally laid-out Edit/Archive row actions. Provide adequate width or an accessible compact menu; inspect desktop/mobile and hidden-name-column states.
-- scripts/review-directory-controls.mjs assumes1084px card at1184px viewport, based on old60px rail. New190px sidebar makes card954px. Test matched-card geometry at an appropriate viewport AND narrower real combined layouts.
-Run full browser suite and both shell/controls visual reviews on integrated final code. Current CI only runs check/config/DB/build, so green CI did not catch these bugs.
-No authorization bypass found in review; CSV neutralisation preserved.
-Never commit the private reference image.
+Exact-head CI passed: PR7 run 37152226867, PR12 run 37152234692 and PR14 run 37152231074. These green runs do not satisfy the hosted database gate.
 
-### PR5: Chat baseline
-https://github.com/Jare7028/CT-Alt/pull/5
-Reviewed corrected head7891bd8864df0ab993d236d3dad96a3522abfaee.
-Migration proposal filename20261003171238_chat_conversations.sql; SQL blob750fd82ffcad8d34f6d1b429f5190d020d58de6f. NOT applied to hosted CT Alt.
-Review fixes already made: stale asynchronous response fencing, reselect-history clearing, /chat/:path* proxy cookie refresh.
-Earlier CI37143849977 failed during PostgreSQL startup before migration execution; PR10 main fixes this. Rebase and rerun.
-244DB assertions,10component tests and real local Auth acceptance were reported. Read scripts/test-chat-integration.mjs and docs/CHAT_REVIEW.md.
-Improve tests to assert Set-Cookie on actual /chat navigation and disable polling during205-message insertion for deterministic reconnect pagination.
-Do not treat code approval conditional on green CI as deployment proof.
+Next: restore the dedicated CT Alt Supabase connection; verify hosted history and schema; release PR7 without replaying its applied migration; coordinate additive PR12 and Chat migrations; verify expected production commits and actual accessible flows; continue feature coverage. Do not merge a schema-dependent route while its hosted prerequisites are unverified.
 
-### PR14: Chat Info and permissions
-https://github.com/Jare7028/CT-Alt/pull/14
-Head3bb2fdb26c3aec619e4960431d6d139e6b469722.
-Chat Info, membership management, group admins, admin-only posting, audit, conflicts.
-Reported exact-head CI,28config,274DB assertions,12browser regressions and real Auth matrices pass.
-Independent review and migration coordination still pending. Hosted migration NOT applied.
-Missing: attachments, replies, search, dynamic groups, moderation, Realtime and full UI fidelity.
+## Hosted database gate
+The connected Supabase tool currently returns no permission for the exact CT Alt project. The owner believes its account is jared_clapham@hotmail.co.uk and has been asked to authorise a separate connection while retaining the existing one. Do not assume account access from older sessions or touch another project as a fallback.
 
-### PR12: Schedule editing
-https://github.com/Jare7028/CT-Alt/pull/12
-Head5fea1099550e97d761ba98b1c0e2a8168b849ebb, stacked onPR7.
-Owner/admin edit names,timezones,assignedusers,delegatedmanagers; preserves shift instants/publication and revisions.
-132SQL,19config/time,5realAuthbrowser tests reported. CI37145003764 passes.
-Independent review and additive hosted SQL review still pending. Do not apply blindly.
-Read docs/client-rotas-settings-acceptance.md.
-
-## Database and auth ground truth
-Already applied migrations:
+Earlier verified applied migrations:
 - 20261003143058_workforce_foundation
 - 20261003153745_agents_records
-- 20261003191154_client_rotas
-Re-read remote migration history before any changes. Do not create duplicate timestamps or replay non-idempotent SQL.
-One tenant and one active owner membership existed at last verification; zero agents and agent audit rows. No production test fixtures were created.
-Auth site URL https://ct-alt.vercel.app; allowed redirect https://ct-alt.vercel.app/auth/callback.
-Email confirmation on, anonymous sign-in off. No need to change these for feature development.
-Keep cross-tenant isolation, server/database checks, optimistic revisions, audit and revocation enforcement. UI hiding is not security.
-Baseline security warnings (not introduced by rotas): rls_auto_enable definer execution advisory and disabled leaked-password protection. Do not silently alter security settings.
-Never put credentials into public code or this document.
+- 20261003191154_client_rotas (applied exactly once)
 
-## Verification and releases
-Read package.json and AGENTS.md. Use npm ci, npm run check, npm run test:config, npm run build and the appropriate database/browser/visual scripts.
-CI success is not evidence of browser success: inspect actual workflow coverage.
-Tests should use disposable local Auth/PostgREST/Postgres and synthetic data, not real employees or the reference company's tenant.
-Include interrupted/repeated flows, stale writes, cancellation/back, lost acknowledgements, suspension/revocation, tenant boundaries and timezone/DST tests.
-Use current Next.js16 documentation shipped under node_modules/next/dist/docs.
-Merge only the reviewed final SHA after tests; preserve shared changes. Verify the expected commit on main and Vercel production READY. Verify live route/navigation behaviour where access permits; explicitly distinguish deployment status from authenticated end-to-end testing.
-One integration owner should coordinate schema history and shared shell/proxy changes. Do not leave a heap of preview branches while claiming delivery.
-A dev-only braces advisory remains without a patch; production audit was0. Do not suppress checks or downgrade ESLint blindly.
+Re-read actual hosted history before changes. Do not replay baseline SQL or replace an applied timestamp. The new settings migration and Chat 20261003171238/20261003183901 migrations remain unapplied. Earlier hosted rota verification found six empty tables, RLS, authenticated SELECT-only grants, ten FKs and timezone triggers, with existing data preserved. No production fixtures were created in this session.
+
+Preserve tenant isolation, current membership authorization/revocation, optimistic revisions and audit. Existing Auth site URL/redirect is ct-alt.vercel.app and /auth/callback; email confirmation on, anonymous sign-in off. Baseline security advisories and performance-only rota RLS/FK/index advisories were not silently changed.
+
+## Verification workflow
+Read AGENTS.md and package.json. Run npm ci, check, config, build and appropriate database/browser/visual scripts before pushes. Use current Next16 docs under node_modules/next/dist/docs. Merge only reviewed final SHAs; verify remote main and expected Vercel production READY/alias. Distinguish deployment status, local tests and real production Auth acceptance.
+
+Fixtures must be disposable, label-verified and CT Alt-only. Never use real employees/reference-company data. Reset the entire fixture before repeating a full directory suite: archive/restore intentionally demotes the synthetic admin, so rerunning against mutated data is invalid. The temporary shared Mailpit fixture followed Auth redirects manually for browser PKCE; product login code was unchanged. Chat runners own their exclusive stack and must run sequentially; scheduling uses its separate random-labelled fixture. Only remove resources/files belonging to the current test run.
+
+Include interruption, cancellation/back, stale revisions, committed writes with lost responses, failed recovery reads, tenant boundaries, revocation, timezone/DST and populated-upgrade preservation where relevant. CI success alone does not prove browser success. All current screenshots in the repo are synthetic local outputs; no competitor/private workforce image was committed.
 
 ## Reference workflow and visual evidence
 Connecteam account is READ-ONLY reference. Do not change schedules/users/settings or open chats in a way that changes read state. Public official articles can supply safe reference examples.
@@ -146,6 +75,3 @@ Current private Users controls crop was inspected by reviewers but was not relia
 Current observed hierarchy: topbar search/help/notifications/profile; static Overview,Activity,Users,Smart groups,Automations,Job list; grouped Communication,Operations,HR & Skills. Use original CT Alt branding; don't copy private client-specific labels.
 Synthetic before/after captures are already in repo docs/screenshots and tests/visual-reference. They are safe test data.
 For visual work, compare actual rendered screenshots, not descriptions alone. Mark evidence gaps honestly.
-
-## Suggested first instruction
-Read AGENTS.md and this file, verify remote main and open PRs, and take ownership of the next small tested live release. Start with PR7 migration-history alignment and the documented PR9/PR13 review defects. Use sensible parallel work, keep one integration owner, and continue module by module toward complete Connecteam feature/UI coverage. Keep everything on free resources and keep Assess untouched. Report live results and genuine blockers, without repeatedly asking the owner to approve already-requested development.
