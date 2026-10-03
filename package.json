@@ -12,14 +12,23 @@
     "start": "next start --hostname 127.0.0.1 --port 5180",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "npm run lint && npm run typecheck"
+    "check": "npm run lint && npm run typecheck",
+    "test:db": "node scripts/test-database.mjs",
+    "test:local:setup": "node scripts/setup-local-tests.mjs",
+    "test:browser": "playwright test",
+    "test:config": "node --test tests/config/*.test.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
     "next": "16.3.8",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "server-only": "0.0.1",
+    "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

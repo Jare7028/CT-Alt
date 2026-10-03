@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'CT Alt · Workforce',
-  description: 'An independent workforce application, starting with client rotas.',
+  description: 'An independent workforce application, starting with users and company access.',
   robots: { index: false, follow: false },
 };
 
