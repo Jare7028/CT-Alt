@@ -19,7 +19,7 @@ test('selection spans pages, select-all is page-scoped, and export uses only sel
  const all=page.getByRole('checkbox',{name:'Select all users on this page',exact:true});await all.check();await expect(page.getByRole('status')).toContainText('25 selected');
  await page.getByRole('button',{name:'Next page',exact:true}).click();await expect(all).not.toBeChecked();await page.getByRole('checkbox',{name:`Select Selection ${suffix} Person 25`,exact:true}).check();await expect(all).toHaveJSProperty('indeterminate',true);await expect(page.getByRole('status')).toContainText('26 selected');
  const selected=await exported(page,'Export selected users');expect(selected.trim().split('\r\n')).toHaveLength(27);expect(selected).toContain('Person 00');expect(selected).toContain('Person 25');expect(selected).not.toContain('Person 26');expect(selected).not.toContain('"Synthetic","owner",');
- await page.getByRole('button',{name:'Clear user selection',exact:true}).click();const matching=await exported(page,'Export visible users');expect(matching.trim().split('\r\n')).toHaveLength(30);expect(matching).toContain('Person 28');
+ await page.getByRole('button',{name:'Clear user selection',exact:true}).click();const matching=await exported(page,'Export all matching users');expect(matching.trim().split('\r\n')).toHaveLength(30);expect(matching).toContain('Person 28');
  await all.check();await page.getByRole('searchbox',{name:'Search users',exact:true}).fill(suffix+' no match');await expect(page.getByRole('button',{name:'Export selected users',exact:true})).toHaveCount(0);await expect(all).toBeDisabled();
 });
 test('unjoined count comes from loaded active records and read-only manager selection performs no mutations',async({page})=>{

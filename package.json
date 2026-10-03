@@ -17,7 +17,8 @@
     "test:db": "node scripts/test-database.mjs",
     "test:local:setup": "node scripts/setup-local-tests.mjs",
     "test:browser": "playwright test",
-    "test:config": "node --test tests/config/*.test.mjs"
+    "test:config": "node --test tests/config/*.test.mjs",
+    "test:controls": "node scripts/review-directory-controls.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

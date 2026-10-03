@@ -22,7 +22,7 @@ test('CSV mapping/preview is read-only until explicit confirmation; existing num
  await dialog.getByRole('button',{name:'Confirm add-only import',exact:true}).click();await expect(dialog.getByRole('heading',{name:'Import complete'})).toBeVisible();await expect(dialog).toContainText('1 new users added. 1 existing users skipped.');
  const after=await directory(page);expect(after.length).toBe(before.length+1);expect(after.find(agent=>agent.phone===number)?.first_name).toBe('=1+1');expect(after.find(agent=>agent.phone===number)?.custom_fields.client).toBe('Demo "client"');expect(after.find(agent=>agent.phone===existing.phone)?.first_name).toBe(existing.first_name);
  await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.getByRole('searchbox',{name:'Search users',exact:true}).fill(number);
- const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export visible users'}).click();const exported=readFileSync((await (await download).path())!,'utf8');expect(exported).toContain('"\'=1+1"');expect(exported).toContain('"Zoë, 李"');
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export all matching users'}).click();const exported=readFileSync((await (await download).path())!,'utf8');expect(exported).toContain('"\'=1+1"');expect(exported).toContain('"Zoë, 李"');
 });
 test('duplicate/missing/invalid rows block review; a race conflict rejects the entire authorized batch',async({page})=>{
  await login(page);const number=phone();let dialog=await openImport(page,'First name,Last name,Mobile phone,Client\nAda,One,'+number+',Demo\nBen,Two,'+number+',Demo');
