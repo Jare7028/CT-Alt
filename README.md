@@ -40,6 +40,16 @@ The setup uses `supabase` from PATH, or `CT_ALT_SUPABASE_CLI` for an explicitly 
 
 CI runs lint, TypeScript, project-boundary assertions, isolated SQL assertions and a production build. The full local Auth/browser suite requires the explicit local stack and is not yet run in CI.
 
+## Directory filters (review slice)
+
+The filter panel provides quick exact-value choices and advanced field/operator/value conditions, searchable field selection under Custom fields and User details, all-condition AND or any-condition OR matching, add/remove/reset and a blue active indicator. Advanced conditions remain applied when switching to the quick view; conditions that quick mode cannot express ask the user to switch back. Incomplete/invalid conditions are visibly reported and are not applied.
+
+Supported fields are first/last name, mobile phone, title, team, employment start date, date added, existing company custom text fields, user type and joined status. Text matching ignores case and outer whitespace; date ranges include both endpoints. Employment dates are calendar days. Date added is compared using the company's time zone; missing dates satisfy only Is empty, not date comparisons. CSV export uses all matching loaded records with the selected columns and sort, including rows beyond the current page. Search, tab and unjoined conditions still combine with filters.
+
+Only versioned filter criteria are stored in this browser, scoped to the signed-in Auth user and company. This is not cross-device storage or smart-group creation. Saved criteria are validated against current supported fields/operators; inaccessible company records are never supplied to this component. Filtering grants no permissions and changes no records.
+
+The observed reference supplies quick/advanced structure and field categories; [official documentation](https://help.connecteam.com/en/articles/8715372-user-filters) confirms AND/OR, ranges, switching and filtered export. Exact text-operator labels were not captured. No screenshot pixel comparison is claimed. Groups/tags, smart groups, direct managers, email/last-login/source/onboarding and payroll fields remain tracked gaps until their underlying data and authorization exist. This slice supports up to ten flat conditions and the existing 1,000-record load limit; nested expression groups and server pagination remain future work.
+
 ## Delivery sequence
 
 1. Verify independent repository, database/Auth and hosting resources with no paid upgrades or usage-billed provisioning.
