@@ -6,7 +6,7 @@ An independently implemented workforce application. Agents and their access perm
 
 The live first slice provides real end-user password sign-in and a company-scoped Users directory: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
 
-This is an initial Users slice, not competitor feature parity. Invites, imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
+This is an initial Users slice, not competitor feature parity. Invites, add/update and update-only imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
 
 The independent hosted foundation and Agents slice are live. The recorded migration versions are `20261003143058` and `20261003153745`; no remote migration is required for this Auth change. Local browser verification uses actual isolated Supabase Auth and synthetic data, not the hosted database.
 
@@ -48,6 +48,28 @@ The setup uses `supabase` from PATH, or `CT_ALT_SUPABASE_CLI` for an explicitly 
 
 CI runs lint, TypeScript, project-boundary assertions, isolated SQL assertions and a production build. The full local Auth/browser suite requires the explicit local stack and is not yet run in CI.
 
+## Add-only CSV import (review slice)
+
+Owners/admins can upload a comma-separated UTF-8 CSV, map columns to supported existing user/custom fields, inspect validation, review the summary and explicitly confirm. Preview performs no writes. Unknown columns are visibly ignored unless mapped; required company custom fields must be mapped. New custom fields, invitations, archive actions and role/access changes are not supported by import.
+
+The parser supports a UTF-8 BOM, quoted commas/newlines, doubled quotes and CRLF/LF/CR records, and reports source lines. Invalid encoding/quoting, mismatched column counts, duplicate headers and null characters are rejected. Limits are 128 KiB per file, 25 nonblank data rows, 40 columns, 2,000 characters per decoded cell, 8 KiB per decoded row and 48 KiB for the mapped batch. Names/title/team/custom fields retain the API's own length limits. Employment dates must be finite ISO calendar dates.
+
+Phone values normalize common formatting and use an explicit mapped/default country code for national numbers only in the supported UK, IE, US/CA, FR, DE and AU plans. Other country codes require full +/00 international format; their significant leading digits are never guessed away. Preserve phone digits as spreadsheet text; phone syntax validation does not verify real ownership or deliverability. Duplicate normalized numbers within the file block confirmation. Known existing numbers, including archived records, are shown as skipped and are never updated or restored. Preview checks the loaded directory (currently up to 1,000 records); database uniqueness is authoritative for every company record and catches unseen existing numbers or races.
+
+All new records use one existing signed-user create batch. A conflict or server validation failure rejects the whole batch; files are never silently chunked. Confirmation success reports the acknowledged count even if the subsequent directory refresh fails. Network/unknown server outcomes block another confirmation and ask the user to inspect the directory before retrying. Formula/HTML-like text is stored as ordinary text, rendered with React escaping, and remains subject to CSV export neutralization.
+
+This original implementation follows the documented mapping, validation, summary and confirmation sequence in [Connecteam's CSV import guide](https://help.connecteam.com/en/articles/6463571-import-users-via-an-excel-csv-file). Add/update, update-only, blank-cell overwrite policies, larger imports, inline correction and template downloads remain future increments. No hosted migration or new service is needed.
+
+## Directory filters (review slice)
+
+The filter panel provides quick exact-value choices and advanced field/operator/value conditions, searchable field selection under Custom fields and User details, all-condition AND or any-condition OR matching, add/remove/reset and a blue active indicator. Advanced conditions remain applied when switching to the quick view; conditions that quick mode cannot express ask the user to switch back. Incomplete/invalid conditions are visibly reported and are not applied.
+
+Supported fields are first/last name, mobile phone, title, team, employment start date, date added, existing company custom text fields, user type and joined status. Text matching ignores case and outer whitespace; date ranges include both endpoints. Employment dates are calendar days. Date added is compared using the company's time zone; missing dates satisfy only Is empty, not date comparisons. CSV export uses all matching loaded records with the selected columns and sort, including rows beyond the current page. Search, tab and unjoined conditions still combine with filters.
+
+Only versioned filter criteria are stored in this browser, scoped to the signed-in Auth user and company. This is not cross-device storage or smart-group creation. Saved criteria are validated against current supported fields/operators. Removed or reset restored conditions produce a persistent warning above the directory about broader results/export; Reset all acknowledges and clears it. Inaccessible company records are never supplied to this component. Filtering grants no permissions and changes no records.
+
+The observed reference supplies quick/advanced structure and field categories; [official documentation](https://help.connecteam.com/en/articles/8715372-user-filters) confirms AND/OR, ranges, switching and filtered export. Exact text-operator labels were not captured. No screenshot pixel comparison is claimed. Groups/tags, smart groups, direct managers, email/last-login/source/onboarding and payroll fields remain tracked gaps until their underlying data and authorization exist. This slice supports up to ten flat conditions and the existing 1,000-record load limit; nested expression groups and server pagination remain future work.
+
 ## Delivery sequence
 
 1. Verify independent repository, database/Auth and hosting resources with no paid upgrades or usage-billed provisioning.
@@ -85,3 +107,20 @@ npm run test:db
 The runner creates its own temporary PostgreSQL 17 container with no network, no exposed ports and synthetic fixtures, then removes that container. It accepts no database URL and never uses the connected Supabase project. The image is pinned by digest. The tests emulate only the minimal Supabase Auth schema/identity contract; they do not test actual sessions, PostgREST, email or hosted configuration.
 
 Before remote application, verify the intended independent project's identity and Free plan, inspect its schema/history for conflicts, and apply through the parent-controlled migration process. This repository has no automated remote migration or deployment step. `tests/database/bootstrap.sql` is local-only and must never be applied to a hosted project. Configure exposed API schemas to exclude `workforce_private`, and run hosted read-only policy/advisor checks after application.
+
+## Read-only Agent profiles
+
+User names open addressable `/agents/{id}?company={companyId}` pages. When the First name column is hidden, a View link remains in the row. Profiles show existing user/custom fields, record timestamps in the company time zone, calendar-only employment date and linked company membership status/access. They do not infer an email, invitation state, last login or photograph. Editing remains in the Users directory.
+
+Every profile read uses the authenticated user and existing RLS, with explicit company filters. Owners/admins/managers can read their company records, including archived records. Employees can read only their own linked active record; another employee's membership and the creator's identity remain hidden by RLS. Unknown, malformed, foreign-company and unauthorized records use the same unavailable page. No schema, permission grant, privileged credential or write endpoint is added.
+
+`tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1440 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+
+
+## Client Rotas integration
+
+The integration branch adds named schedules, selected Agents, manager delegation, coloured jobs, draft shifts and explicit publication. Day/Week/Month boards show elapsed hours across overnight and daylight-saving changes. Employees can read only their own published shifts. Users and Agent profiles link to Client Rotas through the shared desktop/mobile shell.
+
+The migration `20261003191154_client_rotas` is registered using the exact SQL recorded as already applied in [the takeover handover](docs/CODEX_HANDOVER.md). Local runners apply migration history once. Do not replay it against hosted Supabase. This session cannot recheck hosted history; scheduling is not claimed as live until the expected production commit and authenticated workflow are verified. Run `npm run test:rotas:db` and the disposable fixture/browser acceptance in [the coverage notes](docs/client-rotas-acceptance.md).
+
+The target remains full Connecteam feature and screen coverage, delivered module by module. See [feature coverage](docs/FEATURE_COVERAGE.md) for the distinction between existing production features, locally implemented work and remaining scope.

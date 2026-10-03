@@ -213,12 +213,6 @@ try {
     .sort()) {
     sql(readFileSync(new URL(file, directory), "utf8"));
   }
-  sql(
-    readFileSync(
-      new URL("../docs/proposals/client-rotas.sql", import.meta.url),
-      "utf8",
-    ),
-  );
   const checks = [];
   for (const suite of ["rotas.sql"]) {
     const result = sql(

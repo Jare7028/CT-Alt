@@ -1,6 +1,6 @@
 # Client rotas: first functional slice
 
-Base: main at `2f1394fc4511a66b711c364aa2407ef52c9f5651`. Independent checkout: `/workspace/ct-alt-rotas`. Route: `/rotas?company=<tenant-id>`.
+Integration base: main at `db609caacaaf5d869add30c0c6ca56b95aa0eb49`. Route: `/rotas?company=<tenant-id>`.
 
 ## Verified source and scope
 
@@ -18,7 +18,7 @@ The [official starting guide](https://help.connecteam.com/en/articles/4100339-st
 
 ## Permission and concurrency boundary
 
-`docs/proposals/client-rotas.sql` is proposed SQL, deliberately outside migration history. Parent must review and assign a migration version. No hosted migration was applied.
+`supabase/migrations/20261003191154_client_rotas.sql` registers the exact SQL retained in `docs/proposals/client-rotas.sql` (blob `b9a02a8cd36d895f6359403f17b615bafd0fcb4f`). The takeover handover records this migration as already applied to CT Alt. Current hosted history cannot be rechecked with this session’s Supabase permissions; do not replay the migration. The local runners load migration history once and do not separately load the proposal.
 
 Every child foreign key contains its tenant and relevant schedule. Exposed tables have RLS and explicit read grants; direct browser writes and anonymous access are revoked. The public RPC is an invoker wrapper over a fixed-search-path private definer, matching the existing Agents mutation boundary. Actor identity comes from `auth.uid()`; roles come from active, confirmed tenant membership.
 
@@ -40,11 +40,11 @@ The read RPC aggregates bounded arrays inside SQL so PostgREST row limits cannot
 | Browser and API                | Synthetic owner creates schedule/job/draft and edits; manager publishes; employee has no draft visibility before publish and own published shifts afterward; Day/Week/Month totals, search, responsive board, API auth/origin validation                             |
 | Build                          | `npm run check`, `npm run build`                                                                                                                                                                                                                                     |
 
-Run `node scripts/test-rotas-database.mjs` for a fresh network-disabled temporary database. It applies only existing foundation/Agents migrations and this proposal, uses synthetic fixtures, and removes its own container. Run `npm run test:config` for timezone and existing boundary tests. Browser tests use only the explicitly checked loopback fixture at `http://127.0.0.1:54821`; never point them at hosted resources.
+Run `node scripts/test-rotas-database.mjs` for a fresh network-disabled temporary database. It applies the repository migration history once, uses synthetic fixtures, and removes its own container. Run `npm run test:config` for timezone and existing boundary tests. Browser tests use only the explicitly checked loopback fixture at `http://127.0.0.1:54821`; never point them at hosted resources.
 
 ## Integration and remaining work
 
-Parent owns migration numbering, independent reviews and deployment. Proposed shared navigation addition: “Client rotas” → `/rotas`. The sole approved shared change is an additive `/rotas/:path*` proxy matcher entry so refreshed Auth cookies persist on direct navigation. Existing matcher entries are preserved. Shared navigation, Auth implementation, agent types and existing migrations are otherwise unchanged.
+Client Rotas uses the shared desktop/mobile shell. Users, Agent profiles and module search link to `/rotas?company=<tenant-id>`; scheduling preserves the selected company when navigating back to Users. The additive `/rotas/:path*` proxy matcher persists refreshed Auth cookies on direct navigation. Existing Auth behavior is preserved. Deployment and authenticated hosted acceptance remain pending.
 
 Remaining: roster/admin editing after creation; agent-group qualification/permissions; unassigned shifts and capacity; open-shift claim/unclaim; swaps; templates; requests; notifications; confirmation/completion; repeating/all-day/group shifts; location/notes/tasks; job editing; draft deletion; safe published-edit/re-publish lifecycle; calendar virtualization/pagination; richer view options and job/layer views. No inactive controls imply these features exist.
 
@@ -52,9 +52,9 @@ Remaining: roster/admin editing after creation; agent-group qualification/permis
 
 On a machine with Docker and repository dependencies installed:
 
-1. Run `env -i PATH="$PATH" node scripts/rotas-browser-fixture.mjs`. This creates a separately labelled, disposable local PostgreSQL/Auth/PostgREST stack. Test-only keys and synthetic account credentials are generated in memory and written only to ignored/private fixture files. No hosted credentials, real workforce data or email server are used.
-2. Use a fresh disposable fixture for each full browser suite run. Once ready, start `env -i PATH="$PATH" NEXT_TELEMETRY_DISABLED=1 npm run dev` in another terminal. Restart the dev server after recreating the fixture so it loads the new loopback public key.
-3. Run `env -i PATH="$PATH" npm exec -- playwright test tests/browser/rotas.spec.ts`.
+1. Run `node scripts/rotas-browser-fixture.mjs`. This creates a separately labelled, disposable local PostgreSQL/Auth/PostgREST stack. Test-only keys and synthetic account credentials are generated in memory and written only to ignored/private fixture files. No hosted credentials, real workforce data or email server are used.
+2. Use a fresh disposable fixture for each full browser suite run. Once ready, start `NEXT_TELEMETRY_DISABLED=1 npm run dev` in another terminal. Restart the dev server after recreating the fixture so it loads the new loopback public key.
+3. Run `npm exec -- playwright test tests/browser/rotas.spec.ts`.
 4. Stop the dev server and fixture. The fixture removes only containers bearing its random run label and its own network.
 
 Validation: 112 isolated PostgreSQL assertions, 19 config/timezone tests and 4 browser/API acceptance tests passed, together with lint/typecheck and production build. Browser acceptance includes a correctly signed, expired local access token with a valid refresh token: direct `/rotas` navigation refreshes it, persists replacement cookies and retains API access. The full Supabase CLI image initially exceeded Docker disk capacity; the smaller fixture completed the real Auth → API → database workflow.
@@ -70,4 +70,9 @@ Synthetic screenshots: [schedule lobby](screenshots/rotas-lobby.png), [draft shi
 - Disposable PostgreSQL 17 lists Factory and posixrules but not localtime. All three are rejected by schedule mutation tests. Node tests guard special/unsupported names, and a real browser/database fixture with a legacy Factory record renders safely and blocks editing.
 - The real Auth browser workflow includes a coworker's draft and published shift alongside the employee's own shift, proving employee API and browser privacy with competing data present.
 
-[Unsupported-zone browser evidence](screenshots/rotas-unsupported-zone.png). No hosted SQL was applied and no existing migration was changed. Common shell/layout/global CSS/navigation integration remains parent-owned.
+[Unsupported-zone browser evidence](screenshots/rotas-unsupported-zone.png). This integration performs no hosted SQL changes. A lost or unverifiable mutation acknowledgement locks the form and requires a successful fresh schedule read before further edits, avoiding a blind duplicate create retry. Browser acceptance discards an acknowledgement only after the real local creation commits, verifies one schedule, and keeps the form locked across a failed recovery read.
+
+
+## Integration verification — 3 October 2026
+
+Current integrated code passes lint/TypeScript, the production build, all 32 configuration/timezone tests, 153 foundation/Agents SQL assertions and 112 rota SQL assertions. The real local Auth/PostgREST/Postgres browser suite passes five tests, including the committed creation with a discarded acknowledgement and a failed recovery read. The shared shell review passes desktop/mobile navigation, keyboard/focus, directory interactions and viewport-overflow checks. Integrated synthetic scheduling screenshots above were inspected. No full current-reference pixel parity or authenticated hosted acceptance is claimed.

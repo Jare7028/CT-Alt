@@ -30,6 +30,6 @@ jobs:
       - run: npm run check
       - run: npm run test:config
       - run: npm run test:db
-      - name: Test rota SQL proposal
+      - name: Test rota migrations and permissions
         run: npm run test:rotas:db
       - run: npm run build
