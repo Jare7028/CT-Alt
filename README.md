@@ -163,3 +163,7 @@ Owners/admins can review completed team time entries with inclusive company-cale
 ## Conversation message search
 
 Desktop Chat can search literal message text within a currently joined conversation, with exact counts and precise paged sequences. Search pauses read marking; Clear resumes normal Chat. Current actor/company/conversation checks preserve private groups and revoke access on subsequent reads. See [search acceptance](docs/chat-search-acceptance.md). Global search, attachments and full Chat parity remain further work.
+
+## Time Off
+
+Active linked users can request full calendar-day leave and withdraw pending requests. Owners/admins create/archive leave types and review, approve, reject or cancel team requests with retained history, exact filters/counts and safe retries. See [Time Off acceptance](docs/time-off-acceptance.md). Partial-day leave, policy balances/accrual and calendar/payroll integration remain further work.

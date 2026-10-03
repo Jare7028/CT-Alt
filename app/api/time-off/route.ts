@@ -1,0 +1,8 @@
+import {NextResponse} from 'next/server';
+import {configured,supabase} from '../../../lib/supabase';
+import {validOrigin} from '../../../lib/request-security';
+import {TimeOffError,parseTimeOffQuery,readTimeOff,saveTimeOff,timeOffMutation} from '../../../lib/time-off';
+const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+const fail=(error:unknown)=>error instanceof TimeOffError?response({error:error.message},error.status):response({error:'The time off request could not be confirmed. Reload and review before making another change.'},503);
+export async function GET(request:Request){if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{return response(await readTimeOff(await supabase(),parseTimeOffQuery(new URL(request.url).searchParams)));}catch(error){return fail(error);}}
+export async function POST(request:Request){if(!validOrigin(request))return response({error:'Invalid request origin.'},403);if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{const raw=await request.text();if(new TextEncoder().encode(raw).length>24000)return response({error:'Time off request is too large.'},413);let value:unknown;try{value=JSON.parse(raw);}catch{return response({error:'Invalid time off request.'},400);}const parsed=timeOffMutation.safeParse(value);if(!parsed.success)return response({error:'Choose valid leave details, calendar dates and decision reason.'},400);return response({saved:await saveTimeOff(await supabase(),parsed.data)});}catch(error){return fail(error);}}
