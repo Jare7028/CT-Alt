@@ -15,7 +15,7 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
   if (companyError) return <main><h1>Users</h1><p role="alert">Company access could not be loaded. Please try again shortly.</p></main>;
   const requested = (await searchParams).company;
   const company = companies?.find(item => item.id === requested) || (!requested ? companies?.[0] : null);
-  if (!company) return <main><h1>Users</h1><p>Your account has no active access to this company. Contact your company owner.</p><Link href="/agents">Check company access</Link></main>;
+  if (!company) return <main><h1>{requested?'Company access unavailable':'Company activation pending'}</h1><p>{requested?'Your account has no active access to this company.':'Your email is confirmed. An administrator needs to activate your company access.'}</p><Link href="/agents">Check company access again</Link><p><Link href="/login">Return to sign-in</Link></p></main>;
   const [membersResult, agentsResult, fieldsResult] = await Promise.all([
     client.from('tenant_memberships').select('tenant_id,user_id,display_name,role,status').eq('tenant_id', company.id),
     client.from('agents').select('*').eq('tenant_id', company.id).order('last_name').order('first_name').limit(1000),

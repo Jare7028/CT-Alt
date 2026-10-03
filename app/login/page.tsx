@@ -3,6 +3,6 @@ import Login from './login';
 
 export const dynamic = 'force-dynamic';
 
-export default function LoginPage() {
-  return <Login configured={configured()} />;
+export default async function LoginPage({searchParams}:{searchParams:Promise<{error?:string}>}) {
+  return <Login configured={configured()} linkError={(await searchParams).error==='link'} />;
 }

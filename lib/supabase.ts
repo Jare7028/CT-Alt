@@ -10,7 +10,7 @@ export async function supabase() {
   if (!config) throw new Error('Company sign-in is not configured yet.');
   const jar = await cookies();
   return createServerClient(config.url, config.key, {
-    cookieOptions: { name: 'ct-alt-auth' },
+    cookieOptions: { name: 'ct-alt-auth', httpOnly: true, secure: config.url.startsWith('https:') },
     cookies: {
       getAll: () => jar.getAll(),
       setAll: values => {

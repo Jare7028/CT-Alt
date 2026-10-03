@@ -7,7 +7,7 @@ export async function proxy(request: NextRequest) {
   const config = supabaseConfig();
   if (!config) return response;
   const client = createServerClient(config.url, config.key, {
-    cookieOptions: { name: 'ct-alt-auth' },
+    cookieOptions: { name: 'ct-alt-auth', httpOnly: true, secure: config.url.startsWith('https:') },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: values => {
