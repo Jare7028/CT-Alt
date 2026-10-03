@@ -105,7 +105,18 @@ test("real Auth, signed-cookie API, UI persistence, tenant/privacy boundaries, r
     "base64-" + Buffer.from(JSON.stringify(session)).toString("base64url");
   expect(cookies).toHaveLength(1);
   await context.addCookies([{ ...cookies[0], value: expired }]);
-  await page.goto(`/chat?company=${f.tenant}`);
+  const expiredNavigation = await page.goto(`/chat?company=${f.tenant}`);
+  if (!expiredNavigation)
+    throw Error("Missing direct Chat navigation response");
+  expect(expiredNavigation.status()).toBe(200);
+  const navigationHeaders = await expiredNavigation.headersArray();
+  expect(
+    navigationHeaders.some(
+      (header) =>
+        header.name.toLowerCase() === "set-cookie" &&
+        header.value.startsWith("ct-alt-auth"),
+    ),
+  ).toBe(true);
   await expect(
     page.getByRole("heading", { name: "Chat", exact: true }),
   ).toBeVisible();
@@ -239,6 +250,18 @@ test("real Auth, signed-cookie API, UI persistence, tenant/privacy boundaries, r
   expect(
     rows.data?.filter((m) => m.body === "Duplicate synthetic"),
   ).toHaveLength(1);
+  await expect
+    .poll(async () => {
+      const read = await owner
+        .from("chat_reads")
+        .select("sequence")
+        .eq("conversation_id", conversation)
+        .eq("user_id", f.accounts.owner.id);
+      return read.data?.[0]?.sequence;
+    })
+    .toBe(3);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date(Date.now() + 100));
   const employeeRetry = {
     action: "send",
     conversationId: conversation,
@@ -260,6 +283,13 @@ test("real Auth, signed-cookie API, UI persistence, tenant/privacy boundaries, r
     });
     expect(result.error).toBeNull();
   }
+  const pausedRead = await owner
+    .from("chat_reads")
+    .select("sequence")
+    .eq("conversation_id", conversation)
+    .eq("user_id", f.accounts.owner.id);
+  expect(pausedRead.data?.[0]?.sequence).toBe(3);
+  await page.clock.resume();
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect(page.getByRole("log").getByRole("article")).toHaveCount(208, {
     timeout: 20000,
