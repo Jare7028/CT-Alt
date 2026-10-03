@@ -1,10 +1,12 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { csvCell } from '../../lib/csv';
 import { formatEmploymentDate, formatTimestamp, compareDateValues } from '../../lib/agent-dates';
 import { useRouter } from 'next/navigation';
 import type { Agent, AgentField, AgentInput, Company, Member } from '../../lib/agent-types';
+import Filters, { useDirectoryFilters } from './filters';
+import { blankFilters, filterAgents, filterFields } from '../../lib/agent-filters';
 import './users.css';
 
 type Row = { key: string; first_name: string; last_name: string; country: string; mobile: string; title: string; team: string; employment_start_date: string; custom_fields: Record<string,string> };
@@ -21,7 +23,7 @@ export default function Users({ companies,company,members,agents: initial,fields
   const [currentMembers,setMembers]=useState(members);
   const [dialog,setDialog]=useState<'form'|'confirmation'|null>(null);
   const [tab,setTab]=useState<'users'|'admins'|'archived'>('users');
-  const [search,setSearch]=useState(''); const [unjoined,setUnjoined]=useState(false); const [team,setTeam]=useState('');
+  const [search,setSearch]=useState(''); const [unjoined,setUnjoined]=useState(false);
   const [page,setPage]=useState(0); const [rowsPerPage,setRowsPerPage]=useState(25);
   const [sort,setSort]=useState({ key:'last_name',descending:false });
   const [hidden,setHidden]=useState<string[]>([]); const [error,setError]=useState(''); const [notice,setNotice]=useState('');
@@ -39,8 +41,10 @@ export default function Users({ companies,company,members,agents: initial,fields
     ...(tab==='admins' ? [{ key:'role',label:'Access level',value:(a:Agent)=>member(a)?.role==='owner' ? 'Owner' : 'Admin' }] : []),
     ...fields.map(field=>({ key:field.key,label:field.label,value:(a:Agent)=>a.custom_fields[field.key] || '—' })),
   ];
+  const supportedFilters=useMemo(()=>filterFields(fields,currentMembers,company.time_zone),[fields,currentMembers,company.time_zone]);
+  const directoryFilters=useDirectoryFilters(company.id,actorId,supportedFilters);
   const displayed=columns.filter(column=>!hidden.includes(column.key));
-  const filtered=agents.filter(agent=>(tab==='archived' ? agent.status==='archived' : agent.status==='active' && (tab!=='admins' || admin(agent))) && (!unjoined || !agent.user_id) && (!team || agent.team===team) && `${agent.first_name} ${agent.last_name} ${agent.phone} ${agent.title} ${agent.team} ${Object.values(agent.custom_fields).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered=filterAgents(agents,directoryFilters.state,supportedFilters).filter(agent=>(tab==='archived' ? agent.status==='archived' : agent.status==='active' && (tab!=='admins' || admin(agent))) && (!unjoined || !agent.user_id) && `${agent.first_name} ${agent.last_name} ${agent.phone} ${agent.title} ${agent.team} ${Object.values(agent.custom_fields).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
   const sorted=[...filtered].sort((a,b)=>{
     const dateOrder=sort.key==='employment_start_date' ? compareDateValues(a.employment_start_date,b.employment_start_date) : sort.key==='created_at' ? compareDateValues(a.created_at,b.created_at,true) : null;
     const column=columns.find(c=>c.key===sort.key);
@@ -90,9 +94,10 @@ export default function Users({ companies,company,members,agents: initial,fields
     <aside className="rail" aria-label="Modules"><Link href="/agents" aria-label="Users" aria-current="page">♙</Link></aside>
     <main className="users-main"><header className="users-heading"><span className="users-icon" aria-hidden="true">♙</span><h1>Users</h1></header>
       {notice ? <p role="status" className="feedback">{notice}</p> : null}{error && !dialog ? <p role="alert" className="error">{error}</p> : null}
+      {directoryFilters.state.restored ? <p role="alert" className="error">{directoryFilters.state.restored==='removed' ? 'Some saved filter conditions were removed because their fields or operators are no longer available.' : 'Saved filter conditions could not be restored and were reset.'} Your results and export may include more users. Review the filters or choose Reset all to clear this notice.</p> : null}
       <div className="directory-card"><div role="tablist" aria-label="User status" className="tabs">{(['users','admins','archived'] as const).map(value=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>{setTab(value);setPage(0);}}>{value[0].toUpperCase()+value.slice(1)} <span>({agents.filter(a=>value==='archived'?a.status==='archived':a.status==='active'&&(value!=='admins'||admin(a))).length})</span></button>)}</div>
         <div className="toolbar"><label className="search"><span aria-hidden="true">⌕</span><span className="sr-only">Search users</span><input type="search" placeholder="Search" value={search} onChange={event=>{setSearch(event.target.value);setPage(0);}} /></label>
-          <details className="filter"><summary>Filter</summary><div><label>Team<select value={team} onChange={event=>{setTeam(event.target.value);setPage(0);}}><option value="">All teams</option>{[...new Set(agents.map(a=>a.team).filter(Boolean))].sort().map(t=><option key={t}>{t}</option>)}</select></label><button onClick={()=>{setTeam('');setSearch('');setUnjoined(false);setPage(0);}}>Reset all</button></div></details>
+          <Filters fields={supportedFilters} agents={agents} state={directoryFilters.state} onChange={state=>{directoryFilters.change(state);setPage(0);}} onReset={()=>{directoryFilters.change(blankFilters());setSearch('');setUnjoined(false);setPage(0);}}/>
           <div className="toolbar-right"><button className={unjoined?'unjoined selected':'unjoined'} aria-pressed={unjoined} onClick={()=>{setUnjoined(!unjoined);setPage(0);}}>Users haven’t joined yet</button><button onClick={exportCsv} aria-label="Export visible users">⇩</button>{canManage ? <details className="add-menu"><summary className="primary">Add users <span aria-hidden="true">⌄</span></summary><button onClick={event=>{event.currentTarget.closest('details')?.removeAttribute('open');open();}}>Add manually</button></details> : null}</div>
         </div>
         <div className="table-scroll"><table><thead><tr>{displayed.map(column=><th key={column.key} scope="col"><button onClick={()=>setSort({key:column.key,descending:sort.key===column.key&&!sort.descending})}>{column.label}{sort.key===column.key ? <span aria-hidden="true"> {sort.descending?'↓':'↑'}</span> : null}</button></th>)}<th scope="col"><details className="column-picker"><summary aria-label="Choose columns">☷</summary><fieldset><legend>Columns</legend>{columns.map(c=><label key={c.key}><input type="checkbox" checked={!hidden.includes(c.key)} onChange={()=>setHidden(old=>old.includes(c.key)?old.filter(key=>key!==c.key):[...old,c.key])}/>{c.label}</label>)}</fieldset></details></th></tr></thead><tbody>{visible.map(agent=><tr key={agent.id}>{displayed.map(c=><td key={c.key}>{c.key==='first_name' ? <span className="person"><span className="avatar" aria-hidden="true">{agent.first_name[0]}{agent.last_name[0]}</span>{c.value(agent)}</span> : c.value(agent)}</td>)}<td className="row-actions">{canManage ? <>{agent.status==='active' ? <button onClick={()=>open(agent)} aria-label={`Edit ${agent.first_name} ${agent.last_name}`}>Edit</button> : null}{agent.user_id!==actorId && member(agent)?.role!=='owner' ? <button onClick={()=>ask(agent,agent.status==='active'?'archive':'restore')}>{agent.status==='active'?'Archive':'Restore'}</button> : null}</> : null}</td></tr>)}{!visible.length ? <tr><td className="empty" colSpan={displayed.length+1}>No users match this view.</td></tr> : null}</tbody></table></div>
