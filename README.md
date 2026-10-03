@@ -110,11 +110,17 @@ Before remote application, verify the intended independent project's identity an
 
 ## Read-only Agent profiles
 
-User names open addressable `/agents/{id}?company={companyId}` pages. When the First name column is hidden, a View link remains in the row. Profiles show existing user/custom fields, record timestamps in the company time zone, calendar-only employment date and linked company membership status/access. They do not infer an email, invitation state, last login or photograph. Editing remains in the Users directory.
+User names open addressable `/agents/{id}?company={companyId}` pages. When the First name column is hidden, a View link remains in the row. Profiles show existing user/custom fields, record timestamps in the company time zone, calendar-only employment date and linked company membership status/access. They do not infer an email, invitation state, last login or photograph. Owners/admins can edit active profiles inline or use the existing Users directory edit dialog.
 
 Every profile read uses the authenticated user and existing RLS, with explicit company filters. Owners/admins/managers can read their company records, including archived records. Employees can read only their own linked active record; another employee's membership and the creator's identity remain hidden by RLS. Unknown, malformed, foreign-company and unauthorized records use the same unavailable page. No schema, permission grant, privileged credential or write endpoint is added.
 
-`tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1440 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+`tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1184 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+
+## Directory selection and controls
+
+The unjoined pill counts active records without a linked account in the loaded company directory. No seat-capacity denominator is invented. Header select-all selects only the current page; row selection persists across pagination and sorting. Export uses selected matching rows when any are selected, and otherwise all matching loaded rows. Search, filter, tab, unjoined and data-refresh changes clear selection; company/account switches remount the directory. Selection never changes membership or records.
+
+Toolbar styling follows the parent's native visual review of the private source crop: counted outlined unjoined pill, filter/search icons, circular export, selection gutter, tab underline, primary blue and header styling. Our own desktop reference uses an approximately 1,084-pixel card width; `tests/visual-reference/current-users-controls.png` captures only our rendered tabs, toolbar and header. Source zoom/DPR is unknown and full pixel parity is not claimed.
 
 ## Profile editing
 
