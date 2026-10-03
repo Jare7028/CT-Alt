@@ -20,11 +20,13 @@ export default function Chat({
   companies,
   actorId,
   management,
+  canViewActivity = false,
 }: {
   company: Company;
   companies: Company[];
   actorId: string;
   management: boolean;
+  canViewActivity?: boolean;
 }) {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -354,7 +356,7 @@ export default function Chat({
       companyName={company.name}
       companyId={company.id}
       activeModule="chat"
-      moduleLinks={{ chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      moduleLinks={{ overview: management ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: canViewActivity ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
       companyControl={
         <label className="chat-company">
           Company{" "}

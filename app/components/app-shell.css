@@ -58,6 +58,7 @@
 .ct-add-section { border-top:1px solid var(--ct-line);padding-top:14px; }
 .ct-group-empty { display:block;padding:7px 3px;color:var(--ct-muted);font-size:11px; }
 .ct-shell-content { min-width:0; }
+.ct-dashboard-main { max-width:none; margin:0; padding:0; }
 .ct-shell-content:focus { outline:none; }
 .ct-shell-collapsed { --ct-sidebar-width:60px; }
 .ct-shell-collapsed .ct-sidebar :is(.ct-nav-label,.ct-unavailable,.ct-add-section,.ct-add-unavailable,.ct-group-options,.ct-group-title) { display:none; }

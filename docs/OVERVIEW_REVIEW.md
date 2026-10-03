@@ -1,0 +1,15 @@
+# Overview and Activity
+
+Original CT Alt implementation based on the public [Overview guide](https://help.connecteam.com/en/articles/6436008-the-overview-page) and [Activity guide](https://help.connecteam.com/en/articles/6419701-the-activity-page). No proprietary assets or private workforce records were imported.
+
+Overview shows exact server counts for active/archived directory records, account-linked/unlinked active records and active memberships by role. Owners/admins also see recent recorded user changes; managers receive counts without audit data. These are directory linkage counts, not invitations, login analytics or seat capacity. Attendance, time-off, engagement, alerts and celebrations remain future integrations.
+
+Activity is owner/admin only. Its user-change log supports action and inclusive company-calendar date filters, manual refresh, addressable profiles and stable older-history pagination. Bigint audit IDs stay text, and cursors preserve microsecond timestamps and numeric ordering. Cursor scope includes company, timezone and filters; later arrivals do not duplicate an ongoing older-history traversal. Other feature audit streams and activity analytics remain incomplete.
+
+Both readers use signed-user RLS and explicit tenant predicates, then recheck current membership/company status, role and timezone. Employee/foreign/revoked requests fail without a summary. Routes and APIs use private/no-store responses. Company discovery never falls back from an explicit inaccessible or malformed company. No privileged application credential or schema migration is added.
+
+Counts are exact individually, but the eight queries do not share a transactional snapshot. Concurrent directory writes can temporarily make related summary counts disagree; refresh reads the current values again. A consistent snapshot is a tracked follow-up. Refreshed activity formatting uses the response timezone rather than a stale initial prop.
+
+Validation: check/build, configuration/query tests and an independently reviewed API/UI/page integration. Four real GoTrue/PostgREST/PostgreSQL/browser scenarios cover 1,204 active records (above the directory limit), bigint IDs above 2^53, tied timestamps and microseconds, pagination during concurrent arrivals, inclusive calendar boundaries, timezone changes, owner/admin/manager/employee/foreign permissions, revocation with existing signed cookies, no-store headers and desktop/mobile shell containment. Synthetic rendered captures were inspected at1444/900/390px. A prior synthetic UI review also exercises delayed filter/company responses, errors and pagination deduplication.
+
+Run `node scripts/test-overview-integration.mjs` with the managed Docker daemon and local Chromium. It accepts no hosted connection, uses digest-pinned disposable resources, checks exclusive local ports, labels/verifies its owned database and restores local environment files. Run it independently of other Auth fixtures using the same ports. Production deployment status is recorded in the handover; real-account production Auth workflows and full current-reference pixel parity remain unverified.

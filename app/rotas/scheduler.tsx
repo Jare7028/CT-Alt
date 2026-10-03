@@ -375,7 +375,7 @@ export default function Scheduler({
       activeModule="rotas"
       companyId={company.id}
       companyName={company.name}
-      moduleLinks={{ chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      moduleLinks={{ overview: role !== "employee" ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: owner ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
       companyControl={
         <label>
           <span className="sr-only">Company</span>
