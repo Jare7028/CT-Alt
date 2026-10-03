@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import AppShell from "../components/app-shell";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -70,6 +70,10 @@ export default function Chat({
   const fail = useCallback((reason: unknown) => {
     setError(reason instanceof Error ? reason.message : "Chat is unavailable.");
     if (reason instanceof PostingError) {
+      // A list requested before this denial may still claim posting is allowed.
+      // Invalidate its response before hiding the composer.
+      generation.current++;
+      setBusy(false);
       setConversations((current) =>
         current.map((item) =>
           item.id === selectedRef.current ? { ...item, can_post: false } : item,
@@ -346,11 +350,11 @@ export default function Chat({
     }
   }
   return (
-    <main className="chat-app">
-      <header>
-        <span className="mark">C</span>
-        <span>CT Alt</span>
-        <Link href="/agents">Users</Link>
+    <AppShell
+      companyName={company.name}
+      companyId={company.id}
+      activeModule="chat"
+      companyControl={
         <label className="chat-company">
           Company{" "}
           <select
@@ -366,7 +370,9 @@ export default function Chat({
             ))}
           </select>
         </label>
-      </header>
+      }
+    >
+    <main className="chat-app">
       <div className="chat-title">
         <h1>Chat</h1>
       </div>
@@ -656,5 +662,6 @@ export default function Chat({
         </section>
       </div>
     </main>
+    </AppShell>
   );
 }

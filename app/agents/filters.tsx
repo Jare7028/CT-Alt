@@ -1,6 +1,7 @@
 'use client';
 import { useState, useSyncExternalStore } from 'react';
 import './filters.css';
+import DirectoryIcon from './directory-icon';
 import { activeRules, operatorLabels, operators, preferenceKey, quickCompatible, restoreFilters, type FilterField, type FilterState } from '../../lib/agent-filters';
 
 const fallback=new Map<string,string>();
@@ -35,7 +36,7 @@ export default function Filters({fields,agents,state,onChange,onReset}:{fields:F
   function update(id:string,patch:Partial<FilterState['rules'][number]>) {
     onChange({...state,rules:state.rules.map(rule=>rule.id===id ? {...rule,...patch} : rule)});
   }
-  return <details className="filter directory-filter"><summary aria-label="Filter users">Filter {active ? <span className="filter-dot" aria-label={`${active} active filters`} /> : null}</summary>
+  return <details className="filter directory-filter"><summary aria-label="Filter users"><DirectoryIcon name="filter"/><DirectoryIcon name="chevron"/>{active ? <span className="filter-dot" aria-label={`${active} active filters`} /> : null}</summary>
     <div className="filter-panel" role="region" aria-label="User filters">
       <div className="filter-heading"><strong>{advanced?'Advanced filters':'Quick filters'}</strong><button onClick={()=>{setFieldSearch('');onReset();}}>Reset all</button></div>
       {!advanced && !compatible ? <p className="filter-help">These conditions need advanced filters. Switch back to edit them; your conditions still apply.</p> : <>

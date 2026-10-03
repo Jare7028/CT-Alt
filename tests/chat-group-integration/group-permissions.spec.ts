@@ -87,6 +87,17 @@ test("real signed Auth group edits, admin-only posting, history, private boundar
     path: "/tmp/ct-alt-chat-group-info.png",
     fullPage: true,
   });
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(info).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bounds = await info.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    await page.screenshot({ path: `/tmp/ct-alt-chat-shell-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 1280, height: 844 });
   await info.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(info).not.toBeVisible();
   const managerContext = await browser.newContext();

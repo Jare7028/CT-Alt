@@ -58,7 +58,9 @@ try {
   started = true;
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
-    const result = spawnSync('docker', ['exec', name, 'pg_isready', '-U', 'postgres', '-d', 'ct_alt_test'], { stdio: 'ignore', timeout: 5000 });
+    // The image briefly starts a socket-only init server and then restarts it.
+    // TCP loopback readiness waits for the final server inside this container.
+    const result = spawnSync('docker', ['exec', name, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'ct_alt_test'], { stdio: 'ignore', timeout: 5000 });
     if (result.status === 0) { ready = true; break; }
     await new Promise(resolve => setTimeout(resolve, 500));
   }

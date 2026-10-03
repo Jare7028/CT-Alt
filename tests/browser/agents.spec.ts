@@ -35,7 +35,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();
  await expect(row).toContainText('Changed title');
  const download=page.waitForEvent('download');
- await page.getByRole('button',{name:'Export visible users'}).click();
+ await page.getByRole('button',{name:'Export all matching users'}).click();
  expect((await download).suggestedFilename()).toBe('users.csv');
  await row.getByRole('button',{name:'Archive',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'Archive',exact:true}).click();
@@ -52,7 +52,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await page.screenshot({path:'test-results/users-mobile.png',fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  expect(errors).toEqual([]);
- await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await page.getByLabel('Account menu').click();await page.getByRole('button',{name:'Sign out',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Sign in to your company'})).toBeVisible();
  await page.goto('/agents');
  await expect(page).toHaveURL(/\/login$/);

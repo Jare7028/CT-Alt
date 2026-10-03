@@ -58,7 +58,7 @@
 }
 .chat-workspace {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
   border: 1px solid #dcdee0;
   border-radius: 10px;
   background: white;
@@ -107,6 +107,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 .chat-conversation > p {
   padding: 24px;
@@ -349,4 +350,21 @@
   padding: 16px;
   text-align: center;
   background: #eaf5ff;
+}
+
+/* Fit the shared navigation and keep composer controls inside narrow panes. */
+.chat-app {
+  width: 100%;
+  min-width: 0;
+}
+.chat-company select {
+  max-width: 180px;
+  font: inherit;
+}
+.chat-compose textarea {
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .chat-app { padding: 12px; }
+  .chat-info-person { flex-wrap: wrap; }
 }

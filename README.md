@@ -110,8 +110,29 @@ Before remote application, verify the intended independent project's identity an
 
 ## Read-only Agent profiles
 
-User names open addressable `/agents/{id}?company={companyId}` pages. When the First name column is hidden, a View link remains in the row. Profiles show existing user/custom fields, record timestamps in the company time zone, calendar-only employment date and linked company membership status/access. They do not infer an email, invitation state, last login or photograph. Editing remains in the Users directory.
+User names open addressable `/agents/{id}?company={companyId}` pages. When the First name column is hidden, a View link remains in the row. Profiles show existing user/custom fields, record timestamps in the company time zone, calendar-only employment date and linked company membership status/access. They do not infer an email, invitation state, last login or photograph. Owners/admins can edit active profiles inline or use the existing Users directory edit dialog.
 
 Every profile read uses the authenticated user and existing RLS, with explicit company filters. Owners/admins/managers can read their company records, including archived records. Employees can read only their own linked active record; another employee's membership and the creator's identity remain hidden by RLS. Unknown, malformed, foreign-company and unauthorized records use the same unavailable page. No schema, permission grant, privileged credential or write endpoint is added.
 
-`tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1440 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+`tests/visual-reference/current-users-desktop.png` is our own isolated local app output at 1184 × 1000 using synthetic fixtures only. It contains no credentials, real workforce data, source competitor image or browser chrome. This manually reviewed artifact supports visual comparison; it is not an automatic screenshot assertion or a claim of competitor pixel parity.
+
+## Directory selection and controls
+
+The unjoined pill counts active records without a linked account in the loaded company directory. No seat-capacity denominator is invented. Header select-all selects only the current page; row selection persists across pagination and sorting. Export uses selected matching rows when any are selected, and otherwise all matching loaded rows. Search, filter, tab, unjoined and data-refresh changes clear selection; company/account switches remount the directory. Selection never changes membership or records.
+
+Toolbar styling follows the parent's native visual review of the private source crop: counted outlined unjoined pill, filter/search icons, circular export, selection gutter, tab underline, primary blue and header styling. Our own desktop reference uses an approximately 1,084-pixel card width; `tests/visual-reference/current-users-controls.png` captures only our rendered tabs, toolbar and header. Source zoom/DPR is unknown and full pixel parity is not claimed.
+
+## Profile editing
+
+Owners/admins can click an existing field on an active profile, edit it inline and save by leaving the field. This follows the blur-save interaction documented in [Connecteam's profile guide](https://help.connecteam.com/en/articles/8934869-managing-your-users-profiles). Personal details contain names/mobile; Company related info contains title/team, calendar employment date and existing configured custom text fields. Saved, Saving, Editing and error states remain visible. Directory manual add/edit keeps its separate explicit confirmation workflow.
+
+Invalid input never submits. Escape discards only the current unsaved field and restores keyboard focus; it does not undo earlier saves. Saves are serialized and submit one existing signed-user update with the last confirmed revision. A successful acknowledgement must identify the same record and its next revision. Stale/unknown outcomes preserve the field and block further writes until a fresh read. Record/company/linked-account identity, roles/access, status and audit metadata are not editable. Archived profiles require the existing directory restore workflow first.
+
+Profile links wait for acknowledgement before navigating. Browser Back cannot reliably be cancelled, so pending saves use keepalive and an outcome marker scoped to the Auth user, company and record. The marker contains only status and revision, never field values or credentials. A subsequent visit requires review if its outcome is unknown or its cached record predates a confirmed save. Hard unload uses the browser's unsaved-change warning. These browser recovery paths were verified in local Chromium; browser policy and session-storage availability can limit recovery. The database's revision and authorization checks always remain authoritative. No schema or permission grants change.
+
+
+## Chat and group permissions (pending release)
+
+The integrated Chat branch includes company-scoped direct and selected-user group conversations, text history, unread counts, earlier-history pagination and retry-safe sends. Chat Info supports member selection, explicit group admins and admin-only posting with revision conflicts and audit records. The existing shared shell contains Chat's company selector and tenant-aware Users navigation. Live company/group membership and posting checks remain enforced in PostgreSQL.
+
+Both proposed Chat migrations remain unapplied to hosted Supabase. Shared module links stay disabled until the integration owner reviews and coordinates that schema release. Local checks cover tenant isolation, current-role revocation, concurrent changes and stale client responses; authenticated hosted acceptance and full appearance parity remain unverified. See [Chat review and integration](docs/CHAT_REVIEW.md) for verification and the complete remaining feature scope.
