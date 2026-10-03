@@ -21,6 +21,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await dialog.getByLabel('Mobile phone row 1',{exact:true}).fill('07700'+suffix);
  await expect(dialog.getByRole('button',{name:'Confirm',exact:true})).toBeDisabled();
  await dialog.getByLabel('Client row 1',{exact:true}).fill('Demo client');
+ await dialog.getByLabel('Employment Start Date row 1',{exact:true}).fill('2026-10-03');
  await expect(dialog.getByRole('button',{name:'Confirm',exact:true})).toBeEnabled();
  await dialog.getByRole('button',{name:'Confirm',exact:true}).click();
  await expect(dialog).not.toBeVisible();
@@ -28,6 +29,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await page.getByRole('searchbox').fill(suffix);
  const row=page.getByRole('row').filter({hasText:'Synthetic '+suffix});
  await expect(row).toBeVisible();
+ await expect(row).toContainText('3 Oct 2026');
  await row.getByRole('button',{name:'Edit',exact:false}).click();
  await page.getByRole('dialog').getByLabel('Title row 1',{exact:true}).fill('Changed title');
  await page.getByRole('dialog').getByRole('button',{name:'Confirm',exact:true}).click();

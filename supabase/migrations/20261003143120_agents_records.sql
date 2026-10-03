@@ -18,7 +18,7 @@ create table public.agents (
   phone text not null check (phone ~ '^\+[1-9][0-9]{7,14}$'),
   title text not null default '' check (length(title) <= 100),
   team text not null default '' check (length(team) <= 100),
-  employment_start_date date,
+  employment_start_date date check (employment_start_date is null or (isfinite(employment_start_date) and employment_start_date between date '0001-01-01' and date '9999-12-31')),
   custom_fields jsonb not null default '{}' check (jsonb_typeof(custom_fields) = 'object'),
   status text not null default 'active' check (status in ('active', 'archived')),
   revision integer not null default 1 check (revision > 0),
@@ -109,6 +109,7 @@ begin
     if item->>'action' in ('create','update') then
       if jsonb_typeof(item->'first_name') is distinct from 'string' or jsonb_typeof(item->'last_name') is distinct from 'string' or jsonb_typeof(item->'phone') is distinct from 'string' then raise exception using errcode='22023', message='Enter a first name, last name and mobile number'; end if;
       if (item ? 'title' and jsonb_typeof(item->'title') <> 'string') or (item ? 'team' and jsonb_typeof(item->'team') <> 'string') then raise exception using errcode='22023', message='Enter valid title and team'; end if;
+      if item ? 'employment_start_date' and item->'employment_start_date' <> 'null'::jsonb and (jsonb_typeof(item->'employment_start_date') <> 'string' or item->>'employment_start_date' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') then raise exception using errcode='22023', message='Enter a finite ISO calendar date'; end if;
       if item->>'action'='update' and existing.status<>'active' then raise exception using errcode='22023', message='Restore the agent before editing'; end if;
       if jsonb_typeof(item->'custom_fields') is distinct from 'object' then raise exception using errcode='22023', message='Enter valid custom fields'; end if;
       if exists (select 1 from jsonb_each(item->'custom_fields') kv where jsonb_typeof(kv.value)<>'string' or length(kv.value#>>'{}')>500 or not exists (select 1 from public.agent_fields f where f.tenant_id=target_tenant and f.key=kv.key)) then

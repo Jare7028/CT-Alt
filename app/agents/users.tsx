@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { csvCell } from '../../lib/csv';
+import { formatEmploymentDate, formatTimestamp, compareDateValues } from '../../lib/agent-dates';
 import { useRouter } from 'next/navigation';
 import type { Agent, AgentField, AgentInput, Company, Member } from '../../lib/agent-types';
 import './users.css';
@@ -12,7 +14,6 @@ function phone(row: Row) { const number=row.mobile.replace(/[\s()-]/g,''); retur
 function used(row: Row) { return !!(row.first_name || row.last_name || row.mobile || row.title || row.team || row.employment_start_date || Object.values(row.custom_fields).some(Boolean)); }
 function valid(row: Row, fields: AgentField[]) { return !!row.first_name.trim() && !!row.last_name.trim() && /^\+[1-9][0-9]{7,14}$/.test(phone(row)) && fields.every(field => !field.required || row.custom_fields[field.key]?.trim()); }
 function record(row: Row): AgentInput { return { first_name:row.first_name.trim(),last_name:row.last_name.trim(),phone:phone(row),title:row.title,team:row.team,employment_start_date:row.employment_start_date || null,custom_fields:row.custom_fields }; }
-function csvCell(value: string) { const safe=/^[=+@\-\t\r]/.test(value) ? "'"+value : value; return '"'+safe.replaceAll('"','""')+'"'; }
 
 export default function Users({ companies,company,members,agents: initial,fields,actorId,canManage }: { companies:Company[];company:Company;members:Member[];agents:Agent[];fields:AgentField[];actorId:string;canManage:boolean }) {
   const router=useRouter();
@@ -29,19 +30,22 @@ export default function Users({ companies,company,members,agents: initial,fields
   const form=useRef<HTMLDialogElement>(null); const confirmation=useRef<HTMLDialogElement>(null);
   const member=(agent:Agent) => currentMembers.find(item=>item.user_id===agent.user_id);
   const admin=(agent:Agent) => ['owner','admin'].includes(member(agent)?.role || '');
-  const formatDate=(value:string|null) => value ? new Intl.DateTimeFormat('en-GB',{timeZone:company.time_zone,dateStyle:'medium'}).format(new Date(value.length===10 ? value+'T12:00:00Z' : value)) : '—';
   const columns:Column[]=[
     { key:'first_name',label:'First name',value:a=>a.first_name },{ key:'last_name',label:'Last name',value:a=>a.last_name },
     { key:'last_login',label:'Last login',value:a=>a.user_id ? 'Not recorded' : 'Not joined' },
-    { key:'title',label:'Title',value:a=>a.title || '—' },{ key:'employment_start_date',label:'Employment Start Date',value:a=>formatDate(a.employment_start_date) },
+    { key:'title',label:'Title',value:a=>a.title || '—' },{ key:'employment_start_date',label:'Employment Start Date',value:a=>formatEmploymentDate(a.employment_start_date) },
     { key:'team',label:'Team',value:a=>a.team || '—' },{ key:'kiosk',label:'Kiosk code',value:()=> '—' },
-    { key:'created_at',label:'Date added',value:a=>formatDate(a.created_at) },{ key:'created_by',label:'Added by',value:a=>currentMembers.find(m=>m.user_id===a.created_by)?.display_name || '—' },
+    { key:'created_at',label:'Date added',value:a=>formatTimestamp(a.created_at,company.time_zone) },{ key:'created_by',label:'Added by',value:a=>currentMembers.find(m=>m.user_id===a.created_by)?.display_name || '—' },
     ...(tab==='admins' ? [{ key:'role',label:'Access level',value:(a:Agent)=>member(a)?.role==='owner' ? 'Owner' : 'Admin' }] : []),
     ...fields.map(field=>({ key:field.key,label:field.label,value:(a:Agent)=>a.custom_fields[field.key] || '—' })),
   ];
   const displayed=columns.filter(column=>!hidden.includes(column.key));
   const filtered=agents.filter(agent=>(tab==='archived' ? agent.status==='archived' : agent.status==='active' && (tab!=='admins' || admin(agent))) && (!unjoined || !agent.user_id) && (!team || agent.team===team) && `${agent.first_name} ${agent.last_name} ${agent.phone} ${agent.title} ${agent.team} ${Object.values(agent.custom_fields).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
-  const sorted=[...filtered].sort((a,b)=>{ const column=columns.find(c=>c.key===sort.key);return (column?.value(a)||'').localeCompare(column?.value(b)||'', 'en-GB',{numeric:true})*(sort.descending?-1:1); });
+  const sorted=[...filtered].sort((a,b)=>{
+    const dateOrder=sort.key==='employment_start_date' ? compareDateValues(a.employment_start_date,b.employment_start_date) : sort.key==='created_at' ? compareDateValues(a.created_at,b.created_at,true) : null;
+    const column=columns.find(c=>c.key===sort.key);
+    return (dateOrder ?? (column?.value(a)||'').localeCompare(column?.value(b)||'', 'en-GB',{numeric:true}))*(sort.descending?-1:1);
+  });
   const safePage=Math.min(page,Math.max(0,Math.ceil(sorted.length/rowsPerPage)-1));
   const visible=sorted.slice(safePage*rowsPerPage,(safePage+1)*rowsPerPage);
   const populated=rows.filter(used); const ready=populated.length>0 && populated.every(row=>valid(row,fields));

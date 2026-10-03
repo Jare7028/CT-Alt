@@ -1,13 +1,12 @@
-import { configured } from './lib/supabase-config';
+import { supabaseConfig } from './lib/supabase-config';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!configured() || !url || !key) return response;
-  const client = createServerClient(url, key, {
+  const config = supabaseConfig();
+  if (!config) return response;
+  const client = createServerClient(config.url, config.key, {
     cookieOptions: { name: 'ct-alt-auth' },
     cookies: {
       getAll: () => request.cookies.getAll(),

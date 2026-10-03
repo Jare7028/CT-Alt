@@ -26,6 +26,7 @@ test('actual Auth sessions preserve company boundaries and manager/employee perm
   expect((await write(employee,[{action:'create',...data}])).status()).toBe(403);
   expect((await write(owner,[{action:'create',...data,role:'owner'}])).status()).toBe(400);
   expect((await write(owner,[{action:'create',...data,custom_fields:{}}])).status()).toBe(400);
+  expect((await write(owner,[{action:'create',...data,employment_start_date:'infinity'}])).status()).toBe(400);
   expect((await owner.post('/api/agents',{headers:{Origin:'https://foreign.example'},data:{tenantId:f.tenantA,changes:[{action:'create',...data}]}})).status()).toBe(403);
  }finally{await Promise.all([owner,manager,employee,foreign].map(client=>client.dispose()));}
 });

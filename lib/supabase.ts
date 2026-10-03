@@ -2,13 +2,14 @@ import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-import { configured } from './supabase-config';
+import { supabaseConfig } from './supabase-config';
 export { configured } from './supabase-config';
 
 export async function supabase() {
-  if (!configured()) throw new Error('Company sign-in is not configured yet.');
+  const config = supabaseConfig();
+  if (!config) throw new Error('Company sign-in is not configured yet.');
   const jar = await cookies();
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+  return createServerClient(config.url, config.key, {
     cookieOptions: { name: 'ct-alt-auth' },
     cookies: {
       getAll: () => jar.getAll(),
