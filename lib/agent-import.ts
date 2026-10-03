@@ -59,7 +59,11 @@ export function importPhone(value:string,country:string) {
   if(number.startsWith('+'))return number;
   if(number.startsWith('00'))return '+'+number.slice(2);
   const code=country.trim().replace(/^\+?/,'+');
-  if(!/^\+[1-9]\d{0,3}$/.test(code) || !/^\d+$/.test(number))return '';
+  if(!/^\d+$/.test(number))return '';
+  // Only these explicitly supported plans remove the national trunk 0.
+  // Other plans can have significant leading zeros: require +/00 format.
+  if(code==='+1')return /^[2-9]\d{9}$/.test(number) ? code+number : '';
+  if(!['+44','+353','+33','+49','+61'].includes(code))return '';
   return code+number.replace(/^0/,'');
 }
 function validDate(value:string) {
@@ -78,7 +82,7 @@ export function previewImport(csv:CsvData,mapping:string[],custom:AgentField[],e
     const phone=importPhone(mapped.phone || '',mapped.country || defaultCountry);
     const record:AgentInput={first_name:(mapped.first_name || '').trim(),last_name:(mapped.last_name || '').trim(),phone,title:mapped.title || '',team:mapped.team || '',employment_start_date:mapped.employment_start_date?.trim() || null,custom_fields:Object.fromEntries(custom.filter(field=>selected.includes('custom:'+field.key)).map(field=>[field.key,mapped['custom:'+field.key] || '']))};
     const errors:string[]=[];const skip=phones.has(phone);
-    if(!/^\+[1-9][0-9]{7,14}$/.test(phone))errors.push('Enter a valid mobile number and country code; preserve phone digits as text.');
+    if(!/^\+[1-9][0-9]{7,14}$/.test(phone))errors.push('Enter a valid mobile number. National format is supported for UK, IE, US/CA, FR, DE and AU only; use + or 00 international format elsewhere. Preserve digits as text.');
     if(phone)seen.set(phone,[...(seen.get(phone) || []),row.line]);
     if(!skip) {
       if(!record.first_name || record.first_name.length>100)errors.push('First name is required (maximum 100 characters).');

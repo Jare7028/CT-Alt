@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { blankFilters, calendarDate, companyDate, filterFields, filterAgents, activeRules, preferenceKey, quickCompatible, restoreFilters } from '../../lib/agent-filters.ts';
+const fields=filterFields([{key:'client',label:'Client',required:true,position:1}],[],'America/New_York');
+const agent=(extra={})=>({first_name:'Ada',last_name:'Example',phone:'+447700900001',title:'Supervisor',team:'North',employment_start_date:'2024-02-29',custom_fields:{client:'Demo client'},created_at:'2026-10-04T00:30:00Z',user_id:null,...extra});
+const rule=(field,operator,value='',end='')=>({id:field,field,operator,value,end});
+const state=(rules,join='and')=>({...blankFilters(),mode:'advanced',join,rules});
+test('supported text/custom fields apply explicit AND/OR without broadening tenant input',()=>{
+ const north=agent(),south=agent({team:'South',first_name:'Ben',custom_fields:{client:'Other'}}),records=[north,south];
+ assert.deepEqual(filterAgents(records,state([rule('team','is',' north '),rule('custom:client','contains','DEMO')]),fields),[north]);
+ assert.deepEqual(filterAgents(records,state([rule('team','is','South'),rule('first_name','is','Ada')],'or'),fields),records);
+ for(const [operator,value,expected] of [['is_not','ada',false],['starts_with','AD',true],['ends_with','da',true],['not_contains','zz',true]])assert.equal(filterAgents([north],state([rule('first_name',operator,value)]),fields).length,Number(expected));
+ assert.deepEqual(filterAgents(records,state([rule('phone','contains','900001')]),fields),records);
+ assert.equal(filterAgents([agent({title:''})],state([rule('title','empty')]),fields).length,1);
+ assert.equal(filterAgents([agent({title:''})],state([rule('title','not_empty')]),fields).length,0);
+});
+test('employment dates use calendar days; date-added uses company day including DST',()=>{
+ assert.equal(companyDate('2026-10-04T00:30:00Z','America/New_York'),'2026-10-03');
+ assert.equal(companyDate('2026-03-08T06:59:00Z','America/New_York'),'2026-03-08');
+ assert.equal(companyDate('2026-03-08T07:01:00Z','America/New_York'),'2026-03-08');
+ assert.equal(companyDate('2026-11-01T05:30:00Z','America/New_York'),'2026-11-01');
+ assert.equal(companyDate('2026-11-01T06:30:00Z','America/New_York'),'2026-11-01');
+ const records=[agent(),agent({employment_start_date:'2024-03-01'}),agent({employment_start_date:null})];
+ assert.deepEqual(filterAgents(records,state([rule('employment_start_date','between','2024-02-29','2024-03-01')]),fields),records.slice(0,2));
+ assert.deepEqual(filterAgents(records,state([rule('employment_start_date','before','2024-03-01')]),fields),records.slice(0,1));
+ assert.deepEqual(filterAgents(records,state([rule('employment_start_date','after','2024-02-29')]),fields),records.slice(1,2));
+ assert.equal(filterAgents(records,state([rule('employment_start_date','is_not','2024-03-01')]),fields).length,1);
+ assert.equal(filterAgents(records,state([rule('employment_start_date','empty')]),fields).length,1);
+ assert.equal(filterAgents([agent()],state([rule('created_at','is','2026-10-03')]),fields).length,1);
+ for(const value of ['2023-02-29','0000-01-01','2024-02-30','infinity','2026-1-1'])assert.equal(calendarDate(value),false);
+ assert.equal(calendarDate('0001-01-01'),true);assert.equal(calendarDate('9999-12-31'),true);
+ assert.equal(activeRules(state([rule('employment_start_date','between','2026-10-04','2026-10-03')]),fields).length,0);
+});
+test('unsupported/stale criteria cannot silently become another field and quick switching preserves meaning',()=>{
+ const original=state([rule('employment_start_date','between','2024-01-01','2024-12-31')]);
+ assert.equal(quickCompatible(original,fields),false);
+ assert.equal(quickCompatible(state([rule('team','is','North')]),fields),true);
+ assert.equal(quickCompatible(state([rule('team','is','North')],'or'),fields),false);
+ assert.deepEqual(restoreFilters(JSON.stringify({...original,mode:'quick'}),fields).rules,original.rules);
+ assert.equal(restoreFilters(JSON.stringify(state([rule('groups','is','private'),rule('first_name','before','Ada')])),fields).rules.length,0);
+ for(const raw of ['not json','null',JSON.stringify({version:2}),JSON.stringify({...original,rules:Array(11).fill(original.rules[0])}),JSON.stringify({...original,rules:[original.rules[0],original.rules[0]]})])assert.deepEqual(restoreFilters(raw,fields),{...blankFilters(),restored:'reset'});
+ assert.notEqual(preferenceKey('company-a','user-a'),preferenceKey('company-b','user-a'));
+ assert.notEqual(preferenceKey('company-a','user-a'),preferenceKey('company-a','user-b'));
+});
+
+test('removed saved fields/operators warn and the warning survives saving valid remaining criteria',()=>{
+ const saved=state([rule('custom:retired','is','Previously restricted'),rule('team','is','North')]);
+ const restored=restoreFilters(JSON.stringify(saved),fields);assert.equal(restored.restored,'removed');assert.equal(restored.rules.length,1);
+ assert.equal(restoreFilters(JSON.stringify(restored),fields).restored,'removed');
+ assert.equal(restoreFilters(JSON.stringify(state([rule('team','before','North')])),fields).restored,'removed');
+ assert.equal(restoreFilters(JSON.stringify(blankFilters()),fields).restored,undefined);
+ const record=agent(),dateField=fields.find(field=>field.key==='created_at');
+ assert.equal(dateField.read(record),'2026-10-03');record.created_at='2026-10-05T00:30:00Z';assert.equal(dateField.read(record),'2026-10-04');
+});

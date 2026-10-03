@@ -42,3 +42,12 @@ test('manager cannot import through either the UI or the signed-user API',async(
  await login(page,'manager');await expect(page.getByRole('button',{name:'Import users',exact:true})).toHaveCount(0);
  const result=await page.request.post('/api/agents',{headers:{Origin:origin},data:{tenantId:f.tenantA,changes:[{action:'create',first_name:'Denied',last_name:'Synthetic',phone:phone(),title:'',team:'',employment_start_date:null,custom_fields:{client:'Demo'}}]}});expect(result.status()).toBe(403);
 });
+test('unsupported national-format numbers block review; full international identities match significant-zero existing records',async({page})=>{
+ await login(page);const national='070'+Date.now().toString().slice(-7),international='+225'+national;
+ const existing=await page.request.post('/api/agents',{headers:{Origin:origin},data:{tenantId:f.tenantA,changes:[{action:'create',first_name:'Significant',last_name:'Synthetic',phone:international,title:'',team:'',employment_start_date:null,custom_fields:{client:'Demo'}}]}});expect(existing.status()).toBe(200);await page.reload();
+ const header='First name,Last name,Mobile phone,Client,Country code';
+ const dialog=await openImport(page,header+'\nAda,Example,'+national+',Demo,225');
+ await expect(dialog).toContainText('use + or 00 international format elsewhere');await expect(dialog.getByRole('button',{name:'Review import',exact:true})).toBeDisabled();
+ await dialog.getByLabel('CSV file',{exact:true}).setInputFiles({name:'synthetic.csv',mimeType:'text/csv',buffer:Buffer.from(header+'\nAda,Example,'+international+',Demo,225\nBen,Example,'+phone()+',Demo,44','utf8')});
+ await expect(dialog).toContainText('Skip existing user');await expect(dialog).toContainText('1 new users; 1 existing users');await expect(dialog.getByRole('button',{name:'Review import',exact:true})).toBeEnabled();
+});

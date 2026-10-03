@@ -52,3 +52,13 @@ test('large mapped batches are rejected before submission even inside the file l
  const rows=Array.from({length:25},(_,i)=>'Ada,Example,+447700901'+String(i).padStart(3,'0')+','+Array(5).fill('x'.repeat(500)).join(','));
  const result=preview(header+'\n'+rows.join('\n'),[],fields);assert.equal(result.valid,false);assert.equal(result.issues.some(issue=>issue.includes('48 KiB')),true);
 });
+test('significant national zeros are never stripped for unsupported countries and existing matching is preserved',()=>{
+ assert.equal(importPhone('0701234567','225'),'');assert.equal(importPhone('0701234567','+225'),'');
+ assert.equal(importPhone('+2250701234567','+44'),'+2250701234567');assert.equal(importPhone('002250701234567','+44'),'+2250701234567');
+ assert.equal(importPhone('+390612345678','39'),'+390612345678');assert.equal(importPhone('0612345678','39'),'');
+ assert.equal(importPhone('2025550123','1'),'+12025550123');assert.equal(importPhone('02025550123','1'),'');
+ const csv=parseImportCsv(headers+',Country code\nAda,Example,0701234567,Demo,225');
+ const bad=previewImport(csv,suggestMapping(csv.headers,importFields(custom)),custom,[{phone:'+2250701234567'}],'+44');assert.equal(bad.valid,false);assert.equal(bad.rows[0].record.phone,'');assert.ok(bad.rows[0].errors.length);
+ const matched=preview(headers+'\nAda,Example,+2250701234567,Demo',[{phone:'+2250701234567'}]);assert.equal(matched.skipped,1);assert.equal(matched.added,0);
+ const duplicate=preview(headers+'\nAda,Example,+2250701234567,Demo\nBen,Example,002250701234567,Demo');assert.equal(duplicate.valid,false);assert.equal(duplicate.rows.every(row=>row.errors.includes('Duplicate mobile number within this file.')),true);
+});
