@@ -52,7 +52,7 @@ test('owner can add, edit, search, export, archive and restore a user',async({pa
  await page.screenshot({path:'test-results/users-mobile.png',fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  expect(errors).toEqual([]);
- await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await page.getByLabel('Account menu').click();await page.getByRole('button',{name:'Sign out',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Sign in to your company'})).toBeVisible();
  await page.goto('/agents');
  await expect(page).toHaveURL(/\/login$/);
