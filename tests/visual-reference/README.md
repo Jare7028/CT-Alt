@@ -9,3 +9,5 @@ Run `npm run test:controls` with no other dev server in this checkout. The dispo
 Real local Auth/API/browser tests and the integrated shell review remain separate release checks.
 
 `chat-search-integrated-desktop.png` is our synthetic signed local employee conversation-search capture with literal Unicode/body escaping and integrated Quick Tasks navigation; it contains no real workforce or competitor assets.
+
+`time-off-integrated-desktop-review.png` is our synthetic signed owner team-review capture after employee unknown-response recovery and audited approval; all names/notes are synthetic.

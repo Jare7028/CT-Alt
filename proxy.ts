@@ -22,4 +22,4 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ['/agents/:path*', '/rotas/:path*', '/chat/:path*', '/quick-tasks/:path*', '/time-clock/:path*', '/overview/:path*', '/activity/:path*', '/api/:path*', '/login'] };
+export const config = { matcher: ['/agents/:path*', '/rotas/:path*', '/chat/:path*', '/quick-tasks/:path*', '/time-off/:path*', '/time-clock/:path*', '/overview/:path*', '/activity/:path*', '/api/:path*', '/login'] };

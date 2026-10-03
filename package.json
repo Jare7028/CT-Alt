@@ -24,7 +24,8 @@
     "test:time-clock:db": "node scripts/test-time-clock-database.mjs",
     "test:team-timesheets:db": "node scripts/test-team-timesheets-database.mjs",
     "test:quick-tasks:db": "node scripts/test-quick-tasks-database.mjs",
-    "test:chat-search:db": "node scripts/test-chat-search-database.mjs"
+    "test:chat-search:db": "node scripts/test-chat-search-database.mjs",
+    "test:time-off:db": "node scripts/test-time-off-database.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
