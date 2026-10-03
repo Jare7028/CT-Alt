@@ -155,3 +155,7 @@ Desktop Time Clock supports jobs, personal clock-in/out, paid/unpaid manual brea
 ## Quick Tasks
 
 Quick Tasks supports owner/admin drafts, publishing, edits, archive/restore and reopening; assigned users complete published work. Shared group tasks have one completion, while separate-per-user tasks remain independent. Desktop status/search/overdue filters, precise paging, exact counts and bounded searched assignee selection are available. See [Quick Tasks acceptance](docs/quick-tasks-acceptance.md); run `node scripts/test-quick-tasks-integration.mjs` for isolated real Auth acceptance. Comments, attachments, subtasks, recurring work and granular feature permissions remain further work.
+
+## Team timesheets
+
+Owners/admins can review completed team time entries with inclusive company-calendar dates, retained user names, exact range totals and precise paging. Complete CSV uses the whole selected date/user scope, independently of displayed pages, and refuses scopes above10,000 entries. See [Team timesheets acceptance](docs/team-timesheets-acceptance.md); run `node scripts/test-team-timesheets-integration.mjs` for isolated real Auth/browser checks. Payroll, manual edits, approvals and full Time Clock parity remain further work.
