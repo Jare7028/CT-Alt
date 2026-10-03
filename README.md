@@ -8,7 +8,7 @@ The review branch adds real end-user sign-in and a company-scoped Users director
 
 This is an initial Users slice, not competitor feature parity. Invites, imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
 
-The independent hosted foundation is established. The Agents migration is proposed for parent-controlled review/application; this branch does not apply remote migrations, merge or deploy main. Local browser verification uses actual isolated Supabase Auth and synthetic data, not the hosted database.
+The independent hosted foundation is established. The parent applied the Agents migration once as `20261003153745`; this branch aligns the unchanged SQL with that recorded version and does not replay remote migrations, merge or deploy main. Local browser verification uses actual isolated Supabase Auth and synthetic data, not the hosted database.
 
 ## Run locally
 

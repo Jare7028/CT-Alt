@@ -1,6 +1,6 @@
 # Proposed initial Users slice
 
-Apply only `20261003143120_agents_records.sql` to the independently verified CT Alt project after the already-applied foundation (`20261003143058`). Do not apply test bootstrap/fixtures remotely. No Auth hook, account provisioning, invitation delivery, storage resource or paid dependency is added.
+The parent applied `20261003153745_agents_records.sql` once to the independent CT Alt project after the foundation (`20261003143058`). SQL blob `ebd54a8ce43f0259abfad50a2b79895a012c3b75` is unchanged. Do not replay either migration. Do not apply test bootstrap/fixtures remotely. No Auth hook, account provisioning, invitation delivery, storage resource or paid dependency is added.
 
 The migration creates `agent_fields`, `agents`, `agent_audit` and a signed-user `save_agents` RPC. The public wrapper is an invoker; the internal definer has an empty search path and qualified references. API exposure must continue excluding `workforce_private`. Browser roles have SELECT only on tables and cannot forge audit events, roles, IDs, links or tenant ownership.
 
