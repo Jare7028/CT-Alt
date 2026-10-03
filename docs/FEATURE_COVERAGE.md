@@ -4,7 +4,7 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `2f14a9c8e13e87edf9e3b191c5f17d4b3ec8b6ff`. Vercel production `dpl_8VmHpU4mpDhov7wr5UKRaEJeorBf` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock redirect to login. Real-account authenticated production workflows were not exercised.
+Latest application release: `017c57b878c712ad444bdf353446b01dc920be74`. Vercel production `dpl_H4meT14svgMcZrpRtugKT5D1UnAe` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock/Quick Tasks redirect to login. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -15,7 +15,8 @@ Latest application release: `2f14a9c8e13e87edf9e3b191c5f17d4b3ec8b6ff`. Vercel p
 | Chat | PR5/14 persistent direct/group messages, unread history, group administration and posting permissions; 28 config, 274 SQL, 13 component regressions and both real local Auth acceptance runners pass | On main and production; both migration histories verified | attachments, replies, search, moderation, Realtime and complete appearance/mobile fidelity |
 | Overview/Activity | Exact counts, owner/admin audit, action/calendar filters, safe bigint keyset, access rechecks;41 query/config and47 snapshot/concurrency assertions plus4 real local Auth/browser cases | On main and production | Consistent signed-user statement counts verified; attendance, engagement, alerts, other audit streams and full reference parity |
 | Time Clock | Desktop jobs, personal clock-in/out, manual paid/unpaid breaks, Today and own timesheets;48 config,111 SQL/race and6 real Auth/API/browser cases | On main and production; PR17 CI37157079995 passed | Payroll/GPS/approvals/manual edits, automatic breaks and full reference parity |
-| Quick Tasks | Desktop lifecycle, shared/individual assignments, own completion, role/tenant isolation, exact counts/paging and bounded searched assignees;56 config,82 SQL/race and6 real Auth cases | Reviewed additive SQL applied; consumer release pending | Subtasks, comments, attachments, recurrence, notifications, Date view and granular feature permissions |
+| Quick Tasks | Desktop lifecycle, shared/individual assignments, own completion, role/tenant isolation, exact counts/paging and bounded searched assignees;56 config,82 SQL/race and6 real Auth cases | On main and production; PR18 CI37158960575 passed | Subtasks, comments, attachments, recurrence, notifications, Date view and granular feature permissions |
+| Team timesheets | Owner/admin range/user review, exact completed totals, version-fenced keysets, retained names and whole-scope CSV with10,000 bound;64 combined config,46 team SQL,111 retained Clock and6 real Auth cases | Reviewed additive SQL applied; consumer release pending | Payroll formats/rates/overtime, issues, approvals and manual edits |
 
 ## Wider workforce scope
 
@@ -36,4 +37,4 @@ For every delivered slice, record functional scope, local checks, browser/API pe
 
 Latest owner direction: prioritise desktop functionality and keep consulting official Connecteam docs; defer new mobile polish.
 
-Work underway: Quick Tasks lifecycle/assignment/permissions from official desktop guides, plus owner/admin team-timesheet review, exact range totals and bounded complete CSV export. These are local candidates until reviewed, tested, migrated and deployed.
+Work underway: owner/admin team-timesheet review, exact range totals and bounded complete CSV export, followed by conversation message search. These remain local candidates until reviewed, tested, migrated and deployed.
