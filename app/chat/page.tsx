@@ -54,6 +54,7 @@ export default async function ChatPage({
       companies={companies || []}
       actorId={user.id}
       management={["owner", "admin", "manager"].includes(member?.role || "")}
+      canViewActivity={["owner", "admin"].includes(member?.role || "")}
     />
   );
 }
