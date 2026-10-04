@@ -1,5 +1,17 @@
 # CT Alt feature coverage
 
+## Directory Work Contacts released
+
+PR38 merged as `aa1d8ecbcade7bce6dce09231f26525999ea661b`, reviewed head `431675776beb8e6672811fa566f13adc17914789`, exact tree `211be4a1f5172fb4b45ce9dedcbfd7f20f97f9f0`. Exact-head CI37237563498 passed all30 steps. Production `dpl_GzkRFfSSNfnWkeLmtt8Ee2KtUiVK` is READY for that exact main in the verified CT Alt project, with ct-alt.vercel.app alias. Unsigned login200, Directory307/login and valid DirectoryGET/POST and RotasGET401/private-no-store passed. No signed production mutation, seed, account or message was created.
+
+Directory activation, owner Add Contact/Save Contact, full authorized list/Search and persisted Visible in app are released. External contact identities remain separate from Agents/Auth. Nonowners read visible contacts; management needs a verified Directory grant, and the current CT Alt implementation grants it only to owners. All49 SQL assertions,12 races,255 configurations,46 synthetic,20 genuine and fresh retained7/11/11/8/4 passed, as did whole check/build and independent reviews. Integrated activation/list/drawer captures were inspected. Schema20261004214608 was applied once with exact reviewed SHA256 `b610293951823a2379091a9c133f339b0fcb4741795ae96fe62b9218edad2620`, retaining24 old history rows,104 old table contents,397 relations,225 functions and security metadata with no new legacy triggers. All4 new tables remain empty. All25 applied identities/bytes are immutable; never replay old schema or seeds. Full Users phonebook, delegated management, dynamic information, photos, detail/edit/delete/mobile and authenticated current Connecteam pixels remain gaps. Older pending-release checkpoints below are historical.
+
+## Reference copy cleanup active increment
+
+Local verification passed:16 retained synthetic templates,11 fresh signed templates,4 fresh Users,255 configurations and final whole check/build. Independent frozen source, literal-test and integrated-capture reviews found no blocker. Only2 runtime UI files and2 existing literal expectations changed; API/lib/all25 applied SQL/scripts/CI/Auth/settings remain exact. All owned local fixtures, ports, locks and environment were restored. CI/consumer production release remains pending.
+
+Worktree `/workspace/ct-alt-reference-copy-cleanup`, branch `codex/reference-copy-cleanup`, starts from the released main above. Read [copy cleanup contract](REFERENCE_COPY_CLEANUP.md). The bounded next change removes unsupported ordinary sidebar/template text and aligns already-observed single-template labels. No new features, API/schema/Auth/settings/data or consent/recovery changes. Root owns documentation, verification and release; the UI author owns only the two UI files and existing literal expectations. Current account comparison remains deferred until the owner logs in.
+
 ## Day and Week Templates released
 
 PR37 merged as `c4855e39c4dacc1436efb60796edcf8d7bb5fabc`, exact reviewed tree `a33093dd286ce0cffa775666dc25331e5d4e1c7b`. Reviewed head `7907909932e32c49f6d6d3cabae6db2070bd5704` passed exact-head CI37232423710, all 29 steps. Production `dpl_5jJpDfwHbNyyTimoJowJMm3xBftm` is READY for that exact main in the verified CT Alt project and aliased to ct-alt.vercel.app. Login200, Rotas307/login and valid unsigned periodGET/POST and SingleTemplatesGET401/private-no-store passed. No signed production mutation was attempted.

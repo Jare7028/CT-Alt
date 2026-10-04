@@ -210,7 +210,7 @@ test("manager creates, edits, duplicates, applies one draft and deletes without 
   });
   await drawer.getByRole("button", { name: "Add Template" }).click();
   await drawer.getByLabel("Template name").fill("Evening handover");
-  await drawer.getByRole("button", { name: "Save template" }).click();
+  await drawer.getByRole("button", { name: "Save as template" }).click();
   await expect(
     drawer.getByText("Evening handover", { exact: true }),
   ).toBeVisible();
@@ -327,7 +327,7 @@ test("published source details cannot edit and require explicit seconds normaliz
   const drawer = page.getByRole("dialog", { name: "Shift Templates" });
   await expect(drawer.getByLabel(/source includes seconds/)).toBeVisible();
   await drawer.getByLabel(/source includes seconds/).check();
-  await drawer.getByRole("button", { name: "Save template" }).click();
+  await drawer.getByRole("button", { name: "Save as template" }).click();
   await expect(
     drawer.getByRole("button", { name: "Add Template" }),
   ).toBeEnabled();
@@ -428,9 +428,9 @@ test("late list response cannot restore templates after current permission rejec
   });
   await page.getByRole("button", { name: "Templates", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "Shift Templates" });
-  await drawer.getByLabel("Search templates").fill("held");
+  await drawer.getByLabel("Search").fill("held");
   await expect.poll(() => held).toBe(true);
-  await drawer.getByLabel("Search templates").fill("revoked");
+  await drawer.getByLabel("Search").fill("revoked");
   await expect(drawer).toHaveCount(0);
   release();
   await expect(
@@ -696,11 +696,11 @@ test("historical zone wall seconds require consent even when UTC seconds are zer
   await expect(drawer.getByLabel("End time")).toHaveValue("17:09");
   const consent = drawer.getByLabel(/source includes seconds/);
   await expect(consent).toBeVisible();
-  await drawer.getByRole("button", { name: "Save template" }).click();
+  await drawer.getByRole("button", { name: "Save as template" }).click();
   await expect(consent).not.toBeChecked();
   expect(posts.filter((p) => "change" in p)).toHaveLength(0);
   await consent.check();
-  await drawer.getByRole("button", { name: "Save template" }).click();
+  await drawer.getByRole("button", { name: "Save as template" }).click();
   await expect(
     drawer.getByRole("button", { name: "Add Template" }),
   ).toBeEnabled();
@@ -746,12 +746,12 @@ for (const scenario of ["sub-millisecond", "zero-fraction"]) {
     await expect(drawer.getByLabel("End time")).toHaveValue("17:00");
     if (scenario === "sub-millisecond") {
       await expect(consent).toBeVisible();
-      await drawer.getByRole("button", { name: "Save template" }).click();
+      await drawer.getByRole("button", { name: "Save as template" }).click();
       expect(posts.filter((p) => "change" in p)).toHaveLength(0);
       await expect(consent).not.toBeChecked();
       await consent.check();
     } else await expect(consent).toHaveCount(0);
-    await drawer.getByRole("button", { name: "Save template" }).click();
+    await drawer.getByRole("button", { name: "Save as template" }).click();
     await expect(
       drawer.getByRole("button", { name: "Add Template" }),
     ).toBeEnabled();
