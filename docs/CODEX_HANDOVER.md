@@ -1,5 +1,15 @@
 # CT Alt — Codex takeover
-Updated 4 October 2026, 11:43 UTC, Requests schema verified; consumer release and48 demo cards pending. Recheck remote heads, credentials and deployments before acting.
+Updated 4 October 2026: Requests release and 48 cards verified live; realistic fictional workspace content committed and verified. Recheck remote heads, credentials and deployments before acting.
+
+## Latest content and release state
+
+Main `de023f0edb6db888062661c59bdbcd5e4c83dec8` (PR32 Requests) passed CI `37200205189` and matches READY Vercel `dpl_CrievaTxw817FiZHhz25Pe9LHJgt`, aliased to ct-alt.vercel.app. All 20 registered migrations remain immutable. Requests schema and cards are already applied: do not replay either seed or migration helpers.
+
+The owner's latest direction removes visible Demo names and labels. The original fictional rows now have 21 natural staff names/credible roles/teams, 48 unique site-specific Requests, realistic task and handbook content, four published Updates, two published handbooks and two published forms. Existing schedules/jobs/shifts have natural labels. Twenty directory-only staff remain unlinked; the unchanged owner account remains linked to the fictional Alex Morgan profile. Do not provision accounts merely to make sample assignments look populated. Owner Auth/login, membership/settings, existing operational dates/status/history and other projects remain preserved. See [current workspace content and verification](LIVE_DEMO_DATA.md).
+
+The bounded data-only transaction passed rollback validation and exact row/count/security-metadata preservation assertions before commit. Authenticated-role database RPC reads and unsigned production smoke checks passed; no new authenticated browser login was performed. The public preparer contains synthetic copy only; private snapshots and generated SQL remain outside Git. It refuses edited seed revisions and its committed proposal fails exact-row replay rather than overwriting current content. Four new tests bring configuration coverage to 190; whole check/build pass and independent review found no blocker.
+
+The release paragraphs below are historical. Their pending Requests/demo labels must not override this verified state. Full feature parity is still incomplete; keep the wider roadmap and paused files/templates work visible.
 
 ## Goal and working style
 Build the complete workforce application using Connecteam as the functional and visual reference, with original code/assets and CT Alt branding. The owner wants feature-by-feature and workflow parity, then later customisation. Do not silently narrow this to an MVP or claim affiliation. The latest direction prioritises close desktop visual matching to the standard Connecteam layout. The latest explicit owner request authorises live fictional demo data and a Requests kanban while preserving the standard desktop visual direction; defer mobile polish. Consult current public Connecteam guides for each module. Track actual implementation, tests, deployments and gaps in [FEATURE_COVERAGE.md](FEATURE_COVERAGE.md).
