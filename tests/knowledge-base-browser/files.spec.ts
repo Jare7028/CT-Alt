@@ -203,21 +203,15 @@ test("exact 2 MiB is accepted without multiplying reservations", async ({
   await saved(page);
   expect(posts()).toHaveLength(1);
 });
-test("quota states are permanent company allocations and published global caps, never free storage", async ({
+test("budget reads remain tenant scoped without an ordinary allocation panel", async ({
   page,
 }) => {
   await editor(page);
   const budget = page.getByRole("region", {
     name: "Reserved and retained budget",
   });
-  await expect(budget).toContainText(
-    "7,340,032 bytes across 7 permanent attempts",
-  );
-  await expect(budget).toContainText("100 MiB and 4,096 attempts");
-  await expect(budget).toContainText("Closing or deleting never releases");
-  await expect(budget).not.toContainText(
-    /free space|available bytes|reclaimed/i,
-  );
+  await expect(budget).toHaveCount(0);
+  await expect.poll(() => model.fileCalls.filter((c) => c.path.endsWith("/budget")).length).toBe(1);
   expect(
     model.fileCalls
       .filter((c) => c.path.endsWith("/budget"))[0]

@@ -373,7 +373,7 @@ function Library({ company, initialData }: Props) {
     [destinationBusy, setDestinationBusy] = useState(false),
     [confirmation, setConfirmation] = useState<Confirmation>(null);
   const [chosenFile, setChosenFile] = useState<File | null>(null);
-  const [fileBudget, setFileBudget] = useState<KnowledgeFileBudgetData | null>(
+  const [, setFileBudget] = useState<KnowledgeFileBudgetData | null>(
     null,
   );
   const [fileAttempt, setFileAttempt] =
@@ -3232,16 +3232,7 @@ function Library({ company, initialData }: Props) {
               </label>
               <p className="kb-hint">
                 One nonempty PDF, UTF-8 text or CSV, PNG, or JPEG, up to 2 MiB.
-                The server verifies the filename, declared type, and file
-                content. Files download as attachments; no inline preview.
               </p>
-              {editingNode && (
-                <p className="kb-hint">
-                  The existing current file stays readable until this
-                  replacement is finalized. Superseded files remain charged to
-                  the permanent budget.
-                </p>
-              )}
               {chosenFile && (
                 <p>
                   {chosenFile.name} · {chosenFile.size.toLocaleString("en-GB")}{" "}
@@ -3253,49 +3244,6 @@ function Library({ company, initialData }: Props) {
                   {fileIssue(chosenFile)}
                 </p>
               )}
-              <section
-                className="kb-file-budget"
-                aria-label="Reserved and retained budget"
-              >
-                <h3>Reserved and retained budget</h3>
-                {fileBudget ? (
-                  <>
-                    <p>
-                      This company:{" "}
-                      {fileBudget.allocatedBytes.toLocaleString("en-GB")} bytes
-                      across{" "}
-                      {fileBudget.allocatedAttempts.toLocaleString("en-GB")}{" "}
-                      permanent attempts.
-                    </p>
-                    <details>
-                      <summary>Company reservation states</summary>
-                      <dl className="kb-file-states">
-                        {Object.entries(fileBudget.states).map(
-                          ([status, total]) => (
-                            <div key={status}>
-                              <dt>{status.replaceAll("_", " ")}</dt>
-                              <dd>{total.toLocaleString("en-GB")}</dd>
-                            </div>
-                          ),
-                        )}
-                      </dl>
-                    </details>
-                    <p>
-                      Deployment lifetime cap: 100 MiB and 4,096 attempts.
-                      Company attempt cap: 2,048. Other companies’ allocations
-                      are private.
-                    </p>
-                  </>
-                ) : (
-                  <p>Loading this company’s permanent allocations…</p>
-                )}
-                <p className="kb-hint">
-                  Failed, unknown, closed and superseded attempts remain
-                  charged. Closing or deleting never releases this budget. A new
-                  reservation can be unavailable even when this company is below
-                  its cap.
-                </p>
-              </section>
             </>
           )}
           {editor === "base" && (

@@ -1,5 +1,10 @@
 # CT Alt feature coverage
 
+Reference copy cleanup PR39 is live at main `f6bbe4c8df5cf0932af03dd46927cca64dba8da0`, exact reviewed tree `a731a7402fa4cbf05be9fdda12c144c7a0ea4659`; all30 CI steps and verified CT Alt READY deployment/unsigned checks passed. Minute-only hour displays remain live with exact stored timestamps preserved. No SQL/Auth/settings/data or other-project changes.
+
+The bounded [Knowledge Base copy cleanup](KNOWLEDGE_BASE_COPY_CLEANUP.md) removes ordinary upload-budget details and implementation prose while preserving upload limits, permissions and recovery. Local60 synthetic/targeted1/signed9/config255/check passed; final build passed; CI and release remain pending. Full authenticated Connecteam pixel comparison remains deferred; Surveys draft save/list/reopen is not established by inspected public evidence.
+
+
 ## Directory Work Contacts released
 
 PR38 merged as `aa1d8ecbcade7bce6dce09231f26525999ea661b`, reviewed head `431675776beb8e6672811fa566f13adc17914789`, exact tree `211be4a1f5172fb4b45ce9dedcbfd7f20f97f9f0`. Exact-head CI37237563498 passed all30 steps. Production `dpl_GzkRFfSSNfnWkeLmtt8Ee2KtUiVK` is READY for that exact main in the verified CT Alt project, with ct-alt.vercel.app alias. Unsigned login200, Directory307/login and valid DirectoryGET/POST and RotasGET401/private-no-store passed. No signed production mutation, seed, account or message was created.

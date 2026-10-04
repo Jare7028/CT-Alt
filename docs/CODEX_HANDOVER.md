@@ -1,5 +1,11 @@
 # CT Alt — Codex takeover
 
+## Reference copy cleanup released; Knowledge Base copy cleanup active
+
+PR39 merged as `f6bbe4c8df5cf0932af03dd46927cca64dba8da0`, reviewed head `bb020b792e5e0b5d6f13de510266c6372ddbeca1`, exact tree `a731a7402fa4cbf05be9fdda12c144c7a0ea4659`. Exact-head CI37239502487 passed all30 steps. Production `dpl_Farzjax4M5edPj1kDQVNT4jhQrDF` is READY for that exact main in the verified CT Alt project with ct-alt.vercel.app alias. Unsigned login200, Directory307/login, DirectoryGET/POST and Rotas/TemplatesGET401/private-no-store passed. Unsupported ordinary sidebar/template guidance was removed; all stored precision, recovery and permissions remain unchanged. No SQL/Auth/settings/data or other project changes.
+
+The next bounded [Knowledge Base copy cleanup](KNOWLEDGE_BASE_COPY_CLEANUP.md) removes the ordinary permanent-budget panel and implementation prose while retaining real upload limits, errors, current-access probes and recovery. Worktree `/workspace/ct-alt-knowledge-base-copy-cleanup`, branch `codex/knowledge-base-copy-cleanup`, starts from released main above. Root owns documentation, verification and release. Local author owns only the Knowledge Base component and its existing obsolete panel expectation. All60 synthetic file cases, final targeted budget case, nine signed file cases,255 configurations and whole check passed; final build passed; CI and release remain pending. Independent source/test/capture review found no blocker. No hosted schema/configuration/data changes. All25 applied migration bytes remain immutable. Earlier pending checkpoints below are historical. Full replica and current account pixels remain incomplete; Surveys draft persistence is not established by the public guides and must not be invented.
+
 ## Directory Work Contacts released
 
 PR38 merged as `aa1d8ecbcade7bce6dce09231f26525999ea661b`, reviewed head `431675776beb8e6672811fa566f13adc17914789`, exact tree `211be4a1f5172fb4b45ce9dedcbfd7f20f97f9f0`. Exact-head CI37237563498 passed all30 steps. Production `dpl_GzkRFfSSNfnWkeLmtt8Ee2KtUiVK` is READY for that exact main in the verified CT Alt project, with ct-alt.vercel.app alias. Unsigned login200, Directory307/login and valid DirectoryGET/POST and RotasGET401/private-no-store passed. No signed production mutation, seed, account or message was created.
