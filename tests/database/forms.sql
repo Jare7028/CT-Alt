@@ -1,0 +1,62 @@
+begin;
+create function pg_temp.forms_check(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'FAIL: %',label;end if;raise notice 'PASS: %',label;end$$;
+create function pg_temp.forms_throws(code text,command text,label text)returns void language plpgsql as $$begin begin execute command;raise exception 'Expected SQLSTATE %',code;exception when others then if sqlstate<>code then raise exception 'FAIL %: expected %, actual % (%)',label,code,sqlstate,sqlerrm;end if;end;raise notice 'PASS: %',label;end$$;
+create temporary table forms_state(k text primary key,v jsonb);grant all on forms_state to authenticated;
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+insert into forms_state values('schema','[{"id":"6f100000-0000-4000-8000-000000000001","kind":"description","text":"Exact original instructions 😀"},{"id":"6f100000-0000-4000-8000-000000000002","kind":"text","label":"Required text","required":true},{"id":"6f100000-0000-4000-8000-000000000003","kind":"yes_no","label":"Required false permitted","required":true},{"id":"6f100000-0000-4000-8000-000000000004","kind":"single_choice","label":"Choice","required":true,"options":[{"id":"6f100000-0000-4000-8000-000000000007","label":"Original choice"}]},{"id":"6f100000-0000-4000-8000-000000000005","kind":"multiple_choice","label":"Optional choices","required":false,"options":[{"id":"6f100000-0000-4000-8000-000000000007","label":"Original choice"}]},{"id":"6f100000-0000-4000-8000-000000000006","kind":"number","label":"Precise decimal","required":true}]');
+insert into forms_state values('complete','{"6f100000-0000-4000-8000-000000000002":" \nOriginal answer 😀 ","6f100000-0000-4000-8000-000000000003":false,"6f100000-0000-4000-8000-000000000004":"6f100000-0000-4000-8000-000000000007","6f100000-0000-4000-8000-000000000005":[],"6f100000-0000-4000-8000-000000000006":"+123456789012.123456"}');
+do $$declare r jsonb;t uuid:='88000000-0000-4000-8000-000000000001';op uuid:=gen_random_uuid();c jsonb;begin
+ r:=public.save_form(t,op,'{"action":"create_form","name":"Empty","description":"","schema":[],"audienceIds":[],"allowRespondentEdit":false}');perform pg_temp.forms_check(r->>'formRevision'='1','empty draft saves revision1');
+ perform pg_temp.forms_throws('40001',format('select public.save_form(%L,gen_random_uuid(),%L)',t,jsonb_build_object('action','publish_form','formId',r->>'formId','formRevision',1)::text),'empty publication cannot write');
+ c:=jsonb_build_object('action','create_form','name','Original form','description','Synthetic','schema',(select v from forms_state where k='schema'),'audienceIds',jsonb_build_array('00000000-0000-4000-8000-000000000903'),'allowRespondentEdit',true);op:=gen_random_uuid();r:=public.save_form(t,op,c::text);insert into forms_state values('created',r);
+ perform pg_temp.forms_check(public.save_form(t,op,c::text)=r,'same actor UUID receipt acknowledges once');
+ perform pg_temp.forms_throws('22023',format('select public.save_form(%L,%L,%L)',t,op,(c||'{"name":"Changed"}')::text),'UUID payload hash rejects changed content');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','publish_form','formId',r->>'formId','formRevision',1)::text);insert into forms_state values('published',r);
+ perform pg_temp.forms_check((public.read_forms(t,'catalog','manage')->'counts'->>'total')::integer=2,'management catalog uses exact coherent total');
+ perform pg_temp.forms_throws('42501',format('select public.read_forms(%L,''form'',''mine'',%L)',t,r->>'formId'),'unassigned administrator cannot read respondent form');
+ perform pg_temp.forms_throws('22023',format('select public.save_form(%L,gen_random_uuid(),%L)',t,'{"action":"create_form","name":"First","name":"Duplicate","description":"","schema":[],"audienceIds":[],"allowRespondentEdit":false}'),'direct raw RPC rejects duplicate object keys');
+end$$;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000903',false);
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:=((select v from forms_state where k='published')->>'formId')::uuid;r jsonb;d jsonb;c jsonb;op uuid:=gen_random_uuid();begin
+ d:=public.read_forms(t,'form','mine',f);perform pg_temp.forms_check(jsonb_array_length(d->'schema')=6 and d->'response'='null'::jsonb and not d?'assignees','assigned manager receives schema and no management audience');
+ c:=jsonb_build_object('action','save_progress','formId',f,'formRevision',2,'responseRevision',0,'answers','{"6f100000-0000-4000-8000-000000000002":"Private progress","6f100000-0000-4000-8000-000000000006":"-"}'::jsonb);r:=public.save_form(t,op,c::text);insert into forms_state values('progress',r);insert into forms_state values('progressOp',to_jsonb(op));
+ perform pg_temp.forms_check(r->>'responseRevision'='1'and r->>'responseStatus'='in_progress','partial autosave accepts required omissions and incomplete numeric typing');
+ d:=public.read_forms(t,'form','mine',f);perform pg_temp.forms_check(d->'response'->'answers'->>'6f100000-0000-4000-8000-000000000002'='Private progress','fresh signed reload returns acknowledged own progress');
+ perform pg_temp.forms_throws('22023',format('select public.save_form(%L,gen_random_uuid(),%L)',t,(c||jsonb_build_object('action','submit_response','responseRevision',1))::text),'submission rejects missing required typed answers');
+ perform pg_temp.forms_throws('22023',format('select public.save_form(%L,gen_random_uuid(),%L)',t,(c||jsonb_build_object('responseRevision',1,'answers','{"6f100000-0000-4000-8000-000000000001":"Forged description"}'::jsonb))::text),'hidden description answers are forbidden');
+end$$;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:=((select v from forms_state where k='published')->>'formId')::uuid;r uuid:=((select v from forms_state where k='progress')->>'responseId')::uuid;begin
+ perform pg_temp.forms_check((select count(*)from public.form_responses)=0,'admin direct RLS cannot read another actor progress');
+ perform pg_temp.forms_check((public.read_forms(t,'responses','manage',f)->'counts'->>'total')::integer=0,'management list counts contain only submitted records');
+ perform pg_temp.forms_check(not(public.read_forms(t,'form','manage',f)?'response'),'management detail carries no private progress payload');
+ perform pg_temp.forms_throws('42501',format('select public.read_forms(%L,''response'',''manage'',%L,%L,''all'',''all'','''',10)',t,f,r),'management detail denies progress response ID');
+ perform pg_temp.forms_check((select count(*)from public.form_audit where action='save_progress')=0,'progress audit IDs hidden from management');
+end$$;
+reset role;
+select pg_temp.forms_check((select count(*)from workforce_private.form_response_history)=0,'progress saves create no answer history');
+select pg_temp.forms_check(not exists(select 1 from pg_attribute where attrelid='workforce_private.form_operations'::regclass and attname='payload'and not attisdropped),'private autosave receipt stores command hash rather than prior answer bytes');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000903',false);
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:=((select v from forms_state where k='published')->>'formId')::uuid;r jsonb;begin
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','submit_response','formId',f,'formRevision',2,'responseRevision',1,'answers',(select v from forms_state where k='complete'))::text);insert into forms_state values('submitted',r);perform pg_temp.forms_check(r->>'responseRevision'='2'and r->>'responseStatus'='submitted'and r->>'submittedAt'~'\.\d{6}Z$','complete typed submission retains exact decimal and false/empty optional choices');
+ perform pg_temp.forms_check(public.reconcile_form_operation(t,((select v from forms_state where k='progressOp')#>>'{}')::uuid,'save_progress')->>'status'='recorded','earlier autosave receipt remains acknowledged under current authority');
+end$$;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:=((select v from forms_state where k='published')->>'formId')::uuid;rid uuid:=((select v from forms_state where k='submitted')->>'responseId')::uuid;d jsonb;r jsonb;answer jsonb;op uuid:=gen_random_uuid();begin
+ d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);perform pg_temp.forms_check(d->'response'->>'formName'='Original form'and d->'response'->'answers'->>'6f100000-0000-4000-8000-000000000006'='+123456789012.123456','management sees only submitted original snapshot and precise numeric string');insert into forms_state values('beforeReview',d->'response');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','review_response','formId',f,'formRevision',2,'responseId',rid,'responseRevision',2,'reviewed',true)::text);d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);
+ perform pg_temp.forms_check(d->'response'->>'reviewed'='true'and d->>'historyCount'='0'and d->'response'->>'lastEditedAt'=(select v->>'lastEditedAt'from forms_state where k='beforeReview')and d->'response'->>'lastEditedBy'='00000000-0000-4000-8000-000000000903','review attribution does not overwrite content editor or create answer history');
+ answer:=(select v from forms_state where k='complete')||jsonb_build_object('6f100000-0000-4000-8000-000000000002','Administrator edit');r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','admin_edit_response','formId',f,'formRevision',2,'responseId',rid,'responseRevision',3,'answers',answer)::text);d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);
+ perform pg_temp.forms_check(d->>'historyCount'='1'and d->'response'->>'reviewed'='false'and d->'response'->>'lastEditedBy'='00000000-0000-4000-8000-000000000901'and d->'response'->>'submittedAt'=(select v->>'submittedAt'from forms_state where k='beforeReview'),'content edit retains first submittedAt clears review and records admin attribution');
+ perform pg_temp.forms_check(d->'history'->0->'answers'=(select v from forms_state where k='complete')and not(d->'history'->0?'schema'),'retained history has prior answers and references shared original schema');
+ perform pg_temp.forms_throws('22023',format('select public.read_forms(%L,''response'',''manage'',%L,%L,''all'',''all'','''',11)',t,f,rid),'history page is bounded to ten before JSON aggregation');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','archive_form','formId',f,'formRevision',2)::text);perform pg_temp.forms_check(public.read_forms(t,'response','manage',f,rid,'all','all','',10)->>'historyCount'='1','archived submitted history remains available to management');
+ perform pg_temp.forms_throws('40001',format('select public.save_form(%L,gen_random_uuid(),%L)',t,jsonb_build_object('action','review_response','formId',f,'formRevision',3,'responseId',rid,'responseRevision',4,'reviewed',true)::text),'archive is read only for review');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','restore_form','formId',f,'formRevision',3)::text);perform pg_temp.forms_check(public.read_forms(t,'form','manage',f)->'form'->>'status'='published','restore preserves published state and frozen schema');
+ perform pg_temp.forms_check(public.reconcile_form_operation(t,op,'create_form')->>'status'='not_recorded','absence reconciliation returns durable field-free not_recorded');
+ perform pg_temp.forms_throws('40001',format('select public.save_form(%L,%L,%L)',t,op,'{"action":"create_form","name":"Late","description":"","schema":[],"audienceIds":[],"allowRespondentEdit":false}'),'late-start mutation cannot commit after durable absence');
+ perform pg_temp.forms_throws('22023',format('select public.reconcile_form_operation(%L,%L,''edit_form'')',t,op),'absence operation is bound to original action');
+end$$;
+reset role;
+select pg_temp.forms_check(exists(select 1 from workforce_private.form_operations where state='closed_absent'and form_id is null and response_id is null and payload_hash is null and result is null),'absence tombstone retains no form answers names or resource IDs');
+rollback;

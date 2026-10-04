@@ -52,4 +52,6 @@ jobs:
         run: npm run test:smart-groups:db
       - name: Knowledge Base database checks
         run: npm run test:knowledge-base:db
+      - name: Forms database checks
+        run: npm run test:forms:db
       - run: npm run build
