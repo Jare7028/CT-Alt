@@ -854,6 +854,7 @@ export default function Scheduler({
         data.members.find((m) => m.user_id === actorId)?.display_name
       }
       moduleLinks={{
+        directory: `/directory?company=${encodeURIComponent(company.id)}`,
         requests: `/requests?company=${encodeURIComponent(company.id)}`,
         forms: `/forms?company=${encodeURIComponent(company.id)}`,
         "knowledge-base": `/knowledge-base?company=${encodeURIComponent(company.id)}`,
