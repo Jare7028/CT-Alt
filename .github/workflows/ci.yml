@@ -62,4 +62,6 @@ jobs:
         run: npm run test:knowledge-base-files:db
       - name: Shift Templates database and preservation checks
         run: npm run test:rota-templates:db
+      - name: Visible draft publication and preservation checks
+        run: npm run test:rota-publication:db
       - run: npm run build

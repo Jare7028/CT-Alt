@@ -1,5 +1,5 @@
-import {verifyKnowledgeFileBaselines} from './knowledge-base-files-readiness.mjs';
-verifyKnowledgeFileBaselines();
+import {verifyRotaPublicationBaselines} from './knowledge-base-files-readiness.mjs';
+verifyRotaPublicationBaselines();
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -7,13 +7,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const diagnosticDesktop = process.argv.slice(2).length === 1 && process.argv[2] === '--diagnostic-desktop';
-const diagnosticRecovery = process.argv.slice(2).length === 1 && process.argv[2] === '--diagnostic-recovery';
-if(process.argv.length > 2 && !diagnosticDesktop && !diagnosticRecovery) throw Error('Only the bounded desktop diagnostic flag is supported.');
+const mode=process.argv[2]??'publication';
+if(process.argv.length>3||!['publication','retained-rotas','retained-templates','capture-confirmation'].includes(mode))throw Error('Only publication, one fresh retained suite or the bounded confirmation capture is supported.');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (realpathSync(process.cwd()) !== realpathSync(root) || JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).name !== 'ct-alt') throw Error('Run only from this independent CT Alt repository.');
 const remote = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8' });
 if (remote.status !== 0 || !/^(https:\/\/github\.com\/|git@github\.com:)Jare7028\/CT-Alt(?:\.git)?$/i.test(remote.stdout.trim())) throw Error('Refusing an unverified repository binding.');
+const fixtureEnv={...process.env};
+delete fixtureEnv.CT_ALT_KB_FILE_HMAC_KEY;
+delete fixtureEnv.CT_ALT_KB_FILE_HMAC_KEY_ID;
+delete fixtureEnv.CT_ALT_PUBLICATION_CAPTURE;
 // The existing fixture verifies pinned image digests and random owned Docker labels.
 const lock = '/tmp/ct-alt-overview-test-lock';
 const fixtures = '/tmp/ct-alt-local-fixtures.json';
@@ -32,7 +35,7 @@ function run(args, env) {
   command = child;
   return new Promise((resolve, reject) => {
     child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve() : reject(Error('Requests acceptance command failed.')));
+    child.on('exit', code => code === 0 ? resolve() : reject(Error('Visible publication acceptance command failed.')));
   });
 }
 async function stop(child) {
@@ -62,7 +65,7 @@ try {
     probe.once('error', () => reject(Error(`Owned fixture port ${port} is busy.`)));
     probe.listen(port, '127.0.0.1', () => probe.close(resolve));
   });
-  fixture = spawn(process.execPath, ['scripts/overview-browser-fixture.mjs'], { cwd: root, stdio: 'inherit' });
+  fixture = spawn(process.execPath, ['scripts/overview-browser-fixture.mjs'], { cwd: root, stdio: 'inherit', env:fixtureEnv });
   let ready = false;
   for (let i = 0; i < 360; i++) {
     if (fixture.exitCode !== null || fixture.signalCode !== null) throw Error('Owned fixture failed to start.');
@@ -72,20 +75,20 @@ try {
   if (!ready) throw Error('Owned fixture startup timed out.');
   const settings = JSON.parse(readFileSync(fixtures, 'utf8'));
   if (settings.url !== 'http://127.0.0.1:54821' || !/^[0-9a-f]{8}$/.test(settings.fixtureLabel) || typeof settings.key !== 'string') throw Error('Wrong owned fixture settings.');
-  const files = (await import('node:fs')).readdirSync(resolve(root,'supabase/migrations')).filter(name=>name.endsWith('.sql'));
-  if(files.length!==23 || files.filter(name=>name.endsWith('_requests_board.sql')).length!==1 || files.filter(name=>name.endsWith('_knowledge_base_files.sql')).length!==1 || files.filter(name=>name.endsWith('_rota_shift_templates.sql')).length!==1 || files.filter(name=>name.endsWith('_rota_visible_publication.sql')).length!==1) throw Error('Expected22 applied baselines plus the reviewed Publication candidate.');
-  const ownership=spawnSync('docker',['inspect','supabase_db_ct-alt-independent','--format','{{index .Config.Labels "ct-alt.test"}}'],{encoding:'utf8'});
-  if(ownership.status!==0 || ownership.stdout.trim()!==settings.fixtureLabel) throw Error('Wrong owned Requests fixture database.');
-  const installed=spawnSync('docker',['exec','-i','supabase_db_ct-alt-independent','psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-U','postgres'],{input:"select to_regclass('public.work_requests')is not null and to_regclass('workforce_private.request_operations')is not null and to_regprocedure('public.save_request(uuid,uuid,text)')is not null;",encoding:'utf8'});
-  if(installed.status!==0 || installed.stdout.trim()!=='t') throw Error('Requests candidate did not load into owned fixture.');
-  const configPath = `/tmp/ct-alt-requests-auth-${settings.fixtureLabel}.config.mjs`;
+  if(mode==='retained-rotas'){
+    const owned=spawnSync('docker',['inspect','supabase_db_ct-alt-independent','--format','{{index .Config.Labels "ct-alt.test"}}'],{encoding:'utf8'});
+    if(owned.status!==0||owned.stdout.trim()!==settings.fixtureLabel)throw Error('Owned retained Rotas identity mismatch');
+    const zoneSeed=spawnSync('docker',['exec','-i','supabase_db_ct-alt-independent','psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-U','postgres'],{encoding:'utf8',input:"begin;alter table public.rota_schedules disable trigger rota_supported_time_zone;alter table public.rota_schedules disable trigger rota_time_zone;insert into public.rota_schedules(id,tenant_id,name,time_zone) values('ac100000-0000-4000-8000-000000000001','"+settings.tenantA+"','Synthetic legacy unsupported zone','Factory');alter table public.rota_schedules enable trigger rota_supported_time_zone;alter table public.rota_schedules enable trigger rota_time_zone;commit;"});
+    if(zoneSeed.status!==0||zoneSeed.error)throw Error('Owned unsupported-zone fixture setup failed');
+  }
+  const configPath = `/tmp/ct-alt-rota-publication-auth-${settings.fixtureLabel}.config.mjs`;
   // This dedicated test is outside the shared tests/browser configuration.
-  writeFileSync(configPath, `export default ${JSON.stringify({ testDir: resolve(root, 'tests/browser'), testMatch: 'requests.spec.ts', workers: 1, retries: 0, outputDir: resolve(root, 'test-results'), use: { baseURL: 'http://127.0.0.1:5180', headless: true, viewport: { width: 1444, height: 960 }, launchOptions: { executablePath: process.env.CT_ALT_CHROMIUM || '/usr/bin/chromium', args: ['--no-sandbox'] } } })};
+  writeFileSync(configPath, `export default {...${JSON.stringify({ testDir: resolve(root, 'tests/browser'), testMatch: mode==='retained-rotas'?'rotas.spec.ts':mode==='retained-templates'?'rota-templates.spec.ts':'rota-publication.spec.ts', workers: 1, retries: 0, outputDir: resolve(root, 'test-results'), use: { baseURL: 'http://127.0.0.1:5180', headless: true, viewport: { width: 1444, height: 960 }, launchOptions: { executablePath: process.env.CT_ALT_CHROMIUM || '/usr/bin/chromium', args: ['--no-sandbox'] } } })}${mode==='capture-confirmation'?',grep:/frozen displayed filters exclude other jobs workers dates and deduplicate overnight cells/':''}};
 `, { mode: 0o600, flag: 'wx' });
   config = configPath;
   const syntax = spawnSync(process.execPath, ['--check', configPath], { cwd: root, encoding: 'utf8' });
-  if (syntax.error || syntax.status !== 0) throw Error('Generated Requests browser configuration is invalid: ' + (syntax.error?.message || syntax.stderr));
-  const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: settings.url, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: settings.key, NEXT_TELEMETRY_DISABLED: '1' };
+  if (syntax.error || syntax.status !== 0) throw Error('Generated Visible publication browser configuration is invalid: ' + (syntax.error?.message || syntax.stderr));
+  const env = { ...fixtureEnv, NEXT_PUBLIC_SUPABASE_URL: settings.url, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: settings.key, NEXT_TELEMETRY_DISABLED: '1' };
   await run(['node_modules/next/dist/bin/next', 'build'], env);
   server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', '5180'], { cwd: root, stdio: 'inherit', env });
   ready = false;
@@ -95,7 +98,7 @@ try {
     await delay(250);
   }
   if (!ready) throw Error('Owned application startup timed out.');
-  await run(['node_modules/@playwright/test/cli.js', 'test', '--config', config, ...(diagnosticDesktop ? ['--grep', 'signed roles see|exact counts and literal|desktop create/edit|held real POST'] : diagnosticRecovery ? ['--grep','held real POST'] : [])], env);
+  await run(['node_modules/@playwright/test/cli.js', 'test', '--config', config], {...env,...(mode==='capture-confirmation'?{CT_ALT_PUBLICATION_CAPTURE:'1'}:{})});
 } finally {
   await cleanup();
 }

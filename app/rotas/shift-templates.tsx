@@ -354,7 +354,7 @@ export default function ShiftTemplates({
       const agent = agents.find((a) => a.id === change.agent_id);
       applied(
         change.date,
-        `Draft created for ${agent ? agent.first_name + " " + agent.last_name : "the selected worker"}. Publish all schedule drafts when ready.`,
+        `Draft created for ${agent ? agent.first_name + " " + agent.last_name : "the selected worker"}. Review the displayed drafts and publish when ready.`,
       );
     } else applied(day, "Template saved.");
     if (!refreshed)
@@ -495,7 +495,7 @@ export default function ShiftTemplates({
           applied(
             day,
             operation.action === "apply"
-              ? "Earlier operation created one private draft. Review the schedule and publish all drafts when ready."
+              ? "Earlier operation created one private draft. Review the displayed drafts and publish when ready."
               : "Earlier template operation was saved.",
           );
         }
@@ -901,8 +901,8 @@ export default function ShiftTemplates({
                   ))}
                 <p role="status">{previewError || preview}</p>
                 <p>
-                  Creates one private draft. Publishing later publishes all
-                  drafts in this schedule.
+                  Creates one private draft. Review the displayed period and
+                  filters before publishing.
                 </p>
                 {overlap && (
                   <label className={styles.checkbox}>

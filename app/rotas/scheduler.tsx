@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Company } from "../../lib/agent-types";
+import type { RotaPublicationMutation } from "../../lib/rota-publication-types";
 import type { RotaData, RotaShift } from "../../lib/rota-types";
 import {
   addDays,
@@ -167,6 +168,14 @@ export default function Scheduler({
   const [templateSource, setTemplateSource] = useState<RotaShift | null>(null);
   const accessEpoch = useRef(0);
   const templateScope = useRef("");
+  const publicationEpoch = useRef(0);
+  const publicationLifetime = useRef({ active: true });
+  const publicationRef = useRef<
+    (RotaPublicationMutation & { caption: string }) | null
+  >(null);
+  const [publication, setPublication] = useState<
+    (RotaPublicationMutation & { caption: string }) | null
+  >(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState("");
@@ -197,6 +206,21 @@ export default function Scheduler({
   const [uncertain, setUncertain] = useState(false);
   const writeLock = useRef(false);
   const [overlapWarning, setOverlapWarning] = useState(false);
+  useEffect(() => {
+    const lifetime = { active: true };
+    publicationLifetime.current = lifetime;
+    void Promise.resolve().then(() => {
+      if (!lifetime.active) return;
+      publicationRef.current = null;
+      setPublication(null);
+      setBusy(false);
+      writeLock.current = false;
+      setUncertain(false);
+    });
+    return () => {
+      lifetime.active = false;
+    };
+  }, [company.id, actorId]);
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const generation = accessEpoch.current;
@@ -209,6 +233,8 @@ export default function Scheduler({
         if (signal?.aborted || generation !== accessEpoch.current) return false;
         if (response.status === 401 || response.status === 403) {
           accessEpoch.current++;
+          publicationRef.current = null;
+          setPublication(null);
           setData(empty);
           setTemplatesOpen(false);
           setTemplateSource(null);
@@ -354,6 +380,13 @@ export default function Scheduler({
   const displayed = visible.filter((s) =>
     agents.some((a) => a.id === s.agent_id),
   );
+  const displayedDrafts = [
+    ...new Map(
+      displayed
+        .filter((shift) => shift.status === "draft")
+        .map((shift) => [shift.id, { id: shift.id, revision: shift.revision }]),
+    ).values(),
+  ].sort((a, b) => a.id.localeCompare(b.id));
   const hours = displayed.reduce(
     (sum, s) => sum + days.reduce((h, d) => h + hoursOn(s, d), 0),
     0,
@@ -362,10 +395,33 @@ export default function Scheduler({
     setFormError("");
     setOverlapWarning(false);
     setEditing(shift);
+    if (kind === "publish") {
+      if (
+        !schedule ||
+        !editable ||
+        !displayedDrafts.length ||
+        busy ||
+        uncertain
+      )
+        return;
+      const snapshot = {
+        tenantId: company.id,
+        scheduleId: schedule.id,
+        scheduleRevision: schedule.revision,
+        shifts: displayedDrafts.map((shift) => ({ ...shift })),
+        caption: `${view}: ${days[0]} – ${days[days.length - 1]} · ${zone}. Worker search: ${userQuery ? `“${userQuery}”` : "all assigned workers"}. Job: ${jobs.find((job) => job.id === jobFilter)?.name || "all jobs"}. Status: ${statusFilter || "all statuses"}.`,
+      };
+      publicationRef.current = snapshot;
+      setPublication(snapshot);
+    }
     setModal(kind);
   };
   const close = () => {
-    if (!writeLock.current && !uncertain) setModal("");
+    if (!writeLock.current && !uncertain) {
+      publicationRef.current = null;
+      setPublication(null);
+      setModal("");
+    }
   };
   async function save(change: Record<string, unknown>) {
     if (writeLock.current || uncertain || templateBusy) return;
@@ -427,6 +483,113 @@ export default function Scheduler({
       setBusy(false);
     }
   }
+  async function publishDisplayed() {
+    const snapshot = publicationRef.current;
+    if (!snapshot || writeLock.current || uncertain || templateBusy) return;
+    writeLock.current = true;
+    setBusy(true);
+    setFormError("");
+    setNotice("");
+    const generation = publicationEpoch.current,
+      access = accessEpoch.current,
+      lifetime = publicationLifetime.current;
+    let rejected = false,
+      acknowledged = false;
+    try {
+      const { caption, ...mutation } = snapshot;
+      void caption;
+      const response = await fetch("/api/rota-publication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mutation),
+      });
+      const result = await response.json();
+      if (
+        !lifetime.active ||
+        generation !== publicationEpoch.current ||
+        access !== accessEpoch.current ||
+        publicationRef.current !== snapshot
+      )
+        return;
+      if (response.status === 401 || response.status === 403) {
+        rejected = true;
+        accessEpoch.current++;
+        publicationRef.current = null;
+        setPublication(null);
+        setData(empty);
+        setModal("");
+        setError(
+          "Scheduling access changed. Reload to check your current permissions.",
+        );
+        return;
+      }
+      if (!response.ok) {
+        rejected = response.status >= 400 && response.status < 500;
+        throw Error(result.error || "These drafts could not be published.");
+      }
+      const saved = result.saved;
+      const expected = snapshot.shifts
+        .map((shift) => `${shift.id}:${shift.revision + 1}`)
+        .sort();
+      if (
+        saved?.schemaVersion !== 1 ||
+        saved.tenantId !== company.id ||
+        saved.actorId !== actorId ||
+        saved.schedule_id !== snapshot.scheduleId ||
+        saved.schedule_revision !== snapshot.scheduleRevision + 1 ||
+        saved.published_count !== snapshot.shifts.length ||
+        !Array.isArray(saved.shifts) ||
+        saved.shifts.length !== expected.length ||
+        saved.shifts.some(
+          (shift: { id: string; revision: number }) =>
+            !shift ||
+            typeof shift.id !== "string" ||
+            !Number.isSafeInteger(shift.revision),
+        ) ||
+        JSON.stringify(
+          saved.shifts
+            .map(
+              (shift: { id: string; revision: number }) =>
+                `${shift.id}:${shift.revision}`,
+            )
+            .sort(),
+        ) !== JSON.stringify(expected)
+      )
+        throw Error("The publication acknowledgement could not be verified.");
+      acknowledged = true;
+      publicationRef.current = null;
+      setPublication(null);
+      setModal("");
+      setNotice(
+        `Published ${snapshot.shifts.length} displayed draft ${snapshot.shifts.length === 1 ? "shift" : "shifts"}. Assigned employees can now see them.`,
+      );
+      setLoading(true);
+      await load();
+    } catch (e) {
+      if (
+        !lifetime.active ||
+        generation !== publicationEpoch.current ||
+        access !== accessEpoch.current
+      )
+        return;
+      if (!rejected && !acknowledged) {
+        setUncertain(true);
+        setFormError(
+          "These drafts may have been published, but confirmation was lost. Reload schedules and review the result before another change.",
+        );
+      } else
+        setFormError(
+          e instanceof Error
+            ? e.message
+            : "These drafts could not be published.",
+        );
+    } finally {
+      if (lifetime.active && generation === publicationEpoch.current) {
+        writeLock.current = false;
+        setBusy(false);
+      }
+    }
+  }
   async function reviewSavedChanges() {
     if (writeLock.current) return;
     writeLock.current = true;
@@ -434,6 +597,8 @@ export default function Scheduler({
     try {
       if (await load()) {
         setUncertain(false);
+        publicationRef.current = null;
+        setPublication(null);
         setFormError("");
         setModal("");
         setNotice(
@@ -501,11 +666,14 @@ export default function Scheduler({
         );
       }
     }
-    if (["publish", "archive", "restore"].includes(modal))
+    if (modal === "publish") void publishDisplayed();
+    if (["archive", "restore"].includes(modal))
       void save({ action: modal, ...base });
   }
   const templateDenied = useCallback(() => {
     accessEpoch.current++;
+    publicationRef.current = null;
+    setPublication(null);
     templateScope.current = "";
     setTemplateBusy(false);
     setData(empty);
@@ -534,6 +702,13 @@ export default function Scheduler({
   };
   const today = () => setDay(dateInZone(new Date().toISOString(), zone));
   const changeSchedule = (id: string) => {
+    publicationEpoch.current++;
+    publicationRef.current = null;
+    setPublication(null);
+    setModal("");
+    setBusy(false);
+    writeLock.current = false;
+    setUncertain(false);
     templateScope.current = "";
     setTemplatesOpen(false);
     setTemplateSource(null);
@@ -1076,12 +1251,12 @@ export default function Scheduler({
                           loading ||
                           busy ||
                           !!error ||
-                          !shifts.some((s) => s.status === "draft")
+                          uncertain ||
+                          !displayedDrafts.length
                         }
                         onClick={() => open("publish")}
                       >
-                        Publish (
-                        {shifts.filter((s) => s.status === "draft").length})
+                        Publish ({displayedDrafts.length})
                       </button>
                     </>
                   )}
@@ -1631,14 +1806,20 @@ export default function Scheduler({
                       Save as template from saved shift
                     </button>
                   )}
-                {modal === "publish" && (
-                  <p>
-                    Publish all{" "}
-                    {shifts.filter((s) => s.status === "draft").length} draft
-                    shifts in this schedule, including drafts outside the
-                    displayed period? Assigned employees will be able to see
-                    them.
-                  </p>
+                {modal === "publish" && publication && (
+                  <>
+                    <p>
+                      Publish {publication.shifts.length} displayed draft{" "}
+                      {publication.shifts.length === 1 ? "shift" : "shifts"}?
+                      Assigned employees will be able to see these shifts.
+                    </p>
+                    <p>{publication.caption}</p>
+                    <p>
+                      This confirmation keeps the exact draft IDs and revisions
+                      selected when it opened. Drafts outside that displayed
+                      subset stay private.
+                    </p>
+                  </>
                 )}
                 {modal === "archive" && (
                   <p>
@@ -1689,7 +1870,7 @@ export default function Scheduler({
                             : modal === "schedule"
                               ? "Create schedule"
                               : modal === "publish"
-                                ? "Publish all drafts"
+                                ? "Publish displayed drafts"
                                 : modal === "archive"
                                   ? "Archive"
                                   : "Restore"}
