@@ -1,0 +1,44 @@
+[
+  {
+    "url": "/agents/cbec84e6-aabe-4145-b431-5010511a8626",
+    "viewport": {
+      "width": 1444,
+      "height": 960
+    },
+    "heading": "Profile Synthetic",
+    "headerHeight": 72,
+    "leftWidth": 288,
+    "gutter": 18,
+    "columnsGap": "18px",
+    "headerMinHeight": "72px",
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headerHeight": 72,
+      "leftWidth": 288,
+      "gutter": 18
+    }
+  },
+  {
+    "url": "/agents/cbec84e6-aabe-4145-b431-5010511a8626",
+    "viewport": {
+      "width": 1444,
+      "height": 776
+    },
+    "heading": "Profile Synthetic",
+    "headerHeight": 72,
+    "leftWidth": 288,
+    "gutter": 18,
+    "columnsGap": "18px",
+    "headerMinHeight": "72px",
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headerHeight": 72,
+      "leftWidth": 288,
+      "gutter": 18
+    }
+  }
+]

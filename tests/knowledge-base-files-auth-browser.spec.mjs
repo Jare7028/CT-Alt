@@ -54,7 +54,7 @@ test('genuine provider accepts one signed upload and exact UTF8 CSV bytes; downl
  const response=await upload(request);const result=await response.json();const diagnostic=typeof result.error==='string'?result.error.slice(0,300).replace(/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,'[redacted token]'):'No API error message';expect(response.status(),diagnostic).toBe(200);privateResponse(response);const ack=result.saved;
  expect(ack).toMatchObject({actorId:fixture.accounts.owner.id,tenantId:fixture.tenantA,operationId:metadata.operationId,action:'save_file',baseId});nodeId=ack.nodeId;currentVersion=ack.versionId;
  const data=await detail(request);expect(data.node.kind).toBe('file');expect(data.node.currentFile).toMatchObject({versionId:currentVersion,filename:metadata.filename,bytes:bytes.length,sha256:hash(bytes),mediaType:'text/csv'});
- expect(sql('select count(*) from storage.migrations')).toBe('74');
+ expect(sql('select count(*) from storage.migrations')).toBe('73');
  const count=sql(`select count(*) from public.knowledge_events where base_id='${baseId}'`);
  const binary=await download(request);expect(binary.status()).toBe(200);privateResponse(binary);expect(binary.headers()['content-length']).toBe(String(bytes.length));expect(binary.headers()['x-content-type-options']).toBe('nosniff');expect(binary.headers()['content-disposition']).toContain('attachment');
  for(const [key,value]of Object.entries({'x-ct-alt-actor-id':fixture.accounts.owner.id,'x-ct-alt-company-id':fixture.tenantA,'x-ct-alt-knowledge-base-id':baseId,'x-ct-alt-knowledge-node-id':nodeId,'x-ct-alt-knowledge-file-version-id':currentVersion}))expect(binary.headers()[key]).toBe(value);

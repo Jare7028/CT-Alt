@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { randomUUID, randomBytes, createHmac } from 'node:crypto';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
-export const STORAGE_IMAGE = 'supabase/storage-api@sha256:13cdccea43f23d848f050eba0d4f3ccdf02a7aca93d4f43268438de95549ef74';
+export const STORAGE_IMAGE = 'supabase/storage-api@sha256:4ae1890ba0c6fd24d975c34f3aa201a01d410171c8ba6eddeb675ef92341a62d';
 export async function startOwnedStorage({ dbContainer, dbName, fixtureLabel, jwtSecret, anonKey, serviceKey, postgrestUrl = 'http://unused-rest:3000', networkName, publishPort, onCleanupReady } = {}) {
   if (!/^[-a-zA-Z0-9_]+$/.test(dbContainer ?? '') || !/^[-a-zA-Z0-9_]+$/.test(dbName ?? '') || !fixtureLabel?.key || !fixtureLabel?.value) throw Error('Verified local database identity required');
   if (!['ct-alt.test', 'ct-alt.test-runner-pid'].includes(fixtureLabel.key) || !/^[a-zA-Z0-9-]+$/.test(String(fixtureLabel.value))) throw Error('Unsupported fixture label');
@@ -19,7 +19,7 @@ export async function startOwnedStorage({ dbContainer, dbName, fixtureLabel, jwt
   const verifyDb = () => { const info=inspect(dbContainer); if(info.Config.Labels?.[fixtureLabel.key]!==String(fixtureLabel.value) || !info.State.Running || info.Config.Image!=='postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24') throw Error('Local PostgreSQL fixture identity mismatch'); };
   const query = sql => { verifyDb(); return docker(['exec','-i',dbContainer,'psql','-X','-At','-v','ON_ERROR_STOP=1','-U','postgres','-d',dbName],sql).stdout.trim(); };
   let ownNetwork=false,attached=false,provider=false,cleaned=false,detachedNone=false;
-  const verifyOwned = name => { if(inspect(name).Config.Labels?.[labelKey]!==nonce) throw Error('Storage provider ownership mismatch'); };
+  const verifyOwned = name => { if(inspect(name).Config.Labels?.[labelKey]!==nonce || inspect(name).Config.Image!==STORAGE_IMAGE) throw Error('Storage provider ownership mismatch'); };
   function cleanup() {
     if(cleaned)return;
     const errors=[];
@@ -52,7 +52,8 @@ export async function startOwnedStorage({ dbContainer, dbName, fixtureLabel, jwt
     let healthy=false;
     for(let i=0;i<100;i++){verifyOwned(containerName);if(docker(['exec',containerName,'node','-e',"fetch('http://127.0.0.1:5000/status').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"],undefined,true).status===0){healthy=true;break;}if(!inspect(containerName).State.Running)break;await new Promise(r=>setTimeout(r,200));}
     if(!healthy)throw Error(redact(docker(['logs','--tail','40',containerName],undefined,true).stdout+docker(['logs','--tail','40',containerName],undefined,true).stderr));
-    if(query('select count(*) from storage.migrations;')!=='74')throw Error('Pinned provider migration count mismatch');
+    if(docker(['exec',containerName,'node','-e',"fetch('http://127.0.0.1:5000/version').then(async r=>process.exit(r.status===200&&(await r.text()).trim()==='1.77.5'?0:1)).catch(()=>process.exit(1))"],undefined,true).status!==0)throw Error('Pinned provider executable version mismatch');
+    if(query('select count(*) from storage.migrations;')!=='73')throw Error('Pinned provider migration count mismatch');
     if(query("select to_regprocedure('storage.allow_only_operation(text)') is not null;")!=='t')throw Error('Provider operation-aware authorization missing');
     return {containerName,networkName:network,baseUrl:publishPort?`http://127.0.0.1:${publishPort}`:null,query,cleanup,verify:()=>{verifyDb();verifyOwned(containerName);}};
   } catch(error) {await cleanup();throw error;}
