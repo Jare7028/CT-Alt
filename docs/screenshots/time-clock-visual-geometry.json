@@ -1,0 +1,158 @@
+[
+  {
+    "section": "my-clock",
+    "viewport": {
+      "width": 1444,
+      "height": 776
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": 340,
+    "attendanceRowHeight": null,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  },
+  {
+    "section": "my-clock",
+    "viewport": {
+      "width": 1444,
+      "height": 960
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": 340,
+    "attendanceRowHeight": null,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  },
+  {
+    "section": "today",
+    "viewport": {
+      "width": 1444,
+      "height": 776
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": null,
+    "attendanceRowHeight": 50,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  },
+  {
+    "section": "today",
+    "viewport": {
+      "width": 1444,
+      "height": 960
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": null,
+    "attendanceRowHeight": 50,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  },
+  {
+    "section": "team",
+    "viewport": {
+      "width": 1444,
+      "height": 776
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": null,
+    "attendanceRowHeight": null,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  },
+  {
+    "section": "team",
+    "viewport": {
+      "width": 1444,
+      "height": 960
+    },
+    "path": "/time-clock",
+    "headingHeight": 78,
+    "contentInset": {
+      "left": "20px",
+      "top": "20px"
+    },
+    "personalWidth": null,
+    "attendanceRowHeight": null,
+    "fontFamily": "\"Noto Sans\", Arial, sans-serif",
+    "sidebarWidth": 196,
+    "topbarHeight": 56,
+    "documentWidth": 1444,
+    "overflow": false,
+    "targets": {
+      "headingHeight": 78,
+      "contentInset": 20,
+      "personalWidth": 340,
+      "attendanceRowHeight": 50
+    }
+  }
+]

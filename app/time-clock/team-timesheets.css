@@ -1,1 +1,196 @@
-.team-timesheets{padding:24px;color:#26384a;min-width:0}.team-timesheet-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}.team-timesheet-heading h2{margin:0;font-size:22px}.team-timesheet-heading p,.team-timesheet-context{color:#697787;font-size:13px}.team-timesheet-heading>div:last-child{display:flex;gap:10px}.team-timesheets button{border:1px solid #cfd8e1;border-radius:7px;padding:9px 13px;background:white;color:#29435b;cursor:pointer;font:inherit;font-size:13px}.team-timesheets button:disabled{opacity:.55;cursor:default}.team-timesheets button:focus-visible,.team-timesheets input:focus-visible,.team-timesheets select:focus-visible{outline:3px solid #78baf0;outline-offset:2px}.team-timesheet-filters{display:flex;align-items:end;gap:14px;margin:22px 0;flex-wrap:wrap}.team-timesheet-filters label{display:grid;gap:7px;font-size:13px;font-weight:600}.team-timesheet-filters input,.team-timesheet-filters select{border:1px solid #cfd8e1;border-radius:6px;padding:8px 10px;font:inherit;background:white;color:inherit;max-width:340px}.team-timesheet-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:20px 0}.team-timesheet-summary>div{border:1px solid #dfe6ed;border-radius:9px;padding:17px;background:#f8fafc}.team-timesheet-summary dt{font-size:12px;color:#697787}.team-timesheet-summary dd{margin:10px 0 0;font-size:21px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.team-timesheet-scroll{overflow:auto;border:1px solid #dfe6ed;border-radius:8px}.team-timesheets table{border-collapse:collapse;width:100%;font-size:13px}.team-timesheets th,.team-timesheets td{text-align:left;padding:14px;white-space:nowrap;border-bottom:1px solid #e7edf2}.team-timesheets th{background:#f5f8fb;font-weight:600}.team-timesheets a{color:#2674b5}.team-timesheet-error{background:#fff1f0;color:#a5332a;border:1px solid #f0c9c5;border-radius:7px;padding:12px}.team-timesheet-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;color:#697787}
+.time-clock-page .team-timesheets {
+  padding: 0;
+  color: #59636b;
+  min-width: 0;
+}
+.team-timesheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.team-timesheet-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.team-timesheet-heading p,
+.team-timesheet-context {
+  color: #89939d;
+  font-size: 12px;
+}
+.team-timesheet-heading > div:last-child {
+  display: flex;
+  gap: 10px;
+}
+.team-timesheets button {
+  border: 1px solid #cfd8e1;
+  border-radius: 22px;
+  padding: 10px 16px;
+  background: white;
+  color: #2998ff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.team-timesheets button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.team-timesheets button:focus-visible,
+.team-timesheets input:focus-visible,
+.team-timesheets select:focus-visible {
+  outline: 3px solid #78baf0;
+  outline-offset: 2px;
+}
+.team-timesheet-filters {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.team-timesheet-filters label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.team-timesheet-filters input,
+.team-timesheet-filters select {
+  border: 1px solid #cfd8e1;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font: inherit;
+  background: white;
+  color: inherit;
+  max-width: 340px;
+}
+.team-timesheet-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 18px 0;
+}
+.team-timesheet-summary > div {
+  border-right: 1px solid #edf0f3;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+.team-timesheet-summary dt {
+  font-size: 12px;
+  color: #697787;
+}
+.team-timesheet-summary dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.team-timesheet-scroll {
+  overflow: auto;
+  border-radius: 8px;
+  max-width: 100%;
+  max-height: calc(100dvh - 420px);
+  min-height: 160px;
+}
+.team-timesheets table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.team-timesheets th,
+.team-timesheets td {
+  text-align: left;
+  padding: 8px 12px;
+  height: 50px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #e7edf2;
+}
+.team-timesheets th {
+  background: #f6f6f6;
+  font-weight: 400;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 48px;
+  white-space: nowrap;
+}
+.team-timesheets a {
+  color: #59636b;
+}
+.team-timesheet-error {
+  background: #fff1f0;
+  color: #a5332a;
+  border: 1px solid #f0c9c5;
+  border-radius: 7px;
+  padding: 12px;
+}
+.team-timesheet-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #697787;
+}
+
+.team-timesheet-summary > div:first-child {
+  padding-left: 0;
+}
+.team-timesheet-summary > div:last-child {
+  border: 0;
+}
+.team-timesheet-summary dt {
+  color: #89939d;
+  font-size: 11px;
+}
+.team-timesheet-heading > div:last-child {
+  flex-wrap: wrap;
+}
+.team-timesheets th:first-child {
+  width: 210px;
+}
+.team-timesheets time {
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .team-timesheet-heading {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .team-timesheet-filters {
+    gap: 10px;
+  }
+  .team-timesheet-filters label {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .team-timesheet-filters select {
+    min-width: 0;
+    width: 100%;
+  }
+  .team-timesheet-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 0;
+  }
+  .team-timesheet-summary > div {
+    padding: 0 12px;
+  }
+  .team-timesheet-summary > div:nth-child(odd) {
+    padding-left: 0;
+  }
+  .team-timesheet-footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .team-timesheet-scroll {
+    max-height: 440px;
+  }
+}
