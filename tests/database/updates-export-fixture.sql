@@ -1,0 +1,14 @@
+-- Local disposable test records only; applied before the additive candidate.
+insert into auth.users(id,email_confirmed_at)select ('00000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,now() from generate_series(901,904)n;
+insert into auth.users(id,email_confirmed_at)select ('00000000-0000-4000-8001-'||lpad(n::text,12,'0'))::uuid,now()from generate_series(1,501)n;
+insert into public.tenants(id,name)values('88000000-0000-4000-8000-000000000001','Export synthetic A'),('88000000-0000-4000-8000-000000000002','Export synthetic B');
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role)select '88000000-0000-4000-8000-000000000001',('00000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'Synthetic '||n,case n when 901 then 'owner'when 902 then 'admin'when 903 then 'manager'else 'employee'end from generate_series(901,904)n;
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role)select '88000000-0000-4000-8000-000000000001',('00000000-0000-4000-8001-'||lpad(n::text,12,'0'))::uuid,'Synthetic member '||n,'employee'from generate_series(1,501)n;
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role)values('88000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000901','Foreign synthetic','owner');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+select public.save_update('88000000-0000-4000-8000-000000000001','8a000000-0000-4000-8000-000000000001',jsonb_build_object('action','create','title','Synthetic export announcement','body','Retained original body','recipientIds',(select jsonb_agg(user_id order by user_id)from public.tenant_memberships where tenant_id='88000000-0000-4000-8000-000000000001'and user_id between '00000000-0000-4000-8001-000000000001'and'00000000-0000-4000-8001-000000000500'),'allowComments',true,'allowReactions',true,'requireConfirmation',true));
+select public.save_update('88000000-0000-4000-8000-000000000001',gen_random_uuid(),jsonb_build_object('action','publish','postId',(select id from public.updates_posts where title='Synthetic export announcement'),'revision',1));
+reset role;
+update public.updates_recipients set name=case when actor_id='00000000-0000-4000-8001-000000000001'then repeat('😀',100)else name end,viewed_at=case when right(actor_id::text,12)::integer<=300 then '2026-10-04T00:10:00.123456+03:00'::timestamptz else null end,confirmed_at=case when right(actor_id::text,12)::integer<=200 then '2026-10-04T00:10:01.654321+03:00'::timestamptz else null end;
+update public.tenant_memberships set status='suspended'where user_id='00000000-0000-4000-8001-000000000001';
+insert into public.updates_comments(tenant_id,post_id,actor_id,author_name,body)select tenant_id,post_id,actor_id,name,'Private comment excluded from CSV'from public.updates_recipients where actor_id='00000000-0000-4000-8001-000000000002';

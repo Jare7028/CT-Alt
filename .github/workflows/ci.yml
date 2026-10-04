@@ -46,4 +46,6 @@ jobs:
         run: npm run test:time-off:db
       - name: Updates database checks
         run: npm run test:updates:db
+      - name: Updates recipient export checks
+        run: npm run test:updates-export:db
       - run: npm run build
