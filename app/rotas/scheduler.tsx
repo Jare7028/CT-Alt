@@ -78,7 +78,7 @@ function UsersIcon() {
   );
 }
 function elapsedLabel(hours: number) {
-  const minutes = Math.floor(hours * 60 + 1e-8);
+  const minutes = Math.floor(Math.round(hours * 3_600_000) / 60_000);
   return (
     Math.floor(minutes / 60)
       .toString()
