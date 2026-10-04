@@ -44,4 +44,6 @@ jobs:
         run: npm run test:chat-search:db
       - name: Time Off database checks
         run: npm run test:time-off:db
+      - name: Updates database checks
+        run: npm run test:updates:db
       - run: npm run build

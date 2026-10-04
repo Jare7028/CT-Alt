@@ -1,0 +1,144 @@
+\set ON_ERROR_STOP on
+create function pg_temp.check_true(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'FAIL: %',label;end if;raise notice 'PASS: %',label;end;$$;
+create function pg_temp.expect_error(command text,expected text,label text) returns void language plpgsql as $$begin begin execute command;exception when others then if sqlstate<>expected then raise exception 'FAIL: % expected % got % (%)',label,expected,sqlstate,sqlerrm;end if;raise notice 'PASS: %',label;return;end;raise exception 'FAIL: % unexpectedly succeeded',label;end;$$;
+insert into auth.users(id,email_confirmed_at,is_anonymous) select ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,case when n=708 then null else now()end,n=709 from generate_series(701,709)n;
+insert into public.tenants(id,name) values('77000000-0000-0000-0000-000000000001','Synthetic Updates A'),('77000000-0000-0000-0000-000000000002','Synthetic Updates B');
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role,status) select '77000000-0000-0000-0000-000000000001',('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'Synthetic '||n,case n when 701 then 'owner' when 702 then 'admin' when 703 then 'manager' else 'employee'end,case n when 707 then 'suspended' else 'active' end from generate_series(701,709)n where n<>706;
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role) values('77000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000706','Foreign','owner');
+create function pg_temp.save(a text,extra jsonb default '{}',op uuid default gen_random_uuid()) returns jsonb language sql as $$select public.save_update('77000000-0000-0000-0000-000000000001',op,jsonb_build_object('action',a)||extra)$$;
+create function pg_temp.draft(title text default 'Announcement') returns jsonb language sql as $$select jsonb_build_object('title',title,'body','Original synthetic body','recipientIds',jsonb_build_array('00000000-0000-0000-0000-000000000704','00000000-0000-0000-0000-000000000705'),'allowComments',true,'allowReactions',true,'requireConfirmation',true)$$;
+create function pg_temp.read(kind text default 'feed',post uuid default null,lim integer default 50,cur jsonb default null,status text default 'all',search text default '') returns jsonb language sql as $$select public.read_updates('77000000-0000-0000-0000-000000000001',kind,post,status,search,lim,cur)$$;
+do $$declare t text;priv text;begin foreach t in array array['updates_posts','updates_recipients','updates_comments','updates_audit']loop
+ perform pg_temp.check_true((select relrowsecurity from pg_class where oid=('public.'||t)::regclass),'RLS enabled '||t);
+ foreach priv in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE']loop
+ perform pg_temp.check_true(not has_table_privilege('anon','public.'||t,priv),'anon denied '||priv||' '||t);
+ if priv<>'SELECT' then perform pg_temp.check_true(not has_table_privilege('authenticated','public.'||t,priv),'browser denied '||priv||' '||t);end if;end loop;end loop;end$$;
+do $$declare f regprocedure;begin foreach f in array array['public.save_update(uuid,uuid,jsonb)'::regprocedure,'public.read_updates(uuid,text,uuid,text,text,integer,jsonb)'::regprocedure,'public.read_updates_access(uuid,uuid,uuid[])'::regprocedure]loop
+ perform pg_temp.check_true(not has_function_privilege('anon',f,'EXECUTE') and not has_function_privilege('service_role',f,'EXECUTE'),'explicit default RPC grants neutralized '||f);
+end loop;end$$;
+select pg_temp.check_true(not has_table_privilege('authenticated','workforce_private.updates_operations','SELECT'),'private receipts unreadable');
+select pg_temp.check_true((select not prosecdef and provolatile='s' and proconfig @> array['search_path=""']from pg_proc where oid='public.read_updates(uuid,text,uuid,text,text,integer,jsonb)'::regprocedure),'read is stable signed invoker fixed search path');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.save('create',pg_temp.draft(),'78000000-0000-0000-0000-000000000001')->>'postId' as post_id \gset
+select pg_temp.check_true(pg_temp.save('create',pg_temp.draft(),'78000000-0000-0000-0000-000000000001')->>'postId'=:'post_id','create retry same receipt');
+select pg_temp.check_true((select count(*)=1 from public.updates_posts)and(select count(*)=1 from public.updates_audit),'create retry once row/audit');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft('Different'),'78000000-0000-0000-0000-000000000001')$q$,'40001','UUID bound to exact payload');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||'{"created_at":"2020-01-01"}')$q$,'22023','client timestamps rejected');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||'{"recipientIds":["00000000-0000-0000-0000-000000000706"]}')$q$,'42501','foreign recipient denied');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||'{"recipientIds":["00000000-0000-0000-0000-000000000708"]}')$q$,'42501','unconfirmed recipient denied');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||'{"recipientIds":["00000000-0000-0000-0000-000000000709"]}')$q$,'42501','anonymous recipient denied');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||'{"recipientIds":["00000000-0000-0000-0000-000000000704","00000000-0000-0000-0000-000000000704"]}')$q$,'22023','duplicate recipients denied');
+select pg_temp.check_true(pg_temp.read('manage')->'counts'->>'draft'='1' and pg_temp.read()->'posts'='[]','management content distinct from own feed');
+select pg_temp.check_true(jsonb_array_length(pg_temp.read('roster')->'users')=5,'roster only confirmed active members');
+select pg_temp.check_true(pg_temp.read('detail',:'post_id')->'post'->>'canEngage'='false','nonrecipient admin cannot engage');
+select pg_temp.expect_error(format($q$select pg_temp.save('view',jsonb_build_object('postId',%L,'contentRevision',1))$q$,:'post_id'),'42501','admin management authority cannot mark view');
+select pg_temp.save('edit',pg_temp.draft('Literal %_ Announcement')||jsonb_build_object('postId',:'post_id','revision',1));
+select pg_temp.expect_error(format($q$select pg_temp.save('publish',jsonb_build_object('postId',%L,'revision',null))$q$,:'post_id'),'22023','null revision cannot bypass concurrency');
+select pg_temp.save('publish',jsonb_build_object('postId',:'post_id','revision',2));
+select pg_temp.check_true(pg_temp.read('manage')->'posts'->0->>'content_revision'='1','publish freezes first content revision');
+select pg_temp.expect_error(format($q$select pg_temp.save('edit',pg_temp.draft()||jsonb_build_object('postId',%L,'revision',3))$q$,:'post_id'),'40001','published text/audience immutable');
+select pg_temp.check_true(pg_temp.read('manage',null,50,null,'all','%_')->'counts'->>'total'='1' and pg_temp.read('manage',null,50,null,'all','body')->'counts'->>'total'='0','literal title search only');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000703',false);
+select pg_temp.expect_error($q$select pg_temp.read('manage')$q$,'42501','manager cannot inspect management');
+select pg_temp.expect_error($q$select pg_temp.read('roster')$q$,'42501','manager cannot inspect recipient roster');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft())$q$,'42501','manager cannot create');
+select pg_temp.check_true((select count(*)=0 from public.updates_posts)and(select count(*)=0 from public.updates_comments),'nonrecipient tables hidden by RLS');
+select pg_temp.expect_error(format($q$select pg_temp.read('detail',%L)$q$,:'post_id'),'42501','nonrecipient known ID denied');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.check_true(pg_temp.read()->'posts'->0->>'id'=:'post_id','published recipient feed');
+select pg_temp.read('detail',:'post_id');select pg_temp.read();
+select pg_temp.check_true((select viewed_at is null from public.updates_recipients where actor_id=auth.uid()),'GET detail/list never mark view');
+select pg_temp.save('view',jsonb_build_object('postId',:'post_id','contentRevision',1),'78000000-0000-0000-0000-000000000004');
+select viewed_at as first_view from public.updates_recipients where actor_id=auth.uid() \gset
+select pg_temp.save('view',jsonb_build_object('postId',:'post_id','contentRevision',1));
+select pg_temp.check_true((select viewed_at=:'first_view'::timestamptz from public.updates_recipients where actor_id=auth.uid()),'first explicit view timestamp retained');
+select pg_temp.save('confirm',jsonb_build_object('postId',:'post_id','contentRevision',1));
+select pg_temp.save('like',jsonb_build_object('postId',:'post_id','contentRevision',1),'78000000-0000-0000-0000-000000000005');
+select pg_temp.save('comment',jsonb_build_object('postId',:'post_id','contentRevision',1,'body','Original comment'),'78000000-0000-0000-0000-000000000006')->>'commentId' as comment_id \gset
+select pg_temp.check_true(pg_temp.save('comment',jsonb_build_object('postId',:'post_id','contentRevision',1,'body','Original comment'),'78000000-0000-0000-0000-000000000006')->>'commentId'=:'comment_id' and(select count(*)=1 from public.updates_comments),'comment lost response retry exact once');
+select pg_temp.check_true(pg_temp.read('detail',:'post_id')->'comments'->0->>'canEdit'='true','own comment server capability');
+select pg_temp.save('edit_comment',jsonb_build_object('postId',:'post_id','contentRevision',1,'commentId',:'comment_id','revision',1,'body','Edited'));
+select pg_temp.expect_error(format($q$select pg_temp.save('edit_comment',jsonb_build_object('postId',%L,'contentRevision',1,'commentId',%L,'revision',1,'body','Stale'))$q$,:'post_id',:'comment_id'),'40001','stale own comment revision denied');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000705',false);
+select pg_temp.check_true(pg_temp.read('detail',:'post_id')->'comments'->0->>'body'='Edited','other recipient can read thread');
+select pg_temp.expect_error(format($q$select pg_temp.save('remove_comment',jsonb_build_object('postId',%L,'contentRevision',1,'commentId',%L,'revision',2))$q$,:'post_id',:'comment_id'),'42501','coworker cannot remove comment');
+select pg_temp.save('confirm',jsonb_build_object('postId',:'post_id','contentRevision',1));
+select pg_temp.check_true((select viewed_at is not null and confirmed_at is not null from public.updates_recipients where actor_id=auth.uid()),'confirmation atomically marks first view');
+select pg_temp.check_true((select count(*)=1 from public.updates_recipients),'recipient identities cannot inspect coworkers');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.check_true(pg_temp.read('recipients',:'post_id')->'counts'='{"total":2,"viewed":2,"confirmed":2,"likes":1,"comments":1}','exact analytics independent of page/filter');
+select pg_temp.check_true(jsonb_array_length(pg_temp.read('recipients',:'post_id',1,null,'confirmed')->'recipients')=1,'bounded filtered recipient page');
+select pg_temp.save('archive',jsonb_build_object('postId',:'post_id','revision',3),'78000000-0000-0000-0000-000000000007');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.check_true(pg_temp.read()->'counts'->>'total'='0','archive removes recipient feed');
+select pg_temp.expect_error(format($q$select pg_temp.save('like',jsonb_build_object('postId',%L,'contentRevision',1),'78000000-0000-0000-0000-000000000005')$q$,:'post_id'),'42501','archive denies personal receipt replay');
+select pg_temp.expect_error(format($q$select pg_temp.read('detail',%L)$q$,:'post_id'),'42501','archive denies personal detail');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.check_true(pg_temp.save('archive',jsonb_build_object('postId',:'post_id','revision',3),'78000000-0000-0000-0000-000000000007')->>'revision'='4','admin replay prior receipt after state change');
+select pg_temp.save('restore',jsonb_build_object('postId',:'post_id','revision',4));
+select pg_temp.check_true(pg_temp.read('detail',:'post_id')->'post'->>'confirmedCount'='2','restore retains confirmation history');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.save('remove_comment',jsonb_build_object('postId',:'post_id','contentRevision',1,'commentId',:'comment_id','revision',2));
+select pg_temp.check_true(pg_temp.read('detail',:'post_id')->'comments'->0->>'body'=''and pg_temp.read('detail',:'post_id')->'post'->>'commentCount'='0','soft removal hides body and exact active count');
+select pg_temp.save('unlike',jsonb_build_object('postId',:'post_id','contentRevision',1));
+select pg_temp.check_true(pg_temp.read()->'posts'->0->>'likeCount'='0','unlike count exact');
+reset role;update public.tenant_memberships set status='suspended' where user_id='00000000-0000-0000-0000-000000000704';set role authenticated;
+select pg_temp.expect_error(format($q$select pg_temp.save('view',jsonb_build_object('postId',%L,'contentRevision',1),'78000000-0000-0000-0000-000000000004')$q$,:'post_id'),'42501','suspension before personal receipt replay');
+select pg_temp.expect_error($q$select pg_temp.read()$q$,'42501','suspended member read denied');
+reset role;update public.tenant_memberships set status='active' where user_id='00000000-0000-0000-0000-000000000704';delete from public.updates_recipients where actor_id='00000000-0000-0000-0000-000000000705';set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000705',false);
+select pg_temp.expect_error(format($q$select pg_temp.read('detail',%L)$q$,:'post_id'),'42501','removed recipient denied known detail');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.save('create',pg_temp.draft('Disabled')||'{"allowComments":false,"allowReactions":false,"requireConfirmation":false}')->>'postId' as disabled_id \gset
+select pg_temp.save('publish',jsonb_build_object('postId',:'disabled_id','revision',1));
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.expect_error(format($q$select pg_temp.save('like',jsonb_build_object('postId',%L,'contentRevision',1))$q$,:'disabled_id'),'42501','disabled reactions enforced');
+select pg_temp.expect_error(format($q$select pg_temp.save('comment',jsonb_build_object('postId',%L,'contentRevision',1,'body','Denied'))$q$,:'disabled_id'),'42501','disabled comments enforced');
+select pg_temp.expect_error(format($q$select pg_temp.save('confirm',jsonb_build_object('postId',%L,'contentRevision',1))$q$,:'disabled_id'),'42501','disabled confirmation enforced');
+select pg_temp.expect_error(format($q$select pg_temp.save('view',jsonb_build_object('postId',%L,'contentRevision',2))$q$,:'disabled_id'),'22023','engagement content revision bound');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.save('create',pg_temp.draft(repeat('😀',160))||jsonb_build_object('body',repeat('😀',5000)))->>'postId' as emoji_id \gset
+select pg_temp.save('publish',jsonb_build_object('postId',:'emoji_id','revision',1));
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.save('comment',jsonb_build_object('postId',:'emoji_id','contentRevision',1,'body',repeat('😀',2000)));
+select pg_temp.check_true(length(pg_temp.read('detail',:'emoji_id')->'post'->>'body')=5000 and length(pg_temp.read('detail',:'emoji_id')->'comments'->0->>'body')=2000,'direct signed valid full Unicode titles bodies comments');
+select pg_temp.expect_error(format($q$select pg_temp.save('comment',jsonb_build_object('postId',%L,'contentRevision',1,'body',repeat('😀',2001)))$q$,:'emoji_id'),'22023','real Unicode overflow denied');
+reset role;
+insert into auth.users(id,email_confirmed_at) select ('00000000-0000-0000-0001-'||lpad(n::text,12,'0'))::uuid,now()from generate_series(1,1005)n;
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role)select '77000000-0000-0000-0000-000000000001',('00000000-0000-0000-0001-'||lpad(n::text,12,'0'))::uuid,'Roster '||lpad(n::text,4,'0'),'employee'from generate_series(1,1005)n;
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.read('roster',null,100,null,'all','Roster') as first_roster \gset
+select pg_temp.check_true(jsonb_array_length(:'first_roster'::jsonb->'users')=100 and :'first_roster'::jsonb->'nextCursor'->>'id'='00000000-0000-0000-0001-000000000100','first roster page explicit100 cursor');
+select pg_temp.check_true(pg_temp.read('roster',null,100,:'first_roster'::jsonb->'nextCursor','all','Roster')->'users'->0->>'id'='00000000-0000-0000-0001-000000000101','next roster page starts101 no cutoff');
+select pg_temp.check_true(pg_temp.read('roster',null,50,null,'all','Roster 1005')->'users'->0->>'name'='Roster 1005','searched roster reaches past1000');
+select pg_temp.expect_error(format($q$select pg_temp.read('roster',null,100,%L::jsonb,'all','Changed')$q$,(:'first_roster'::jsonb->'nextCursor')::text),'22023','roster cursor scoped search');
+select pg_temp.save('create',pg_temp.draft('Large audience')||jsonb_build_object('recipientIds',(select jsonb_agg(user_id order by user_id)from public.tenant_memberships where tenant_id='77000000-0000-0000-0000-000000000001' and display_name like 'Roster%' and user_id<='00000000-0000-0000-0001-000000000500')))->>'postId' as large_id \gset
+select pg_temp.save('publish',jsonb_build_object('postId',:'large_id','revision',1));
+select pg_temp.check_true(pg_temp.read('detail',:'large_id')->'post'->>'recipientCount'='500' and jsonb_array_length(pg_temp.read('detail',:'large_id')->'recipients')=500,'fixed explicit500 audience complete detail/analytics');
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft()||jsonb_build_object('recipientIds',(select jsonb_agg(user_id)from public.tenant_memberships where display_name like 'Roster%' and user_id<='00000000-0000-0000-0001-000000000501')))$q$,'22023','501 audience rejected no truncation');
+reset role;
+insert into public.updates_posts(tenant_id,title,body,status,content_revision,allow_comments,allow_reactions,require_confirmation,created_by,created_name,created_at,published_at)select '77000000-0000-0000-0000-000000000001','Page literal '||n,'Synthetic','published',1,true,true,true,'00000000-0000-0000-0000-000000000701','Synthetic owner','2026-10-03T23:00:00.123456Z','2026-10-03T23:00:00.123456Z'from generate_series(1,1005)n;
+insert into public.updates_recipients(tenant_id,post_id,actor_id,name)select tenant_id,id,'00000000-0000-0000-0000-000000000704','Synthetic 704'from public.updates_posts where title like 'Page literal %';
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000704',false);
+select pg_temp.read('feed',null,2,null,'all','Page literal') as first_page \gset
+select pg_temp.check_true(:'first_page'::jsonb->'counts'->>'total'='1005' and jsonb_array_length(:'first_page'::jsonb->'posts')=2,'exact1005 count never directory cutoff');
+select pg_temp.check_true(:'first_page'::jsonb->'nextCursor'->>'position'='2026-10-03T23:00:00.123456Z','cursor preserves microseconds');
+select pg_temp.check_true(pg_temp.read('feed',null,2,:'first_page'::jsonb->'nextCursor','all','Page literal')->'posts'->0->>'id'<>:'first_page'::jsonb->'posts'->1->>'id','equal timestamp keyset no repeated boundary');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000705',false);
+select pg_temp.expect_error(format($q$select pg_temp.read('feed',null,2,%L::jsonb,'all','Page literal')$q$,(:'first_page'::jsonb->'nextCursor')::text),'22023','old actor cursor cannot transfer');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000706',false);
+select pg_temp.expect_error($q$select pg_temp.read()$q$,'42501','foreign company current member denied');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000708',false);
+select pg_temp.expect_error($q$select pg_temp.read()$q$,'42501','unconfirmed actor read denied');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000709',false);
+select pg_temp.expect_error($q$select pg_temp.read()$q$,'42501','anonymous actor read denied');
+reset role;update public.tenant_memberships set role='manager'where user_id='00000000-0000-0000-0000-000000000701';set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.expect_error($q$select pg_temp.save('create',pg_temp.draft(),'78000000-0000-0000-0000-000000000001')$q$,'42501','revoked admin cannot replay create receipt');
+reset role;update public.tenant_memberships set role='owner'where user_id='00000000-0000-0000-0000-000000000701';
+insert into auth.users(id,email_confirmed_at)values('00000000-0000-0000-0002-000000000001',now()),('00000000-0000-0000-0002-000000000002',now());
+insert into public.tenant_memberships(tenant_id,user_id,display_name,role)values('77000000-0000-0000-0000-000000000001','00000000-0000-0000-0002-000000000001','İ😀Boundary a','employee'),('77000000-0000-0000-0000-000000000001','00000000-0000-0000-0002-000000000002','İ😀Boundary b','employee');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000701',false);
+select pg_temp.read('roster',null,1,null,'all','Boundary') as unicode_roster \gset
+select pg_temp.check_true(:'unicode_roster'::jsonb->'nextCursor'->>'position'=lower('İ😀Boundary a')and pg_temp.read('roster',null,1,:'unicode_roster'::jsonb->'nextCursor','all','Boundary')->'users'->0->>'name'='İ😀Boundary b','SQL Unicode lowercase cursor page boundary works without JS folding');
+select pg_temp.expect_error($q$select public.read_updates('77000000-0000-0000-0000-000000000001','feed',null,'all','',null)$q$,'22023','null page limit cannot unbound direct signed RPC');
+reset role;

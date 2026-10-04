@@ -167,3 +167,7 @@ Desktop Chat can search literal message text within a currently joined conversat
 ## Time Off
 
 Active linked users can request full calendar-day leave and withdraw pending requests. Owners/admins create/archive leave types and review, approve, reject or cancel team requests with retained history, exact filters/counts and safe retries. See [Time Off acceptance](docs/time-off-acceptance.md). Partial-day leave, policy balances/accrual and calendar/payroll integration remain further work.
+
+## Updates
+
+Owners/admins can draft and publish plain text updates to 1–500 selected company members, then archive or restore them. Recipients can open updates, separately confirm reading when requested, react and create/edit/remove their own comments. Management tracks exact viewed/confirmed counts and paged recipient statuses. Publishing freezes content, recipients and engagement settings. See [Updates acceptance](docs/updates-acceptance.md); run `node scripts/test-updates-integration.mjs` for isolated real Auth/API/browser checks. The reviewed additive database migration is applied; the consumer release is pending. Rich media, Smart Groups, scheduled publishing, user posting, notifications and full reference parity remain further work.
