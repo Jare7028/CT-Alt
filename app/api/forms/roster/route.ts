@@ -1,0 +1,3 @@
+import{NextResponse}from'next/server';import{configured,supabase}from'../../../../lib/supabase';import{FormsError,readFormsRoster,parseFormsRosterQuery}from'../../../../lib/forms';
+const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+export async function GET(request:Request){if(!configured())return response({error:'Company sign-in is not configured.'},503);try{return response(await readFormsRoster(await supabase(),parseFormsRosterQuery(new URL(request.url).searchParams)));}catch(e){return e instanceof FormsError?response({error:e.message},e.status):response({error:'Forms could not be verified. Refresh and review.'},503);}}
