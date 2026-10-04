@@ -4,7 +4,7 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `3fe6a7eca11babcf5b98946032de4cf5140afc7d`. Vercel production `dpl_3WQGsucDnXsZsZPj5azUzvdHGb63` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock/Quick Tasks redirect to login. Real-account authenticated production workflows were not exercised.
+Latest application release: `4d97fbd8f8fa0795e3607bb5b1cc7d05960daecf`. Vercel production `dpl_CuV4KxoL3bk3TAP9ptvtXZoNUika` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock/Quick Tasks redirect to login. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -19,7 +19,8 @@ Latest application release: `3fe6a7eca11babcf5b98946032de4cf5140afc7d`. Vercel p
 | Team timesheets | Owner/admin range/user review, exact completed totals, version-fenced keysets, retained names and whole-scope CSV with10,000 bound;64 combined config,46 team SQL,111 retained Clock and6 real Auth cases | On main and production; PR19 CI37160469769 passed | Payroll formats/rates/overtime, issues, approvals and manual edits |
 | Conversation search | Joined-conversation literal search, exact counts/precise sequence paging and current permission rechecks;72 combined configs,37 SQL,29 synthetic and6 real Auth/browser cases | On main and production; PR20 CI37162006287 passed | Global search, sender/date/media filters and search-to-history navigation |
 | Time Off | Full calendar-day types/requests, retained approvals/history, original-requester privacy and overlap-safe decisions;79 combined configs,97 SQL/races,17 synthetic and6 real Auth/browser cases | On main and production; PR21 CI37162952970 passed | Partial days, policy assignments/balances/accrual, granular permissions and calendar/payroll integration |
-| Updates | Owner/admin lifecycle, fixed Auth-member recipients, viewed/confirmed tracking, reactions and own comments;90 combined configs,122 SQL/races,23 synthetic and8 real Auth/browser cases | Reviewed additive SQL applied once; consumer PR/CI/production pending | Media/templates, Smart Groups, scheduling, user posting, published edits, notifications, exports and granular permissions |
+| Updates | Owner/admin lifecycle, fixed Auth-member recipients, viewed/confirmed tracking, reactions and own comments;90 combined configs,122 SQL/races,23 synthetic and8 real Auth/browser cases | On main and production; PR22 CI37164745377 passed | Media/templates, Smart Groups, scheduling, user posting, published edits, notifications, exports and granular permissions |
+| Updates recipient export | Complete selected-status CSV, safe UTF8/formula cells, retained names and precise UTC, fresh role/post checks;98 configs,24 export SQL,122 retained Updates SQL,50 synthetic and6 real Auth/browser cases | Reviewed additive SQL applied once; consumer PR/CI/production pending | Reference-verified format, custom columns/Excel, group-by and granular export permissions |
 
 ## Wider workforce scope
 
@@ -40,4 +41,4 @@ For every delivered slice, record functional scope, local checks, browser/API pe
 
 Latest owner direction: prioritise desktop functionality and keep consulting official Connecteam docs; defer new mobile polish.
 
-Work underway: Time Off PR21 is verified on matching READY production. Desktop Updates passed combined checks, immutable independent review and signed local acceptance; its reviewed SQL is applied and consumer release is next in /workspace/ct-alt-updates. Preserve the wider roadmap.
+Work underway: Updates PR22 is verified on matching READY production. Complete desktop recipient-status CSV passed integrated check/build, immutable independent review and signed local acceptance; SQL is applied and consumer release is next in /workspace/ct-alt-updates-export. Official Smart Groups documentation is being researched for the next module. Preserve the wider roadmap.

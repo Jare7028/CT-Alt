@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import type { Member } from "../../lib/agent-types";
 import type {
   UpdateComment,
@@ -382,6 +383,63 @@ async function harness(page: Page) {
             !audience(row.id).includes(state.actor)))
       )
         return route.fulfill({ status: 403, json: { error: "Detail denied" } });
+      if (url.pathname.endsWith("/recipients/export")) {
+        if (!manage())
+          return route.fulfill({
+            status: 403,
+            json: { error: "Export denied" },
+          });
+        const status = url.searchParams.get("status") || "all";
+        const scoped = audience(row.id).map((id) => ({
+          id,
+          name: users.find((user) => user.id === id)!.name,
+          viewed: members(state.views, row.id).has(id),
+          confirmed: members(state.confirmations, row.id).has(id),
+        }));
+        const filtered = scoped.filter(
+          (user) =>
+            status === "all" ||
+            (status === "viewed"
+              ? user.viewed
+              : status === "unviewed"
+                ? !user.viewed
+                : status === "confirmed"
+                  ? user.confirmed
+                  : !user.confirmed),
+        );
+        const body =
+          "\ufeffUser name,User ID,Viewed,Viewed at (UTC),Confirmed,Confirmed at (UTC)\r\n" +
+          filtered
+            .map((user) =>
+              [
+                user.name,
+                user.id,
+                user.viewed ? "Yes" : "No",
+                user.viewed ? "2026-10-03T13:01:00Z" : "",
+                row.requireConfirmation
+                  ? user.confirmed
+                    ? "Yes"
+                    : "No"
+                  : "Not required",
+                user.confirmed ? "2026-10-03T13:02:00Z" : "",
+              ].join(","),
+            )
+            .join("\r\n") +
+          (filtered.length ? "\r\n" : "");
+        return route.fulfill({
+          body,
+          headers: {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": `attachment; filename="updates-${row.id}-recipients.csv"`,
+            "X-CT-Alt-Actor-ID": state.actor,
+            "X-CT-Alt-Company-ID": state.tenant.id,
+            "X-CT-Alt-Update-ID": row.id,
+            "X-CT-Alt-Recipient-Status": status,
+            "X-CT-Alt-Role": state.role,
+          },
+        });
+      }
       if (url.pathname.endsWith("/recipients"))
         return route.fulfill({
           status: manage() ? 200 : 403,
@@ -1229,5 +1287,393 @@ test("recipient engagement replay accepts prior post revision after archive/rest
   await ready(page);
   expect(state.mutations.at(-1)).toEqual(original);
   expect(state.likes.get(post().id)?.size).toBe(1);
+  expect(await marker(page)).toEqual({});
+});
+
+async function exportAnalytics(page: Page) {
+  const state = await harness(page);
+  state.audiences.set(
+    post().id,
+    users.slice(0, 500).map((user) => user.id),
+  );
+  state.views.set(
+    post().id,
+    new Set(users.slice(0, 100).map((user) => user.id)),
+  );
+  state.confirmations.set(
+    post().id,
+    new Set(users.slice(0, 25).map((user) => user.id)),
+  );
+  await page
+    .getByRole("button", { name: "Manage updates", exact: true })
+    .click();
+  await ready(page);
+  await page
+    .getByRole("button", {
+      name: `Recipient statuses for ${post().title}`,
+      exact: true,
+    })
+    .click();
+  await ready(page);
+  await expect(
+    page.getByRole("button", { name: "Export recipients", exact: true }),
+  ).toBeEnabled();
+  await page.evaluate(() => {
+    const controls = window as unknown as { csvUrls: number };
+    controls.csvUrls = 0;
+    const original = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (object) => {
+      controls.csvUrls += 1;
+      return original(object);
+    };
+  });
+  return state;
+}
+async function holdExportBody(page: Page) {
+  await page.evaluate(() => {
+    const controls = window as unknown as {
+      csvBodyHeld: boolean;
+      releaseCsvBody: () => void;
+    };
+    const original = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const response = await original(...args);
+      if (String(args[0]).includes("/recipients/export?")) {
+        const decode = response.blob.bind(response);
+        response.blob = async () => {
+          const blob = await decode();
+          controls.csvBodyHeld = true;
+          await new Promise<void>((resolve) => {
+            controls.releaseCsvBody = resolve;
+          });
+          return blob;
+        };
+      }
+      return response;
+    };
+  });
+}
+async function releaseExportBody(page: Page) {
+  await page.evaluate(async () => {
+    (window as unknown as { releaseCsvBody: () => void }).releaseCsvBody();
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+  });
+}
+async function expectNoCsv(page: Page) {
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { csvUrls: number }).csvUrls,
+    ),
+  ).toBe(0);
+}
+const csvHeaders = () => ({
+  "Content-Type": "text/csv; charset=utf-8",
+  "Cache-Control": "private, no-store",
+  "Content-Disposition": `attachment; filename="updates-${post().id}-recipients.csv"`,
+  "X-CT-Alt-Actor-ID": actor,
+  "X-CT-Alt-Company-ID": company.id,
+  "X-CT-Alt-Update-ID": post().id,
+  "X-CT-Alt-Recipient-Status": "all",
+  "X-CT-Alt-Role": "owner",
+});
+
+test("recipient CSV exports all500 scoped rows beyond displayed50 and current selected status without view mutations", async ({
+  page,
+}) => {
+  const state = await exportAnalytics(page);
+  await expect(
+    page
+      .getByRole("region", { name: "Recipient statuses", exact: true })
+      .locator("tbody tr"),
+  ).toHaveCount(50);
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export recipients", exact: true })
+    .click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(
+    `updates-${post().id}-recipients.csv`,
+  );
+  const csv = await readFile((await download.path())!, "utf8");
+  expect(
+    csv.startsWith(
+      "\ufeffUser name,User ID,Viewed,Viewed at (UTC),Confirmed,Confirmed at (UTC)\r\n",
+    ),
+  ).toBe(true);
+  expect(csv.trim().split("\r\n")).toHaveLength(501);
+  expect(csv).toContain(users[499].id);
+  expect(state.gets.at(-1)?.searchParams.get("tenantId")).toBe(company.id);
+  expect(state.gets.at(-1)?.searchParams.get("status")).toBe("all");
+  expect(state.gets.at(-1)?.searchParams.has("limit")).toBe(false);
+  expect(state.gets.at(-1)?.searchParams.has("cursor")).toBe(false);
+  await expect(
+    page.getByText(
+      "Recipient CSV download started for every user matching the selected status.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page
+    .getByLabel("Recipient status", { exact: true })
+    .selectOption("viewed");
+  await ready(page);
+  const filteredDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export recipients", exact: true })
+    .click();
+  const filtered = await readFile(
+    (await (await filteredDownload).path())!,
+    "utf8",
+  );
+  expect(filtered.trim().split("\r\n")).toHaveLength(101);
+  expect(filtered).not.toContain(users[100].id);
+  expect(state.gets.at(-1)?.searchParams.get("status")).toBe("viewed");
+  expect(state.mutations).toHaveLength(0);
+  expect(await marker(page)).toEqual({});
+  await capture(page, "updates-export-desktop");
+});
+
+test("complete500 Unicode recipient CSV with precise timestamps larger than256000 bytes downloads", async ({
+  page,
+}) => {
+  const state = await exportAnalytics(page);
+  const csv =
+    "\ufeffUser name,User ID,Viewed,Viewed at (UTC),Confirmed,Confirmed at (UTC)\r\n" +
+    users
+      .slice(0, 500)
+      .map((user) =>
+        [
+          "😀".repeat(100),
+          user.id,
+          "Yes",
+          "2026-10-04T00:12:00.123456Z",
+          "Yes",
+          "2026-10-04T00:13:00.123456Z",
+        ]
+          .map((value) => `"${value}"`)
+          .join(","),
+      )
+      .join("\r\n") +
+    "\r\n";
+  const bytes = new TextEncoder().encode(csv).byteLength;
+  expect(bytes).toBeGreaterThan(256000);
+  expect(bytes).toBeLessThan(1048576);
+  await page.route("**/recipients/export?**", (route) =>
+    route.fulfill({ body: csv, headers: csvHeaders() }),
+  );
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export recipients", exact: true })
+    .click();
+  const content = await readFile(
+    (await (await downloadPromise).path())!,
+    "utf8",
+  );
+  expect(content).toBe(csv);
+  expect(content.trim().split("\r\n")).toHaveLength(501);
+  expect(state.mutations).toHaveLength(0);
+  await expect(
+    page.getByRole("region", { name: "Updates recovery", exact: true }),
+  ).toHaveCount(0);
+});
+
+for (const status of [401, 403, 409, 503])
+  test(`current recipient export${status} clears private panels and keeps failed read locked`, async ({
+    page,
+  }) => {
+    await exportAnalytics(page);
+    await page.route("**/recipients/export?**", (route) =>
+      route.fulfill({ status, json: { error: "Export unavailable" } }),
+    );
+    await page
+      .getByRole("button", { name: "Export recipients", exact: true })
+      .click();
+    await expect(
+      page.getByRole("region", { name: "Updates recovery", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".update-card")).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: "Recipient statuses", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Add update", exact: true }),
+    ).toHaveCount(0);
+    await expectNoCsv(page);
+  });
+
+for (const header of [
+  "X-CT-Alt-Actor-ID",
+  "X-CT-Alt-Company-ID",
+  "X-CT-Alt-Update-ID",
+  "X-CT-Alt-Recipient-Status",
+  "X-CT-Alt-Role",
+  "Content-Type",
+  "Content-Disposition",
+  "Content-Length",
+])
+  test(`malformed recipient CSV${header} clears state before downloading`, async ({
+    page,
+  }) => {
+    await exportAnalytics(page);
+    const headers: Record<string, string> = csvHeaders();
+    headers[header] = header === "Content-Length" ? "1048577" : "wrong";
+    await page.route("**/recipients/export?**", (route) =>
+      route.fulfill({ body: "name,id\r\n", headers }),
+    );
+    await page
+      .getByRole("button", { name: "Export recipients", exact: true })
+      .click();
+    await expect(
+      page.getByRole("region", { name: "Updates recovery", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".update-card")).toHaveCount(0);
+    await expectNoCsv(page);
+  });
+
+for (const body of ["", "a".repeat(1048577)])
+  test(`decoded recipient CSV${body.length ? "oversize" : "empty"} is denied`, async ({
+    page,
+  }) => {
+    await exportAnalytics(page);
+    await page.route("**/recipients/export?**", (route) =>
+      route.fulfill({ body, headers: csvHeaders() }),
+    );
+    await page
+      .getByRole("button", { name: "Export recipients", exact: true })
+      .click();
+    await expect(
+      page.getByRole("region", { name: "Updates recovery", exact: true }),
+    ).toBeVisible();
+    await expectNoCsv(page);
+  });
+
+test("held CSV headers show busy state then departure aborts without a download", async ({
+  page,
+}) => {
+  const state = await exportAnalytics(page);
+  let release: (() => void) | undefined;
+  await page.route("**/recipients/export?**", async (route) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      await route.fallback();
+    } catch {}
+  });
+  await page
+    .getByRole("button", { name: "Export recipients", exact: true })
+    .click();
+  await expect.poll(() => !!release).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "Export recipients", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Preparing recipient CSV…", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Toggle synthetic departure" })
+    .click();
+  release!();
+  await page.evaluate(async () => {
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+  });
+  await expectNoCsv(page);
+  expect(state.mutations).toHaveLength(0);
+});
+
+for (const navigation of [
+  "departure",
+  "company",
+  "actor",
+  "role",
+  "refresh",
+  "status",
+  "close",
+  "post",
+  "picker",
+] as const)
+  test(`decoded CSV${navigation} fence prevents a late download`, async ({
+    page,
+  }) => {
+    await exportAnalytics(page);
+    await holdExportBody(page);
+    await page
+      .getByRole("button", { name: "Export recipients", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { csvBodyHeld: boolean }).csvBodyHeld,
+        ),
+      )
+      .toBe(true);
+    if (navigation === "departure")
+      await page
+        .getByRole("button", { name: "Toggle synthetic departure" })
+        .click();
+    else if (["company", "actor", "role"].includes(navigation))
+      await page
+        .getByRole("button", { name: `Switch synthetic ${navigation}` })
+        .click();
+    else if (navigation === "refresh") {
+      await page.getByRole("button", { name: "Refresh Updates" }).click();
+      await ready(page);
+    } else if (navigation === "status") {
+      await page
+        .getByLabel("Recipient status", { exact: true })
+        .selectOption("confirmed");
+      await ready(page);
+    } else if (navigation === "close")
+      await page
+        .getByRole("button", { name: "Close recipient statuses" })
+        .click();
+    else if (navigation === "post")
+      await page
+        .getByRole("button", {
+          name: `Recipient statuses for ${post(2).title}`,
+          exact: true,
+        })
+        .click();
+    else
+      await page
+        .getByRole("button", { name: "Add update", exact: true })
+        .click();
+    await releaseExportBody(page);
+    await expectNoCsv(page);
+  });
+
+test("held POST prevents forced export and preserves its exact write recovery", async ({
+  page,
+}) => {
+  const state = await exportAnalytics(page);
+  const editor = await draft(page);
+  state.mode = "hold-post";
+  await editor.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect.poll(() => !!state.holdPost).toBe(true);
+  const exportButton = page.getByRole("button", {
+    name: "Export recipients",
+    exact: true,
+  });
+  await expect(exportButton).toBeDisabled();
+  const before = state.gets.length;
+  const stored = await marker(page);
+  await exportButton.evaluate((button) => {
+    button.removeAttribute("disabled");
+    (button as HTMLButtonElement).click();
+  });
+  expect(state.gets.length).toBe(before);
+  expect(await marker(page)).toEqual(stored);
+  await expectNoCsv(page);
+  const complete = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/updates"),
+  );
+  state.mode = "normal";
+  state.holdPost!();
+  await complete;
+  await ready(page);
+  expect(state.mutations).toHaveLength(1);
   expect(await marker(page)).toEqual({});
 });

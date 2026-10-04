@@ -62,6 +62,21 @@ const safeCount = (value: unknown) =>
   Number.isSafeInteger(value) && (value as number) >= 0;
 const safeCursor = (value: unknown) =>
   value === null || (typeof value === "string" && value.length > 0);
+const maximumRecipientCsvBytes = 1048576;
+function safeDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.append(link);
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
 function append<T>(current: T[], next: T[], id: (item: T) => string) {
   const known = new Set(current.map(id));
   return [...current, ...next.filter((item) => !known.has(id(item)))];
@@ -126,6 +141,8 @@ function UpdatesContent({ company, initialData }: Props) {
   const [writePending, setWritePending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportNotice, setExportNotice] = useState("");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editing, setEditing] = useState<UpdatePost | null>(null);
   const [roster, setRoster] = useState<UpdateRecipient[]>([]);
@@ -147,8 +164,16 @@ function UpdatesContent({ company, initialData }: Props) {
   const epoch = useRef(0);
   const writeBusy = useRef<string | null>(null);
   const requests = useRef<
-    Record<"list" | "detail" | "roster" | "analytics", AbortController | null>
-  >({ list: null, detail: null, roster: null, analytics: null });
+    Record<
+      "list" | "detail" | "roster" | "analytics" | "export",
+      AbortController | null
+    >
+  >({ list: null, detail: null, roster: null, analytics: null, export: null });
+  const analyticsScope = useRef<{
+    postId: string;
+    status: RecipientStatus;
+    role: Member["role"];
+  } | null>(null);
   const editor = useRef<HTMLDialogElement>(null);
   const commentEditor = useRef<HTMLDialogElement>(null);
   const confirmationDialog = useRef<HTMLDialogElement>(null);
@@ -211,7 +236,11 @@ function UpdatesContent({ company, initialData }: Props) {
       detail: null,
       roster: null,
       analytics: null,
+      export: null,
     };
+    analyticsScope.current = null;
+    setExportBusy(false);
+    setExportNotice("");
     setRosterBusy(false);
   }
   function closeEditors() {
@@ -264,6 +293,7 @@ function UpdatesContent({ company, initialData }: Props) {
     } catch {}
   }
   function startRead(kind: keyof typeof requests.current) {
+    if (kind !== "export") cancelExport();
     requests.current[kind]?.abort();
     const controller = new AbortController();
     requests.current[kind] = controller;
@@ -276,6 +306,106 @@ function UpdatesContent({ company, initialData }: Props) {
         generation === epoch.current &&
         requests.current[kind] === controller,
     };
+  }
+  function cancelExport() {
+    requests.current.export?.abort();
+    requests.current.export = null;
+    setExportBusy(false);
+    setExportNotice("");
+  }
+  async function exportRecipients() {
+    if (
+      !mounted.current ||
+      locked ||
+      writeBusy.current ||
+      requests.current.export ||
+      !data?.capabilities.canManage ||
+      !["owner", "admin"].includes(data.role) ||
+      !analytics ||
+      editor.current?.open ||
+      commentEditor.current?.open ||
+      confirmationDialog.current?.open
+    )
+      return;
+    const scope = {
+      companyId: company.id,
+      actorId: initialData.actorId,
+      role: data.role,
+      postId: analytics.post.id,
+      status: analytics.status,
+    };
+    const read = startRead("export");
+    const current = () =>
+      read.current() &&
+      analyticsScope.current?.postId === scope.postId &&
+      analyticsScope.current.status === scope.status &&
+      analyticsScope.current.role === scope.role;
+    setExportBusy(true);
+    setExportNotice("");
+    setError("");
+    const params = new URLSearchParams({
+      tenantId: scope.companyId,
+      status: scope.status,
+    });
+    try {
+      const response = await fetch(
+        `/api/updates/${scope.postId}/recipients/export?${params}`,
+        {
+          cache: "no-store",
+          signal: read.controller.signal,
+        },
+      );
+      if (!current()) return;
+      if (!response.ok)
+        throw new Error(
+          response.status === 401 || response.status === 403
+            ? "Your Updates export access could not be verified. Refresh to check your current access."
+            : "Recipient CSV could not be exported. Changes remain locked until a successful refresh.",
+        );
+      const filename = `updates-${scope.postId}-recipients.csv`;
+      const validHeaders = () =>
+        response.headers.get("X-CT-Alt-Actor-ID") === scope.actorId &&
+        response.headers.get("X-CT-Alt-Company-ID") === scope.companyId &&
+        response.headers.get("X-CT-Alt-Update-ID") === scope.postId &&
+        response.headers.get("X-CT-Alt-Recipient-Status") === scope.status &&
+        response.headers.get("X-CT-Alt-Role") === scope.role &&
+        /^text\/csv\s*;\s*charset=utf-8$/i.test(
+          response.headers.get("Content-Type") || "",
+        ) &&
+        response.headers.get("Content-Disposition") ===
+          `attachment; filename="${filename}"`;
+      const size = response.headers.get("Content-Length");
+      if (
+        !validHeaders() ||
+        (size !== null &&
+          (!/^\d+$/.test(size) || Number(size) > maximumRecipientCsvBytes))
+      )
+        throw new Error(
+          "The recipient CSV response could not be verified. Refresh to recover.",
+        );
+      const blob = await response.blob();
+      if (!current()) return;
+      if (!validHeaders() || !blob.size || blob.size > maximumRecipientCsvBytes)
+        throw new Error(
+          "The recipient CSV response could not be verified. Refresh to recover.",
+        );
+      safeDownload(blob, filename);
+      setExportNotice(
+        "Recipient CSV download started for every user matching the selected status.",
+      );
+    } catch (cause) {
+      if (current())
+        clearAccess(
+          cause instanceof Error
+            ? cause.message
+            : "Recipient CSV could not be exported. Refresh to recover.",
+        );
+    } finally {
+      if (current()) {
+        requests.current.export = null;
+        setExportBusy(false);
+      }
+    }
   }
   async function get<T>(url: string, controller: AbortController): Promise<T> {
     const response = await fetch(url, {
@@ -388,6 +518,7 @@ function UpdatesContent({ company, initialData }: Props) {
       return false;
     requests.current.analytics?.abort();
     requests.current.analytics = null;
+    analyticsScope.current = null;
     setAnalytics(null);
     const read = startRead("detail");
     setPhase("reading");
@@ -506,6 +637,7 @@ function UpdatesContent({ company, initialData }: Props) {
   ) {
     if (writeBusy.current || !mounted.current || !data?.capabilities.canManage)
       return;
+    analyticsScope.current = null;
     requests.current.detail?.abort();
     requests.current.detail = null;
     setDetails(null);
@@ -548,6 +680,7 @@ function UpdatesContent({ company, initialData }: Props) {
         throw new Error(
           "Recipient statuses could not be verified. Refresh to recover.",
         );
+      analyticsScope.current = { postId: post.id, status, role: next.role };
       setAnalytics((current) => ({
         post,
         status,
@@ -724,6 +857,7 @@ function UpdatesContent({ company, initialData }: Props) {
   }, [details, phase, writePending]);
   function closeDetail() {
     if (writeBusy.current) return;
+    cancelExport();
     requests.current.detail?.abort();
     requests.current.detail = null;
     setDetails(null);
@@ -1340,6 +1474,8 @@ function UpdatesContent({ company, initialData }: Props) {
                       aria-label="Close recipient statuses"
                       disabled={writePending}
                       onClick={() => {
+                        cancelExport();
+                        analyticsScope.current = null;
                         requests.current.analytics?.abort();
                         requests.current.analytics = null;
                         setAnalytics(null);
@@ -1372,6 +1508,28 @@ function UpdatesContent({ company, initialData }: Props) {
                     explicitly confirmed this published content. These are
                     separate statuses.
                   </p>
+                  <div className="updates-recipient-export">
+                    <p className="updates-hint">
+                      Export every recipient matching the selected status,
+                      including users beyond the displayed page.
+                    </p>
+                    <button
+                      className="updates-primary"
+                      aria-label="Export recipients"
+                      disabled={
+                        locked || exportBusy || !data.capabilities.canManage
+                      }
+                      onClick={() => void exportRecipients()}
+                    >
+                      {exportBusy
+                        ? "Exporting recipients…"
+                        : "Export recipients"}
+                    </button>
+                    {exportBusy && (
+                      <p role="status">Preparing recipient CSV…</p>
+                    )}
+                    {exportNotice && <p role="status">{exportNotice}</p>}
+                  </div>
                   <label>
                     Recipient status
                     <select

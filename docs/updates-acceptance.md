@@ -61,7 +61,7 @@ Independent review of server commit `e22a4cf8ee67e564eb51f19df5467ecea4e632ab` a
 
 All fourteen recorded hosted SQL statements were reread and matched repository bytes. Updates SHA256 is `3dacd9ab51e94d62a9f23390b6abe7e5063b730fa087fc4a541e57586ecbf474`. All 26 prior public table counts and 38 prior function definitions/owners/ACLs were retained. Four new public tables have authenticated SELECT-only RLS; three public RPCs are authenticated-only invokers with an empty search path and no anonymous/service-role execute grant. The one additional INFO advisory for private `updates_operations` is intentional default-deny receipt storage; existing advisories are retained. No browser policy was added to silence it.
 
-Consumer PR, exact-head CI, merge and matching production deployment remain pending. Current verified production is Time Off PR21, merge `3fe6a7eca11babcf5b98946032de4cf5140afc7d`. Local Auth/browser checks do not establish authenticated hosted production acceptance.
+PR22 reviewed head `f75fd7aba8de8d43cb56eff147aa0461532cbe35`, tree `903b4d642c902490df5f191c4f68797869f3236c`, passed exact-head CI37164745377 and merged `4d97fbd8f8fa0795e3607bb5b1cc7d05960daecf`. Matching production `dpl_CuV4KxoL3bk3TAP9ptvtXZoNUika` is READY with ct-alt.vercel.app alias. Login returns200, unsigned Updates redirects to login and the valid unsigned API returns401/private no-store. Local Auth/browser checks do not establish authenticated hosted production acceptance.
 
 ## Full parity backlog
 
