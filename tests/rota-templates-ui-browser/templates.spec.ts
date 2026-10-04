@@ -461,13 +461,13 @@ test("schedule timezone preview rejects gaps and resolves both fold occurrences"
     .getByLabel("Start clock-change occurrence")
     .selectOption("earlier");
   await expect(drawer.getByRole("status")).toContainText(
-    "2026-10-25T00:30:00.000Z",
+    "2026-10-25T01:30 – 2026-10-25T03:00 · 02:30",
   );
   await drawer
     .getByLabel("Start clock-change occurrence")
     .selectOption("later");
   await expect(drawer.getByRole("status")).toContainText(
-    "2026-10-25T01:30:00.000Z",
+    "2026-10-25T01:30 – 2026-10-25T03:00 · 01:30",
   );
   await expect(
     drawer.getByRole("button", { name: "Create draft" }),
