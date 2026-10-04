@@ -362,7 +362,7 @@ export default function ShiftTemplates({
       const agent = agents.find((a) => a.id === change.agent_id);
       applied(
         change.date,
-        `Draft created for ${agent ? agent.first_name + " " + agent.last_name : "the selected worker"}. Review the displayed drafts and publish when ready.`,
+        `Draft created for ${agent ? agent.first_name + " " + agent.last_name : "the selected worker"}.`,
       );
     } else applied(day, "Template saved.");
     if (!refreshed)
@@ -516,7 +516,7 @@ export default function ShiftTemplates({
           applied(
             day,
             operation.action === "apply"
-              ? "Earlier operation created one private draft. Review the displayed drafts and publish when ready."
+              ? "Earlier operation created one private draft."
               : "Earlier template operation was saved.",
           );
         }
@@ -526,7 +526,7 @@ export default function ShiftTemplates({
         await reload();
         await load();
         setError(
-          "This operation was not saved. It is safe to try again with a new operation.",
+          "This operation was not saved.",
         );
       } else throw Error("Operation result could not be verified.");
     } catch (e) {
@@ -668,7 +668,6 @@ export default function ShiftTemplates({
           </button>
         </div>
       )}
-      <p className={styles.zone}>Shifts · {zone}</p>
       {latest?.status === "archived" && (
         <p>Archived schedule. Templates are read only.</p>
       )}
@@ -691,8 +690,9 @@ export default function ShiftTemplates({
       {mode === "list" ? (
         <>
           <label className={styles.search}>
-            Search templates
             <input
+              aria-label="Search"
+              placeholder="Search"
               value={query}
               maxLength={100}
               disabled={busy || uncertain}
@@ -709,9 +709,6 @@ export default function ShiftTemplates({
             Refresh templates and schedules
           </button>
           {loading && <p role="status">Loading templates…</p>}
-          {data && (
-            <p className={styles.zone}>{data.page.total} matching templates</p>
-          )}
           <div className={styles.cards}>
             {data?.templates.map((item) => (
               <article
@@ -871,10 +868,6 @@ export default function ShiftTemplates({
                     <option value="2">Two days later</option>
                   </select>
                 </label>
-                <p>
-                  Local hours follow the schedule’s current time zone. Worker
-                  assignment is chosen when applying.
-                </p>
                 {needsNormalization && mode === "create" && (
                   <label className={styles.checkbox}>
                     <input name="normalize" type="checkbox" required />
@@ -944,10 +937,6 @@ export default function ShiftTemplates({
                     </label>
                   ))}
                 <p role="status">{previewError || preview}</p>
-                <p>
-                  Creates one private draft. Review the displayed period and
-                  filters before publishing.
-                </p>
                 {overlap && (
                   <label className={styles.checkbox}>
                     <input type="checkbox" name="allow_overlap" />I reviewed the
@@ -982,7 +971,9 @@ export default function ShiftTemplates({
                   ? "Create draft"
                   : mode === "delete"
                     ? "Delete template"
-                    : "Save template"}
+                    : mode === "create"
+                      ? "Save as template"
+                      : "Save template"}
             </button>
           </div>
         </form>
