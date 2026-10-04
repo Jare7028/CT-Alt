@@ -1,0 +1,16 @@
+import type {Company,Member} from './agent-types';
+export type UpdateRecipient={id:string;name:string};
+export type UpdatePost={id:string;tenant_id:string;title:string;body:string;status:'draft'|'published'|'archived';revision:number;content_revision:number;created_by:string;created_name:string;created_at:string;published_at:string|null;allowComments:boolean;allowReactions:boolean;requireConfirmation:boolean;recipientCount:number;viewedCount:number;confirmedCount:number;likeCount:number;commentCount:number;liked:boolean;viewedAt:string|null;confirmedAt:string|null;canEdit:boolean;canPublish:boolean;canArchive:boolean;canRestore:boolean;canEngage:boolean;isRecipient:boolean};
+export type UpdateComment={id:string;post_id:string;actorId:string;author_name:string;body:string;status:'active'|'removed';revision:number;created_at:string;updated_at:string;canEdit:boolean;canRemove:boolean};
+export type UpdatesData={company:Company;role:Member['role'];actorId:string;capabilities:{canManage:boolean};posts:UpdatePost[];counts:{total:number;draft:number;published:number;archived:number};nextCursor:string|null;serverTime:string};
+export type UpdatesReadIdentity={tenantId:string;actorId:string;role:Member['role']};
+export type UpdateDetailsData=UpdatesReadIdentity&{post:UpdatePost;recipients:UpdateRecipient[];comments:UpdateComment[];nextCommentsCursor:string|null;serverTime:string};
+export type UpdatesRosterData=UpdatesReadIdentity&{users:UpdateRecipient[];nextCursor:string|null};
+export type UpdateRecipientsData=UpdatesReadIdentity&{recipients:{actorId:string;name:string;viewedAt:string|null;confirmedAt:string|null}[];counts:{total:number;viewed:number;confirmed:number;likes:number;comments:number};nextCursor:string|null};
+type Draft={title:string;body:string;recipientIds:string[];allowComments:boolean;allowReactions:boolean;requireConfirmation:boolean};
+export type UpdatesChange=({action:'create'}&Draft)|({action:'edit';postId:string;revision:number}&Draft)|{action:'publish'|'archive'|'restore';postId:string;revision:number}|{action:'view'|'confirm'|'like'|'unlike';postId:string;contentRevision:number}|{action:'comment';postId:string;contentRevision:number;body:string}|{action:'edit_comment';postId:string;contentRevision:number;commentId:string;revision:number;body:string}|{action:'remove_comment';postId:string;contentRevision:number;commentId:string;revision:number};
+export type UpdatesSaved={operationId:string;action:UpdatesChange['action'];postId:string;revision:number;contentRevision:number;commentId?:string;commentRevision?:number};
+export type UpdatesQuery={tenantId:string;view:'feed'|'manage';status:'all'|'draft'|'published'|'archived';search:string;limit:number;cursor?:string};
+export type UpdatesRosterQuery={tenantId:string;search:string;limit:number;cursor?:string};
+export type UpdateDetailsQuery={tenantId:string;postId:string;limit:number;cursor?:string};
+export type UpdateRecipientsQuery=UpdateDetailsQuery&{status:'all'|'unviewed'|'viewed'|'unconfirmed'|'confirmed'};
