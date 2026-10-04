@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRef, useState, type ReactNode } from 'react';
 import './app-shell.css';
 
-export type ShellModule = 'users' | 'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups' | 'knowledge-base' | 'forms' | 'requests';
+export type ShellModule = 'users' | 'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups' | 'knowledge-base' | 'forms' | 'requests' | 'directory';
 export type AppShellProps = {
   children: ReactNode;
   companyName: string;
@@ -15,10 +15,10 @@ export type AppShellProps = {
   accountName?: string;
   pageNavigation?: ReactNode;
   /** Supply only routes that exist and are ready to use. */
-  moduleLinks?: Partial<Record<'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups' | 'knowledge-base' | 'forms' | 'requests', string>>;
+  moduleLinks?: Partial<Record<'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups' | 'knowledge-base' | 'forms' | 'requests' | 'directory', string>>;
 };
 
-type IconName = 'grid' | 'activity' | 'users' | 'groups' | 'automation' | 'jobs' | 'chat' | 'calendar' | 'chevron' | 'plus' | 'search' | 'help' | 'accessibility' | 'bell' | 'menu' | 'clock';
+type IconName = 'grid' | 'activity' | 'users' | 'groups' | 'automation' | 'jobs' | 'chat' | 'calendar' | 'chevron' | 'plus' | 'search' | 'help' | 'accessibility' | 'bell' | 'menu' | 'clock' | 'directory';
 export function ShellIcon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
     grid: <><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></>,
@@ -28,6 +28,7 @@ export function ShellIcon({ name }: { name: IconName }) {
     automation: <><path d="m13 2-9 12h7l-1 8 10-13h-8z"/></>,
     jobs: <><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V3h8v4M3 12h18M10 12v3h4v-3"/></>,
     chat: <><path d="M4 3h16v13H9l-5 5z"/><path d="M8 7h8M8 11h6"/></>,
+    directory: <><rect x="5" y="3" width="16" height="18" rx="1"/><path d="M8 3v18M3 7h4M3 12h4M3 17h4"/><circle cx="14" cy="9" r="2"/><path d="M11 17v-2c0-3 6-3 6 0v2z"/></>,
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18M8 15h2M14 15h2"/></>,
     chevron: <path d="m8 10 4 4 4-4"/>,
@@ -55,7 +56,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
       <div className="ct-nav-static">{item('Overview', 'grid', moduleLinks.overview, activeModule === 'overview')}{item('Activity', 'activity', moduleLinks.activity, activeModule === 'activity')}{item('Users', 'users', usersHref, activeModule === 'users')}{item('Smart groups', 'groups', moduleLinks['smart-groups'], activeModule === 'smart-groups')}{item('Automations', 'automation')}{item('Job list', 'jobs')}</div>
       {([
         ['Operations', [['Time Clock', 'clock', moduleLinks['time-clock'], 'time-clock', 'blue'], ['Job scheduling', 'calendar', moduleLinks.rotas, 'rotas', 'orange'], ['Forms', 'jobs', moduleLinks.forms, 'forms', 'purple'], ['Quick Tasks', 'jobs', moduleLinks['quick-tasks'], 'quick-tasks', 'orange'], ['Requests', 'activity', moduleLinks.requests, 'requests', 'purple']]],
-        ['Communication', [['Updates', 'activity', moduleLinks.updates, 'updates', 'blue'], ['Chat', 'chat', moduleLinks.chat, 'chat', 'teal'], ['Directory', 'users'], ['Knowledge Base', 'jobs', moduleLinks['knowledge-base'], 'knowledge-base', 'purple'], ['Surveys', 'jobs'], ['Events', 'calendar'], ['Help Desk', 'help']]],
+        ['Communication', [['Updates', 'activity', moduleLinks.updates, 'updates', 'blue'], ['Chat', 'chat', moduleLinks.chat, 'chat', 'teal'], ['Directory', 'directory', moduleLinks.directory, 'directory', 'pink'], ['Knowledge Base', 'jobs', moduleLinks['knowledge-base'], 'knowledge-base', 'purple'], ['Surveys', 'jobs'], ['Events', 'calendar'], ['Help Desk', 'help']]],
         ['HR & Skills', [['Time Off', 'calendar', moduleLinks['time-off'], 'time-off', 'teal'], ['Courses', 'jobs'], ['Quizzes', 'jobs'], ['Documents', 'jobs'], ['Rewards', 'jobs'], ['Recognitions', 'users'], ['Celebrations', 'calendar'], ['Org Chart', 'groups']]],
       ] as [string, [string, IconName, string?, ShellModule?, string?][]][]).map(([group, modules]) => <details className="ct-nav-group" open key={group}><summary aria-label={group}><span className="ct-group-title">{group}</span><span className="ct-group-options" aria-label={`${group} options unavailable`} title="Section options unavailable">···</span><ShellIcon name="chevron"/></summary>{modules.map(([label, icon, href, module, color]) => <div key={label}>{item(label, icon, href, activeModule === module, color)}</div>)}<span className="ct-add-unavailable" aria-disabled="true" title="Adding modules is unavailable"><ShellIcon name="plus"/>Add new<span className="ct-unavailable">Unavailable</span></span></details>)}
       <span className="ct-add-section" aria-disabled="true"><ShellIcon name="plus"/>Add section<span className="ct-unavailable">Unavailable</span></span>
@@ -66,7 +67,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
     <header className="ct-topbar">
       <button className="ct-mobile-menu ct-icon-button" aria-label="Open navigation" onClick={() => drawer.current?.showModal()}><ShellIcon name="menu"/></button>
       <Link className="ct-brand" href="/" aria-label="CT Alt home"><span className="ct-brand-mark" aria-hidden="true">CT</span><span>CT Alt</span></Link>
-      <details className="ct-quick-nav"><summary><ShellIcon name="search"/><span>Find a module</span></summary><div>{moduleLinks.overview && <Link href={moduleLinks.overview}>Overview</Link>}{moduleLinks.activity && <Link href={moduleLinks.activity}>Activity</Link>}<Link href={usersHref}>Users</Link>{moduleLinks['smart-groups'] && <Link href={moduleLinks['smart-groups']}>Smart groups</Link>}{moduleLinks.rotas && <Link href={moduleLinks.rotas}>Job scheduling</Link>}{moduleLinks.chat && <Link href={moduleLinks.chat}>Chat</Link>}{moduleLinks['time-clock'] && <Link href={moduleLinks['time-clock']}>Time Clock</Link>}{moduleLinks['time-off'] && <Link href={moduleLinks['time-off']}>Time Off</Link>}{moduleLinks.updates && <Link href={moduleLinks.updates}>Updates</Link>}{moduleLinks['knowledge-base'] && <Link href={moduleLinks['knowledge-base']}>Knowledge Base</Link>}{moduleLinks.forms && <Link href={moduleLinks.forms}>Forms</Link>}{moduleLinks['quick-tasks'] && <Link href={moduleLinks['quick-tasks']}>Quick Tasks</Link>}{moduleLinks.requests && <Link href={moduleLinks.requests}>Requests</Link>}</div></details>
+      <details className="ct-quick-nav"><summary><ShellIcon name="search"/><span>Find a module</span></summary><div>{moduleLinks.overview && <Link href={moduleLinks.overview}>Overview</Link>}{moduleLinks.activity && <Link href={moduleLinks.activity}>Activity</Link>}<Link href={usersHref}>Users</Link>{moduleLinks['smart-groups'] && <Link href={moduleLinks['smart-groups']}>Smart groups</Link>}{moduleLinks.rotas && <Link href={moduleLinks.rotas}>Job scheduling</Link>}{moduleLinks.chat && <Link href={moduleLinks.chat}>Chat</Link>}{moduleLinks['time-clock'] && <Link href={moduleLinks['time-clock']}>Time Clock</Link>}{moduleLinks['time-off'] && <Link href={moduleLinks['time-off']}>Time Off</Link>}{moduleLinks.updates && <Link href={moduleLinks.updates}>Updates</Link>}{moduleLinks['knowledge-base'] && <Link href={moduleLinks['knowledge-base']}>Knowledge Base</Link>}{moduleLinks.forms && <Link href={moduleLinks.forms}>Forms</Link>}{moduleLinks['quick-tasks'] && <Link href={moduleLinks['quick-tasks']}>Quick Tasks</Link>}{moduleLinks.requests && <Link href={moduleLinks.requests}>Requests</Link>}{moduleLinks.directory && <Link href={moduleLinks.directory}>Directory</Link>}</div></details>
       <div className="ct-topbar-actions">
         <a className="ct-help" href="https://github.com/Jare7028/CT-Alt#readme" target="_blank" rel="noreferrer">Help <ShellIcon name="chevron"/></a>
         <details className="ct-accessibility"><summary aria-label="Accessibility information"><ShellIcon name="accessibility"/></summary><div>Use Tab to move between controls, Enter to activate, and Escape to close navigation. Use your browser’s zoom to enlarge the interface.</div></details>

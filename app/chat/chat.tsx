@@ -564,6 +564,7 @@ function ChatContent({
       companyId={company.id}
       activeModule="chat"
       moduleLinks={{
+        directory: `/directory?company=${encodeURIComponent(company.id)}`,
         requests: `/requests?company=${encodeURIComponent(company.id)}`,
         forms: `/forms?company=${encodeURIComponent(company.id)}`,
         "knowledge-base": `/knowledge-base?company=${encodeURIComponent(company.id)}`,

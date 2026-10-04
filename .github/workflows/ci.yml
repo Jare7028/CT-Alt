@@ -66,4 +66,6 @@ jobs:
         run: npm run test:rota-publication:db
       - name: Day and Week Templates database and preservation checks
         run: npm run test:rota-period-templates:db
+      - name: Directory Work Contacts database and preservation checks
+        run: npm run test:directory:db
       - run: npm run build

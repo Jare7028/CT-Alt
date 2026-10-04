@@ -1,0 +1,14 @@
+import type {Company} from './agent-types';
+export const DIRECTORY_LIMITS = {requestBytes:65536,responseBytes:1024*1024,contacts:1000,operations:20000,page:100,name:100,description:1000,phone:64,email:254,search:100} as const;
+export type DirectoryRole='owner'|'admin'|'manager'|'employee';
+export type DirectoryAction='activate'|'create'|'visibility';
+export type DirectoryAccess={schemaVersion:1;company:Company;actorId:string;role:DirectoryRole;canManage:boolean;active:boolean;viewRevision:number};
+export type DirectoryContact={id:string;name:string;description:string;phone:string;email:string;visible_in_app:boolean;revision:number;created_at:string;updated_at:string};
+export type DirectoryQuery={tenantId:string;q?:string;limit?:number;cursor?:string};
+export type DirectoryAccessQuery={mode:'access';tenantId:string};
+export type DirectoryCatalogue=DirectoryAccess&{search:string;contacts:DirectoryContact[];page:{total:number;nextCursor:string|null}};
+export type DirectoryChange={action:'activate';directory_revision:number}|{action:'create';directory_revision:number;name:string;description:string;phone:string;email:string}|{action:'visibility';directory_revision:number;contact_id:string;contact_revision:number;visible_in_app:boolean};
+export type DirectoryMutation={tenantId:string;operationId:string;change:DirectoryChange};
+export type DirectorySaved={schemaVersion:1;tenantId:string;actorId:string;operationId:string;action:DirectoryAction;directory_revision:number;contact_id:string|null;contact_revision:number|null;active:true};
+export type DirectoryRecoveryQuery={mode:'reconcile';tenantId:string;operationId:string;action:DirectoryAction;contactId:string|null};
+export type DirectoryReconciliation={schemaVersion:1;tenantId:string;actorId:string;operationId:string;action:DirectoryAction;contactId:string|null;status:'recorded';saved:DirectorySaved}|{schemaVersion:1;tenantId:string;actorId:string;operationId:string;action:DirectoryAction;contactId:string|null;status:'not_recorded';saved:null};

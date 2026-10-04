@@ -44,9 +44,9 @@
 .ct-nav-item[href]:hover { background:#f2f7fb; }
 .ct-nav-icon { width:20px;height:20px;display:grid;place-items:center;flex:none; }
 .ct-nav-icon svg { width:18px;height:18px; }
-.ct-icon-teal,.ct-icon-orange,.ct-icon-blue,.ct-icon-purple { border-radius:5px;color:white; }
+.ct-icon-teal,.ct-icon-orange,.ct-icon-blue,.ct-icon-purple,.ct-icon-pink { border-radius:5px;color:white; }
 .ct-icon-teal { background:#29c8bd; }.ct-icon-orange { background:#ff9773; }
-.ct-icon-teal svg,.ct-icon-orange svg,.ct-icon-blue svg,.ct-icon-purple svg { width:15px;height:15px; }
+.ct-icon-teal svg,.ct-icon-orange svg,.ct-icon-blue svg,.ct-icon-purple svg,.ct-icon-pink svg { width:15px;height:15px; }
 .ct-nav-unavailable { color:#526170; }
 .ct-unavailable { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;flex:none;margin-left:auto;font-size:8px;color:#8c959e;letter-spacing:-.1px; }
 .ct-nav-group { padding:12px 0;border-top:1px solid var(--ct-line); }
@@ -80,3 +80,5 @@
 .ct-shell .ct-brand { color:var(--ct-blue); }
 .ct-icon-blue { background:#428dff; }
 .ct-icon-purple { background:#b84abe; }
+
+.ct-icon-pink { background:#d64684; }
