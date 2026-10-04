@@ -48,7 +48,7 @@ Immutable server c747acd53d72f8a6a7daf4df40e67153a565cbfb and UI689e9928c14fe21a
 
 SQL20261004004405 was applied once to verified CT Alt; all15 recorded statements match repository bytes, and reviewed SHA256abbcb40074d7a1100de6f757a44f70dbce97ac8b38cb37e01463b81e976b1f89 is unchanged. All30 prior public table counts and46 prior function definitions/owners/ACLs remain unchanged; no tables/policies or existing grant changes were introduced. The new RPC is STABLE SECURITY INVOKER, empty search path, authenticated-only execution and no anon/service-role execute. Security advisories remain unchanged. The previously unapplied filename was matched to the actual server version without editing SQL.
 
-Consumer PR/exact-head CI/merge/matching production remain pending. Current verified production is UpdatesPR22 merge4d97fbd8f8fa0795e3607bb5b1cc7d05960daecf/READYdpl_CuV4KxoL3bk3TAP9ptvtXZoNUika. Local signed acceptance does not establish authenticated hosted production acceptance.
+PR23 reviewed head b48041b6078acfe3caf39a5faa0aba2674fdc14f/tree962ace35e0b7b4a1a6477bf5272b1bff179e5ff1 passed exact-head CI37166027333 and merged71704b6cb0a137989bc3f5beeb235c91c104777d. Matching productiondpl_H3VAia1ui1oMZJ2Q4tUprgN48Y9z is READY with ct-alt.vercel.app alias. Login200, Updates307-to-login and a valid unsigned recipient-export request401/private no-store/no Content-Disposition were verified. Local signed acceptance does not establish authenticated hosted production acceptance.
 
 ## Backlog preserved
 

@@ -4,7 +4,7 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `4d97fbd8f8fa0795e3607bb5b1cc7d05960daecf`. Vercel production `dpl_CuV4KxoL3bk3TAP9ptvtXZoNUika` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock/Quick Tasks redirect to login. Real-account authenticated production workflows were not exercised.
+Latest application release: `71704b6cb0a137989bc3f5beeb235c91c104777d`. Vercel production `dpl_H3VAia1ui1oMZJ2Q4tUprgN48Y9z` is READY and aliased to ct-alt.vercel.app. Live login renders; unauthenticated Agents/Time Clock/Quick Tasks redirect to login. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -20,7 +20,8 @@ Latest application release: `4d97fbd8f8fa0795e3607bb5b1cc7d05960daecf`. Vercel p
 | Conversation search | Joined-conversation literal search, exact counts/precise sequence paging and current permission rechecks;72 combined configs,37 SQL,29 synthetic and6 real Auth/browser cases | On main and production; PR20 CI37162006287 passed | Global search, sender/date/media filters and search-to-history navigation |
 | Time Off | Full calendar-day types/requests, retained approvals/history, original-requester privacy and overlap-safe decisions;79 combined configs,97 SQL/races,17 synthetic and6 real Auth/browser cases | On main and production; PR21 CI37162952970 passed | Partial days, policy assignments/balances/accrual, granular permissions and calendar/payroll integration |
 | Updates | Owner/admin lifecycle, fixed Auth-member recipients, viewed/confirmed tracking, reactions and own comments;90 combined configs,122 SQL/races,23 synthetic and8 real Auth/browser cases | On main and production; PR22 CI37164745377 passed | Media/templates, Smart Groups, scheduling, user posting, published edits, notifications, exports and granular permissions |
-| Updates recipient export | Complete selected-status CSV, safe UTF8/formula cells, retained names and precise UTC, fresh role/post checks;98 configs,24 export SQL,122 retained Updates SQL,50 synthetic and6 real Auth/browser cases | Reviewed additive SQL applied once; consumer PR/CI/production pending | Reference-verified format, custom columns/Excel, group-by and granular export permissions |
+| Updates recipient export | Complete selected-status CSV, safe UTF8/formula cells, retained names and precise UTC, fresh role/post checks;98 configs,24 export SQL,122 retained Updates SQL,50 synthetic and6 real Auth/browser cases | On main and production; PR23 CI37166027333 passed | Reference-verified format, custom columns/Excel, group-by and granular export permissions |
+| Smart Groups/segments | Dynamic case-sensitive AND/OR profile rules, exact record/eligibility counts beyond1000, saved segments/groups, membership previews, lifecycle/revision/UUID recovery;108 configs,59 SQL/races,47 synthetic and8 real local Auth/API/browser cases | Reviewed additive SQL applied once; consumer CI/production pending | Protected account groups, typed/date operators, delegated permissions, Users Save as Group, profile memberships and dynamic feature audiences |
 
 ## Wider workforce scope
 
@@ -41,4 +42,4 @@ For every delivered slice, record functional scope, local checks, browser/API pe
 
 Latest owner direction: prioritise desktop functionality and keep consulting official Connecteam docs; defer new mobile polish.
 
-Work underway: Updates PR22 is verified on matching READY production. Complete desktop recipient-status CSV passed integrated check/build, immutable independent review and signed local acceptance; SQL is applied and consumer release is next in /workspace/ct-alt-updates-export. Official Smart Groups documentation is being researched for the next module. Preserve the wider roadmap.
+Work underway: Updates PR22 and recipient CSV PR23 are verified on matching READY production. Smart Groups and segments are being implemented in /workspace/ct-alt-smart-groups under [the documented contract](SMART_GROUPS_CONTRACT.md): case-sensitive AND rules with OR alternatives, saved dynamic Agent-record membership, current owner/admin management, explicit account eligibility and safe archive/restore. Integrated check/build, independent immutable reviews, local signed acceptance and one-time hosted schema verification passed; the consumer is not yet released. Cross-feature audience assignment and advanced rule types remain future work. Preserve the wider roadmap.

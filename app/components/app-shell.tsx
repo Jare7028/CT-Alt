@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRef, useState, type ReactNode } from 'react';
 import './app-shell.css';
 
-export type ShellModule = 'users' | 'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off';
+export type ShellModule = 'users' | 'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups';
 export type AppShellProps = {
   children: ReactNode;
   companyName: string;
@@ -15,7 +15,7 @@ export type AppShellProps = {
   accountName?: string;
   pageNavigation?: ReactNode;
   /** Supply only routes that exist and are ready to use. */
-  moduleLinks?: Partial<Record<'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off', string>>;
+  moduleLinks?: Partial<Record<'rotas' | 'chat' | 'overview' | 'activity' | 'time-clock' | 'quick-tasks' | 'updates' | 'time-off' | 'smart-groups', string>>;
 };
 
 type IconName = 'grid' | 'activity' | 'users' | 'groups' | 'automation' | 'jobs' | 'chat' | 'calendar' | 'chevron' | 'plus' | 'search' | 'help' | 'accessibility' | 'bell' | 'menu' | 'clock';
@@ -51,7 +51,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
   }
   function navigation() {
     return <nav aria-label="Main navigation">
-      <div className="ct-nav-static">{item('Overview', 'grid', moduleLinks.overview, activeModule === 'overview')}{item('Activity', 'activity', moduleLinks.activity, activeModule === 'activity')}{item('Users', 'users', usersHref, activeModule === 'users')}{item('Smart groups', 'groups')}{item('Automations', 'automation')}{item('Job list', 'jobs')}</div>
+      <div className="ct-nav-static">{item('Overview', 'grid', moduleLinks.overview, activeModule === 'overview')}{item('Activity', 'activity', moduleLinks.activity, activeModule === 'activity')}{item('Users', 'users', usersHref, activeModule === 'users')}{item('Smart groups', 'groups', moduleLinks['smart-groups'], activeModule === 'smart-groups')}{item('Automations', 'automation')}{item('Job list', 'jobs')}</div>
       {([
         ['Communication', [['Chat', 'chat', moduleLinks.chat, 'chat', 'teal'], ['Client Rotas', 'calendar', moduleLinks.rotas, 'rotas', 'orange'], ['Time Off', 'calendar', moduleLinks['time-off'], 'time-off', 'teal'], ['Client Knowledge Base', 'jobs'], ['Client Training', 'jobs'], ['Knowledge Base', 'jobs']]],
         ['Operations', [['Time Clock', 'clock', moduleLinks['time-clock'], 'time-clock', 'orange'], ['Updates', 'activity', moduleLinks.updates, 'updates', 'teal'], ['Directory', 'users'], ['Knowledge Base', 'jobs'], ['Surveys', 'jobs'], ['Quick Tasks', 'jobs', moduleLinks['quick-tasks'], 'quick-tasks', 'teal'], ['Contracts', 'jobs'], ['Forms', 'jobs'], ['Onboarding', 'users'], ['Hiring', 'users']]],
@@ -65,7 +65,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
     <header className="ct-topbar">
       <button className="ct-mobile-menu ct-icon-button" aria-label="Open navigation" onClick={() => drawer.current?.showModal()}><ShellIcon name="menu"/></button>
       <Link className="ct-brand" href="/" aria-label="CT Alt home"><span className="ct-brand-mark" aria-hidden="true">CT</span><span>CT Alt</span></Link>
-      <details className="ct-quick-nav"><summary><ShellIcon name="search"/><span>Find a module</span></summary><div>{moduleLinks.overview && <Link href={moduleLinks.overview}>Overview</Link>}{moduleLinks.activity && <Link href={moduleLinks.activity}>Activity</Link>}<Link href={usersHref}>Users</Link>{moduleLinks.rotas && <Link href={moduleLinks.rotas}>Client Rotas</Link>}{moduleLinks.chat && <Link href={moduleLinks.chat}>Company Chat</Link>}{moduleLinks['time-clock'] && <Link href={moduleLinks['time-clock']}>Time Clock</Link>}{moduleLinks['time-off'] && <Link href={moduleLinks['time-off']}>Time Off</Link>}{moduleLinks.updates && <Link href={moduleLinks.updates}>Updates</Link>}{moduleLinks['quick-tasks'] && <Link href={moduleLinks['quick-tasks']}>Quick Tasks</Link>}</div></details>
+      <details className="ct-quick-nav"><summary><ShellIcon name="search"/><span>Find a module</span></summary><div>{moduleLinks.overview && <Link href={moduleLinks.overview}>Overview</Link>}{moduleLinks.activity && <Link href={moduleLinks.activity}>Activity</Link>}<Link href={usersHref}>Users</Link>{moduleLinks['smart-groups'] && <Link href={moduleLinks['smart-groups']}>Smart groups</Link>}{moduleLinks.rotas && <Link href={moduleLinks.rotas}>Client Rotas</Link>}{moduleLinks.chat && <Link href={moduleLinks.chat}>Company Chat</Link>}{moduleLinks['time-clock'] && <Link href={moduleLinks['time-clock']}>Time Clock</Link>}{moduleLinks['time-off'] && <Link href={moduleLinks['time-off']}>Time Off</Link>}{moduleLinks.updates && <Link href={moduleLinks.updates}>Updates</Link>}{moduleLinks['quick-tasks'] && <Link href={moduleLinks['quick-tasks']}>Quick Tasks</Link>}</div></details>
       <div className="ct-topbar-actions">
         <a className="ct-help" href="https://github.com/Jare7028/CT-Alt#readme" target="_blank" rel="noreferrer">Help <ShellIcon name="chevron"/></a>
         <details className="ct-accessibility"><summary aria-label="Accessibility information"><ShellIcon name="accessibility"/></summary><div>Use Tab to move between controls, Enter to activate, and Escape to close navigation. Use your browser’s zoom to enlarge the interface.</div></details>

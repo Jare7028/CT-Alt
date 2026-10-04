@@ -48,4 +48,6 @@ jobs:
         run: npm run test:updates:db
       - name: Updates recipient export checks
         run: npm run test:updates-export:db
+      - name: Smart Groups database checks
+        run: npm run test:smart-groups:db
       - run: npm run build

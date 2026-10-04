@@ -27,7 +27,8 @@
     "test:chat-search:db": "node scripts/test-chat-search-database.mjs",
     "test:time-off:db": "node scripts/test-time-off-database.mjs",
     "test:updates:db": "node scripts/test-updates-database.mjs",
-    "test:updates-export:db": "node scripts/test-updates-export-database.mjs"
+    "test:updates-export:db": "node scripts/test-updates-export-database.mjs",
+    "test:smart-groups:db": "node scripts/test-smart-groups-database.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
