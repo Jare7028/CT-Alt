@@ -1,10 +1,12 @@
 # CT Alt
 
-An independently implemented workforce application. Agents and their access permissions come first, followed by client rotas and team communication. The long-term scope is a complete workforce platform, delivered and verified module by module.
+An independently implemented workforce application using CT Alt branding. The long-term scope is a complete workforce platform, delivered and verified module by module. Open the live app at [ct-alt.vercel.app](https://ct-alt.vercel.app).
 
 ## Current state
 
-The live first slice provides real end-user password sign-in and a company-scoped Users directory: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
+Released desktop modules include Users, Client Rotas, Chat and conversation search, Overview/Activity, Time Clock and team timesheets, Quick Tasks, Time Off, Updates with recipient CSV, and Smart Groups/segments. Each module has a defined implemented scope; this does not establish complete Connecteam feature or visual parity. [Feature coverage](docs/FEATURE_COVERAGE.md) records release evidence and remaining workflows. Knowledge Base is the next module in development; desktop functionality takes priority over new mobile polish.
+
+The company-scoped Users directory provides real end-user password sign-in and: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
 
 This is an initial Users slice, not competitor feature parity. Invites, add/update and update-only imports, profile layouts, configurable permission flags/groups, role promotion/ownership transfer, deletion, last-login tracking and kiosks are not implemented. The directory loads at most 1,000 records. Owners are protected from archive; restoring a linked admin returns ordinary employee access. No invitations are sent.
 
@@ -178,4 +180,8 @@ The owner/admin recipient-status panel can export every matching recipient as a 
 
 ## Smart Groups and segments
 
-Owners/admins can organize active workforce records into segments and save dynamic, case-sensitive profile rules with matching previews and searched member pages. Counts distinguish matching records from linked eligible accounts; groups grant no account access or content assignments. Invalid removed fields require repair, and archive/restore retains history. See [Smart Groups acceptance](docs/smart-groups-acceptance.md) and [desktop UI review](docs/SMART_GROUPS_UI_REVIEW.md). Reviewed additive SQL is applied once; consumer CI/production release is pending. Protected account groups, typed/date rules, granular administrators, Users Save as Group and dynamic feature assignments remain further increments.
+Owners/admins can organize active workforce records into segments and save dynamic, case-sensitive profile rules with matching previews and searched member pages. Counts distinguish matching records from linked eligible accounts; groups grant no account access or content assignments. Invalid removed fields require repair, and archive/restore retains history. See [Smart Groups acceptance](docs/smart-groups-acceptance.md) and [desktop UI review](docs/SMART_GROUPS_UI_REVIEW.md). Reviewed additive SQL and PR24 consumer are verified on matching READY production. Protected account groups, typed/date rules, granular administrators, Users Save as Group and dynamic feature assignments remain further increments.
+
+## Desktop Knowledge Base
+
+Desktop bases, nested folders, plain text, named links, persistent sibling ordering, fixed Auth audiences, reader access and genuine open-event insights are implemented using [Connecteam reference findings](docs/knowledge-base-reference.md) and [the reviewed contract](docs/KNOWLEDGE_BASE_CONTRACT.md). The implementation passed full check/build,119 combined configuration checks,94 isolated SQL/race/preservation assertions,57 synthetic desktop cases and8 fresh real local Auth/API/browser cases (2.9 minutes). The reviewed schema is registered as20261004034015 and was applied once; consumer merge and production verification remain pending. Private files, rich text, dynamic group assignments, granular administrators and further workflows remain planned.

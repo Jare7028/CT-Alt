@@ -1,0 +1,8 @@
+import {NextResponse} from 'next/server';
+import {configured,supabase} from '../../../lib/supabase';
+import {KnowledgeBaseError,readKnowledgeBases,parseKnowledgeBasesQuery,knowledgeMutation,knowledgePayloadFits,saveKnowledgeBase,KNOWLEDGE_MAX_BYTES} from '../../../lib/knowledge-base';
+const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+const fail=(e:unknown)=>e instanceof KnowledgeBaseError?response({error:e.message},e.status):response({error:'Knowledge Base could not be verified. Refresh and review before another action.'},503);
+export async function GET(request:Request){if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{return response(await readKnowledgeBases(await supabase(),parseKnowledgeBasesQuery(new URL(request.url).searchParams)));}catch(e){return fail(e);}}
+import {validOrigin} from '../../../lib/request-security';
+export async function POST(request:Request){if(!validOrigin(request))return response({error:'Invalid request origin.'},403);if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{const raw=await request.text();if(new TextEncoder().encode(raw).length>KNOWLEDGE_MAX_BYTES)return response({error:'Knowledge Base request is too large.'},413);let value:unknown;try{value=JSON.parse(raw);}catch{return response({error:'Invalid Knowledge Base request.'},400);}const p=knowledgeMutation.safeParse(value);if(!p.success)return response({error:'Choose valid Knowledge Base details.'},400);if(!knowledgePayloadFits(p.data))return response({error:'Knowledge Base request is too large.'},413);return response({saved:await saveKnowledgeBase(await supabase(),p.data)});}catch(e){return fail(e);}}

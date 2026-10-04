@@ -564,6 +564,7 @@ function ChatContent({
       companyId={company.id}
       activeModule="chat"
       moduleLinks={{
+        "knowledge-base": `/knowledge-base?company=${encodeURIComponent(company.id)}`,
         "smart-groups": canViewActivity ? `/smart-groups?company=${encodeURIComponent(company.id)}` : undefined,
         updates: `/updates?company=${encodeURIComponent(company.id)}`,
         "time-off": `/time-off?company=${encodeURIComponent(company.id)}`,

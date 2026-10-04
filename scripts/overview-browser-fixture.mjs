@@ -142,7 +142,7 @@ try {
   sql(
     "create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;create schema auth;create schema extensions;create extension pgcrypto with schema extensions;",
   );
-  docker(['run','-d','--name',mail,'--network',network,'--label','ct-alt.test='+suffix,'-p','54824:8025','axllent/mailpit:v1.24.1@sha256:4873e5a441ed368f1e98a832f61257a033859f5e829542cd03fb772d2282ea4e']);
+  docker(['run','-d','--name',mail,'--network',network,'--label','ct-alt.test='+suffix,'-p','127.0.0.1:54824:8025','axllent/mailpit:v1.24.1@sha256:4873e5a441ed368f1e98a832f61257a033859f5e829542cd03fb772d2282ea4e']);
   containers.push(mail);
   docker([
     "run",
@@ -154,7 +154,7 @@ try {
     "--label",
     "ct-alt.test=" + suffix,
     "-p",
-    "54825:9999",
+    "127.0.0.1:54825:9999",
     "-e",
     "GOTRUE_API_HOST=0.0.0.0",
     "-e",
@@ -229,7 +229,7 @@ try {
     "--label",
     "ct-alt.test=" + suffix,
     "-p",
-    "54826:3000",
+    "127.0.0.1:54826:3000",
     "-e",
     "PGRST_DB_URI=postgres://postgres@" + db + ":5432/postgres",
     "-e",
