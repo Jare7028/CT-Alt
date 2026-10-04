@@ -50,4 +50,6 @@ jobs:
         run: npm run test:updates-export:db
       - name: Smart Groups database checks
         run: npm run test:smart-groups:db
+      - name: Knowledge Base database checks
+        run: npm run test:knowledge-base:db
       - run: npm run build

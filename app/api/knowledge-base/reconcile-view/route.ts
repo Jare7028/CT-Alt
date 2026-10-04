@@ -1,0 +1,6 @@
+import {NextResponse} from 'next/server';
+import {configured,supabase} from '../../../../lib/supabase';
+import {validOrigin} from '../../../../lib/request-security';
+import {KnowledgeBaseError,knowledgeReconciliation,reconcileKnowledgeView} from '../../../../lib/knowledge-base';
+const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+export async function POST(request:Request){if(!validOrigin(request))return response({error:'Invalid request origin.'},403);if(!configured())return response({error:'Company sign-in is not configured yet.'},503);try{const raw=await request.text();if(new TextEncoder().encode(raw).length>1024)return response({error:'View recovery request is too large.'},413);let value:unknown;try{value=JSON.parse(raw);}catch{return response({error:'Invalid view recovery request.'},400);}const p=knowledgeReconciliation.safeParse(value);if(!p.success)return response({error:'Choose a valid view operation.'},400);return response(await reconcileKnowledgeView(await supabase(),p.data));}catch(e){return e instanceof KnowledgeBaseError?response({error:e.message},e.status):response({error:'View outcome could not be verified.'},503);}}
