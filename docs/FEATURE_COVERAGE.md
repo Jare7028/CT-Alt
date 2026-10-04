@@ -4,7 +4,7 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `88997f4b2b92ef44b3995de3b21224b5f3f01deb` (PR25). Matching Vercel production `dpl_BpKqzsLrkDHNBVnujdZDAVSDgR41` is READY and aliased to ct-alt.vercel.app. Live login renders; unsigned Knowledge Base redirects to login and four valid unsigned APIs return401/private no-store. Real-account authenticated production workflows were not exercised.
+Latest application release: `abe091332de4f2eb53bad312b668ce043e9e3a20` (PR27). Matching Vercel production `dpl_Fx1mPFrAJaXUm8ZhMYxYFikNdVMG` is READY and aliased to ct-alt.vercel.app. Live login200, Forms307-to-login, five valid unsigned GET routes and valid POST/reconciliation401/private-no-store verified. Real-account authenticated production workflows were not exercised.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ Latest application release: `88997f4b2b92ef44b3995de3b21224b5f3f01deb` (PR25). M
 | Knowledge Base | Desktop multiple bases/nested folders/plain text/links, fixed Auth assignment, moves/order/title search, explicit reader views and genuine insights;119 configs,94 SQL/races,57 synthetic and8 real local Auth/API/browser cases | On main and production; PR25 CI37175077530 passed, schema20261004034015 applied once | Private files, rich text, dynamic groups, granular administrators, export and complete reference workflows |
 
 | Private Knowledge Base files | Private upload/replacement/download, bounded lifetime allocation, original-actor recovery and provider proofs;128 configs,43 genuine Storage/SQL/races,117 synthetic and9 fresh real Auth/API/browser cases | Draft PR26, exact-head CI37179671259 passed; hosted schema/bucket/server verifier configuration remain unapplied pending Vercel authentication | Release after private server configuration; rich text, granular file permissions and complete reference workflows |
-| Desktop Forms | Builder/fixed assignments, lifecycle, six ordered fields, private autosave, submit/edit/review/history and recovery;147 configs,97 SQL/races,68 synthetic and10 fresh real Auth/API/browser cases1.8min; all12 retained SQL suites/check/build pass | Schema20261004063200 applied once; reviewed consumer/CI/production release pending | Summaries/export, dynamic audiences, published schema edits, conditions/formulas, repeat responses, advanced fields and full reference parity |
+| Desktop Forms | Builder/fixed assignments, lifecycle, six ordered fields, private autosave, submit/edit/review/history and recovery;147 configs,97 SQL/races,68 synthetic and10 fresh real Auth/API/browser cases1.8min; all12 retained SQL suites/check/build pass | On main and production; schema20261004063200 applied once, PR27 CI37183327315 passed | Summaries/export, dynamic audiences, published schema edits, conditions/formulas, repeat responses, advanced fields and full reference parity |
 
 ## Wider workforce scope
 
@@ -47,3 +47,11 @@ For every delivered slice, record functional scope, local checks, browser/API pe
 Latest owner direction: prioritise desktop functionality and keep consulting official Connecteam docs; defer new mobile polish.
 
 Work underway: desktop Forms follows the [reviewed contract](FORMS_CONTRACT.md) and official linked Forms guides. Private Knowledge Base files remain in reviewed draftPR26 while secure Vercel authentication is pending for server-only verifier settings. Forms is independent of those settings. Keep completing and verifying desktop workflows, then continue the wider roadmap.
+
+Desktop Forms reporting is now in active implementation under [reporting contract](FORMS_REPORTING_CONTRACT.md): date/filter submissions, current-assignee status, question summaries/drilldown and genuine complete filtered XLSX exports. No reporting schema or consumer is released yet.
+
+| Desktop Forms reporting | Submitted-only filtered entries, complete assigned-user status, exact per-question summaries/drilldown and genuine streamed XLSX;174 configs/58 SQL/111 synthetic/8 new plus10 retained real Auth cases; all13 retained SQL/check/build pass | Local acceptance complete; schema20261004080045 applied once; exact CI/consumer release pending | PDF, custom export formats, dynamic audiences, published schema edits, repeat responses and complete reference parity |
+
+Read [reporting acceptance](forms-reporting-acceptance.md) and [the explicit reporting scope/bounds](FORMS_REPORTING_CONTRACT.md). Whole-scope entry limits do not guarantee every finished workbook fits the separate8MiB cap. Signed original built desktop captures were inspected. Private files current integrated PR26 head9ceffe3 passed renewed CI37186072208; no file schema/bucket/verifier configuration is provisioned. Before files release, integrate the latest actual reporting main/history. New desktop schedule-template implementation is underway separately from actual mainabe0913; current official template guides are the reference and all outputs remain drafts until separate publication.
+
+Reporting additiveSQL20261004080045 was applied once with reviewed bytes;51 existing table counts/row digests,112 function identities/security metadata and table/column grants/RLS/policies retained, no new security findings. CTAltFree remainshealthy;19 registered migrations. Consumer release still pendingCI. Privatefiles provisioning must incorporate these19 actual identities.
