@@ -32,7 +32,7 @@ try {
   await mkdir(new URL('../docs/screenshots/',import.meta.url),{recursive:true});
   for(const [label,width,height] of [['desktop',1444,690],['mobile',390,844]]) {
     await page.setViewportSize({width,height});await page.goto(`${baseURL}/shell-review`);
-    await page.getByRole('heading',{name:'Users',exact:true}).waitFor();
+    await page.getByRole('heading',{name:'Users',exact:true}).waitFor();await page.evaluate(()=>document.fonts.ready);
     await page.getByRole('tab',{name:/Admins/}).click();
     await page.waitForFunction(()=>document.querySelectorAll('.table-scroll tbody tr').length===1);
     await page.getByRole('tab',{name:/Users/}).click();
@@ -55,10 +55,9 @@ try {
       await page.screenshot({path:new URL('../docs/screenshots/shell-after-mobile-navigation.png',import.meta.url).pathname});
     }
     assert.equal(await nav.getByRole('link',{name:'Users',exact:true}).getAttribute('href'),'/agents?company=11111111-1111-4111-8111-111111111111');
-    assert.equal(await nav.getByRole('link',{name:'Client Rotas',exact:true}).getAttribute('href'),'/rotas?company=11111111-1111-4111-8111-111111111111');
+    assert.equal(await nav.getByRole('link',{name:'Job scheduling',exact:true}).getAttribute('href'),'/rotas?company=11111111-1111-4111-8111-111111111111');
     for(const name of ['Communication','Operations','HR & Skills']) assert.ok(await nav.getByText(name,{exact:true}).count());
-    assert.equal(await nav.locator('[aria-disabled=true]').filter({hasText:'Chat'}).count(),1);
-    assert.equal(await nav.locator('a').filter({hasText:'Chat'}).count(),0,'Unfinished Chat has no fake route');
+    assert.equal(await nav.getByRole('link',{name:'Chat',exact:true}).getAttribute('href'),'/chat?company=11111111-1111-4111-8111-111111111111','Released Chat retains current company navigation');
     if(label==='mobile') {
       await page.keyboard.press('Escape');
       assert.equal(await page.getByRole('button',{name:'Open navigation'}).evaluate(el=>el===document.activeElement),true,'Escape restores menu focus');
@@ -66,7 +65,7 @@ try {
       await page.getByRole('button',{name:'Collapse navigation'}).click();
       assert.equal(await page.locator('.ct-sidebar').evaluate(el=>el.getBoundingClientRect().width),60);
       await page.getByRole('button',{name:'Expand navigation'}).click();
-      assert.equal(await page.locator('.ct-sidebar').evaluate(el=>el.getBoundingClientRect().width),190);
+      assert.equal(await page.locator('.ct-sidebar').evaluate(el=>el.getBoundingClientRect().width),196);
       await page.getByRole('link',{name:'Skip to content'}).focus();await page.keyboard.press('Enter');
       assert.equal(await page.locator('#ct-main-content').evaluate(el=>el===document.activeElement),true,'Skip link focuses content');
     }

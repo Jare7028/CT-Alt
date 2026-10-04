@@ -337,3 +337,845 @@
   color: inherit;
   opacity: 0.9;
 }
+/* Geometry follows the official desktop lobby, normalized from 2048 to 1444px. */
+.shell {
+  max-width: none;
+  padding: 16px 18px 18px;
+  color: #263746;
+  background: #f6f6f6;
+  font-family: inherit;
+  font-size: 14px;
+  min-height: calc(100vh - var(--ct-topbar-height, 56px));
+}
+.shell button,
+.shell input,
+.shell select {
+  font-family: inherit;
+}
+.shell .lobbyTitleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: white;
+  height: 73px;
+  border: 1px solid #eff0f1;
+  border-radius: 17px;
+  padding: 0 24px;
+  margin: 0 0 17px;
+}
+.lobbyHeading {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  min-width: 0;
+}
+.lobbyHeadingIcon {
+  color: #2998ff;
+  display: grid;
+  place-items: center;
+}
+.shell .lobbyHeadingIcon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shell .lobbyHeading h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+.shell .lobbyRegion {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  background: none;
+}
+.lobbyTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 48px;
+}
+.shell .lobbyTabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 17px 17px 0 0;
+  background: none;
+  color: #9ca4ad;
+  font-size: 16px;
+  padding: 0;
+}
+.shell .lobbyTabs button[aria-selected="true"] {
+  border-color: #eff0f1;
+  color: #2998ff;
+  background: white;
+}
+.shell .lobbyTabs svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lobbyPanel {
+  background: white;
+  border: 1px solid #eff0f1;
+  border-radius: 0 17px 17px 17px;
+  min-height: 526px;
+  padding: 0 20px 24px;
+}
+.lobbyControls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 99px;
+  border-bottom: 1px solid #dddfe1;
+}
+.shell .lobbyControls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 40px;
+  border-radius: 24px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.lobbyControls button svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shell .lobbyReload {
+  color: #2998ff;
+  border-color: #dddfe1;
+  padding: 0 16px;
+}
+.lobbySearch {
+  margin-left: auto;
+  position: relative;
+  width: 216px;
+}
+.shell .lobbySearch input {
+  width: 100%;
+  height: 40px;
+  border-radius: 24px;
+  border: 1px solid #dddfe1;
+  padding: 0 42px 0 20px;
+  font-size: 14px;
+  color: #263746;
+}
+.lobbySearch input::placeholder {
+  color: #b6b8bb;
+}
+.shell .lobbySearch > svg {
+  position: absolute;
+  right: 13px;
+  top: 11px;
+  width: 19px;
+  height: 19px;
+  stroke: #89939b;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.shell .lobbyAdd {
+  position: relative;
+  min-width: 113px;
+  background: #2998ff;
+  color: white;
+  border: 0;
+  padding: 0 15px;
+  margin-left: 0;
+}
+.shell .lobbyAdd::before {
+  content: "";
+  height: 40px;
+  width: 1px;
+  background: #e4e5e6;
+  position: absolute;
+  left: -21px;
+}
+.shell .lobbyAdd:hover:enabled,
+.shell .accessSchedule:hover:enabled {
+  background: #168bea;
+}
+.scheduleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 256px);
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+.scheduleCard {
+  width: 256px;
+  overflow: hidden;
+  border: 1px solid #dedfe1;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 1px 3px #00000013;
+}
+.scheduleArt {
+  height: 95px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: linear-gradient(white 42%, #e1effd 100%);
+  border-bottom: 1px solid #dedfe1;
+}
+.shell .calendarArtwork {
+  width: 120px;
+  height: 82px;
+  transform: translateY(4px);
+  display: block;
+}
+.scheduleBody {
+  height: 169px;
+  padding: 14px 15px 8px;
+  position: relative;
+}
+.shell .scheduleLabel {
+  margin: 0 0 3px;
+  color: #a6aaae;
+  font-size: 12px;
+  line-height: 18px;
+}
+.shell .scheduleBody h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 25px;
+}
+.shell .scheduleName {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  font-weight: 700;
+  text-align: left;
+  color: #263746;
+}
+.shell .scheduleName:hover:enabled {
+  background: none;
+  color: #2998ff;
+}
+.scheduleAssigned,
+.scheduleAdmins {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 14px;
+  color: #4b5661;
+}
+.scheduleAssigned {
+  margin-top: 18px;
+}
+.assignedPill {
+  padding: 6px 9px;
+  background: #f5f6f7;
+  border-radius: 10px;
+  color: #4b5661;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.unassigned {
+  color: #9aa2ab;
+  font-size: 13px;
+}
+.scheduleAdmins {
+  margin-top: 17px;
+}
+.adminAvatars {
+  display: flex;
+  align-items: center;
+  padding-left: 3px;
+}
+.adminAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e7edf8;
+  border: 2px solid white;
+  margin-left: -3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #4f6381;
+}
+.adminAvatar[data-tone="1"] {
+  background: #f6e9ec;
+  color: #9b6775;
+}
+.adminAvatar[data-tone="2"] {
+  background: #e5f2eb;
+  color: #557d65;
+}
+.adminMore {
+  font-size: 11px;
+  color: #7a858f;
+  margin-left: 3px;
+}
+.scheduleZone {
+  display: block;
+  position: absolute;
+  right: 15px;
+  bottom: 7px;
+  font-size: 9px;
+  color: #a1a8ae;
+}
+.scheduleFooter {
+  height: 61px;
+  border-top: 1px solid #dedfe1;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.shell .accessSchedule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 185px;
+  border: 0;
+  border-radius: 24px;
+  background: #2998ff;
+  color: white;
+  font-size: 14px;
+  padding: 0 10px;
+  box-shadow: 0 4px 8px #2998ff26;
+}
+.shell .scheduleEmpty {
+  margin: 28px 0;
+  color: #7a858f;
+}
+.shell .lobbyControls button:disabled {
+  opacity: 0.55;
+}
+.shell .toolbar:first-child {
+  margin-top: 0;
+}
+@media (max-width: 750px) {
+  .shell .lobbyTitleBar {
+    padding: 0 16px;
+  }
+  .shell .lobbyHeading h1 {
+    font-size: 20px;
+  }
+  .lobbyControls {
+    gap: 12px;
+  }
+  .lobbySearch {
+    width: 180px;
+  }
+  .shell .lobbyAdd::before {
+    display: none;
+  }
+  .scheduleGrid {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+  .scheduleCard {
+    width: 100%;
+  }
+}
+
+.archivedPanel {
+  border-radius: 17px 0 17px 17px;
+}
+.shell .scheduleBody h2 {
+  letter-spacing: 0;
+}
+/* Compact calendar geometry from the official 1480px guide example. */
+.shell .calendarTitleBar {
+  height: 78px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: white;
+  border: 1px solid #eff0f1;
+  border-radius: 12px;
+  margin: 6px 0 20px;
+}
+.shell .calendarHeading {
+  margin-right: auto;
+  gap: 12px;
+}
+.shell .calendarHeading h1 {
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3;
+  max-width: 390px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.calendarHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shell .calendarTitleBar button {
+  height: 40px;
+  border-radius: 22px;
+  color: #2998ff;
+  border-color: #dddfe1;
+  padding: 0 15px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.shell .calendarPane {
+  padding: 20px;
+  margin: 0;
+  max-width: none;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #eff0f1;
+  height: calc(100dvh - 194px);
+  min-height: 450px;
+  display: flex;
+  flex-direction: column;
+}
+.calendarControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.calendarViewControls,
+.calendarWriteActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.shell .calendarControls button,
+.calendarFilterMenu summary {
+  min-height: 40px;
+  border-radius: 22px;
+  padding: 0 15px;
+  border: 1px solid #dddfe1;
+  color: #2998ff;
+  font-size: 13px;
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.shell .calendarControls .primary {
+  background: #2998ff;
+  color: white;
+  border-color: #2998ff;
+}
+.calendarViewTabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid #dddfe1;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.shell .calendarViewTabs button {
+  border: 0;
+  border-radius: 0;
+  min-height: 38px;
+  color: #606a72;
+  padding: 0 13px;
+  font-size: 13px;
+}
+.shell .calendarViewTabs button[aria-selected="true"] {
+  background: #ecf6ff;
+  color: #2998ff;
+}
+.calendarPeriod {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid #dddfe1;
+  border-radius: 22px;
+  padding: 0 5px;
+  color: #58636c;
+  font-size: 13px;
+}
+.shell .calendarPeriod button {
+  border: 0;
+  padding: 0;
+  width: 24px;
+  color: #8c959c;
+  font-size: 22px;
+  min-height: 36px;
+  background: none;
+}
+.shell .calendarPeriod span {
+  min-width: 80px;
+  text-align: center;
+}
+.shell .calendarDate {
+  display: block;
+  position: relative;
+}
+.shell .calendarDate input {
+  width: 40px;
+  height: 40px;
+  padding: 0 9px;
+  border-radius: 50%;
+  color: transparent;
+  cursor: pointer;
+  font-size: 0;
+}
+.calendarDate input::-webkit-calendar-picker-indicator {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.calendarFilterMenu {
+  position: relative;
+}
+.calendarFilterMenu summary {
+  list-style: none;
+  cursor: pointer;
+  gap: 13px;
+}
+.calendarFilterMenu[open] summary {
+  border-color: #98cfff;
+  background: #eef7ff;
+}
+.calendarFilterMenu .filters {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  z-index: 5;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  background: white;
+  border: 1px solid #dddfe1;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 5px 18px #26374618;
+  margin: 0;
+}
+.calendarFilterMenu .filters label {
+  font-size: 12px;
+}
+.calendarFilterMenu select {
+  width: 100%;
+}
+.shell .calendarScopeMeta {
+  margin: 0 0 9px;
+  font-size: 10px;
+  color: #89939d;
+}
+.calendarPane .tableScroll {
+  flex: 1;
+  min-height: 150px;
+  border: 1px solid #e2e5e8;
+  border-radius: 0;
+  overflow: auto;
+}
+.calendarPane .calendar {
+  width: 100%;
+  table-layout: fixed;
+}
+.calendarPane .calendar th,
+.calendarPane .calendar td {
+  width: 138px;
+  min-width: 138px;
+  padding: 5px;
+  border: 1px solid #e6e8eb;
+}
+.calendarPane .calendar th:first-child {
+  width: 192px;
+  min-width: 192px;
+  padding: 10px 12px;
+  background: white;
+}
+.calendarPane .calendar thead th {
+  height: 64px;
+  background: white;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 8px 5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.calendarPane .calendar thead th:first-child {
+  z-index: 3;
+}
+.calendarPane .calendar tbody td {
+  height: 66px;
+}
+.calendarDay {
+  display: block;
+  white-space: nowrap;
+  color: #535d64;
+  line-height: 20px;
+}
+.calendarDayTotals {
+  display: flex;
+  justify-content: space-around;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #909ba7;
+  white-space: nowrap;
+}
+.calendarDayTotals span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shell .calendarDayTotals svg,
+.shell .calendarUserText small svg {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+.calendarUserSearch {
+  position: relative;
+}
+.shell .calendarUserSearch input {
+  width: 100%;
+  height: 40px;
+  min-width: 0;
+  padding: 0 29px 0 12px;
+  font-size: 13px;
+  border: 1px solid #dddfe1;
+  border-radius: 10px;
+  font-weight: 400;
+}
+.calendarUserSearch input::placeholder {
+  color: #949eaa;
+}
+.shell .calendarUserSearch > svg {
+  position: absolute;
+  right: 10px;
+  top: 13px;
+  width: 14px;
+  height: 14px;
+  stroke: #8c97a2;
+  stroke-width: 1.6;
+  pointer-events: none;
+}
+.calendarUser {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.calendarUserAvatar {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: #35469b;
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex: none;
+}
+.calendarUserText {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: #576167;
+}
+.calendarUserText > span {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.calendarPane .calendarUserText small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #909ba7;
+  font-size: 10px;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.shell .calendarPane .shift {
+  min-height: 55px;
+  gap: 3px;
+  border: 2px solid;
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 7px 8px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.calendarPane .shift strong {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 16px;
+}
+.calendarPane .shift > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.calendarSummary {
+  display: grid;
+  grid-template-columns: 184px repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+  margin-top: 9px;
+  min-height: 34px;
+  font-size: 12px;
+  color: #59636b;
+}
+.calendarSummary > strong {
+  font-size: 13px;
+  color: #263746;
+  padding-left: 10px;
+}
+.calendarSummary > span:not(:global(.sr-only)) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  background: #f6f7f8;
+  border-radius: 7px;
+  padding: 7px;
+}
+.shell .calendarSummary svg {
+  width: 14px;
+  height: 14px;
+  stroke: #919ca6;
+  stroke-width: 1.2;
+}
+.calendarSummary b {
+  font-weight: 700;
+}
+.shell .calendarPane + .hint {
+  font-size: 10px;
+  margin: 7px 0;
+  color: #89939d;
+}
+.calendarWriteActions .addOptions {
+  min-width: 155px;
+  z-index: 6;
+}
+.calendarWriteActions .addOptions button {
+  border-radius: 6px;
+  height: auto;
+  text-align: left;
+  width: 100%;
+  padding: 9px 12px;
+}
+@media (max-width: 1150px) {
+  .calendarHeaderActions {
+    gap: 5px;
+  }
+  .shell .calendarTitleBar button {
+    padding: 0 10px;
+  }
+  .shell .calendarHeading h1 {
+    max-width: 220px;
+    font-size: 21px;
+  }
+  .calendarControls {
+    align-items: start;
+  }
+  .calendarViewControls {
+    gap: 5px;
+  }
+  .shell .calendarControls button,
+  .calendarFilterMenu summary {
+    padding: 0 11px;
+  }
+  .calendarSummary {
+    grid-template-columns: 180px repeat(3, minmax(100px, 1fr));
+  }
+}
+
+/* Keep the calendar inside narrow viewports without altering desktop geometry. */
+@media (max-width: 700px) {
+  .shell .calendarTitleBar {
+    height: auto;
+    min-height: 78px;
+    padding: 16px;
+    flex-wrap: wrap;
+  }
+  .shell .calendarHeading {
+    width: 100%;
+    min-width: 0;
+  }
+  .shell .calendarHeading h1 {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .calendarHeaderActions {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .calendarControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .calendarViewControls,
+  .calendarWriteActions {
+    min-width: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .calendarPeriod {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .shell .calendarPeriod span {
+    min-width: 0;
+  }
+  .calendarPane .tableScroll {
+    min-width: 0;
+  }
+  .calendarSummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .calendarSummary > strong {
+    grid-column: 1 / -1;
+  }
+  .calendarSummary > span:not(:global(.sr-only)) {
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  .calendarWriteActions .addOptions {
+    left: 0;
+    right: auto;
+  }
+}
