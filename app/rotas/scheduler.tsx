@@ -1,6 +1,7 @@
 "use client";
 import AppShell from "../components/app-shell";
 import ShiftTemplates from "./shift-templates";
+import PeriodTemplates from "./period-templates";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -163,11 +164,42 @@ export default function Scheduler({
   const [loading, setLoading] = useState(true);
   const [rotaBusy, setBusy] = useState(false);
   const [templateBusy, setTemplateBusy] = useState(false);
-  const busy = rotaBusy || templateBusy;
+  const [periodBusy, setPeriodBusy] = useState(false);
+  const writeOwner = useRef<
+    "legacy" | "publication" | "single" | "period" | null
+  >(null);
+  const acquireSingle = useCallback(() => {
+    if (writeOwner.current && writeOwner.current !== "single") return false;
+    writeOwner.current = "single";
+    return true;
+  }, []);
+  const singleLocked = useCallback((value: boolean) => {
+    if (value) writeOwner.current = "single";
+    else if (writeOwner.current === "single") writeOwner.current = null;
+    setTemplateBusy(value);
+  }, []);
+  const acquirePeriod = useCallback(() => {
+    if (writeOwner.current && writeOwner.current !== "period") return false;
+    writeOwner.current = "period";
+    return true;
+  }, []);
+  const periodLocked = useCallback((value: boolean) => {
+    if (value) writeOwner.current = "period";
+    else if (writeOwner.current === "period") writeOwner.current = null;
+    setPeriodBusy(value);
+  }, []);
+  const busy = rotaBusy || templateBusy || periodBusy;
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [periodDrawer, setPeriodDrawer] = useState<{
+    kind: "day" | "week";
+    anchor: string;
+    save: boolean;
+    load: boolean;
+  } | null>(null);
   const [templateSource, setTemplateSource] = useState<RotaShift | null>(null);
   const accessEpoch = useRef(0);
   const templateScope = useRef("");
+  const currentAccessGeneration = useCallback(() => accessEpoch.current, []);
   const publicationEpoch = useRef(0);
   const publicationLifetime = useRef({ active: true });
   const publicationRef = useRef<
@@ -233,10 +265,14 @@ export default function Scheduler({
         if (signal?.aborted || generation !== accessEpoch.current) return false;
         if (response.status === 401 || response.status === 403) {
           accessEpoch.current++;
+          setTemplateBusy(false);
+          setPeriodBusy(false);
+          writeOwner.current = null;
           publicationRef.current = null;
           setPublication(null);
           setData(empty);
           setTemplatesOpen(false);
+          setPeriodDrawer(null);
           setTemplateSource(null);
           setModal("");
         }
@@ -266,6 +302,7 @@ export default function Scheduler({
               setTemplateSource(null);
               setTemplatesOpen(true);
               setTemplateBusy(true);
+              writeOwner.current = "single";
               restored = true;
               break;
             }
@@ -275,13 +312,41 @@ export default function Scheduler({
           // cannot be persisted; unrelated scheduling remains available.
         }
         if (!restored) {
+          for (const available of json.schedules as RotaData["schedules"]) {
+            if (
+              currentCanManage(available.id) &&
+              localStorage.getItem(
+                `ct-alt:rota-period-template-operation:v1:${actorId}:${company.id}:${available.id}`,
+              )
+            ) {
+              templateScope.current = available.id;
+              setSelected(available.id);
+              setTemplatesOpen(false);
+              setPeriodDrawer({
+                kind: "day",
+                anchor: "",
+                save: false,
+                load: false,
+              });
+              setPeriodBusy(true);
+              writeOwner.current = "period";
+              restored = true;
+              break;
+            }
+          }
+        }
+        if (!restored) {
+          setPeriodBusy(false);
+          if (writeOwner.current === "period") writeOwner.current = null;
           setTemplateBusy(false);
+          if (writeOwner.current === "single") writeOwner.current = null;
           if (
             templateScope.current &&
             !currentCanManage(templateScope.current)
           ) {
             templateScope.current = "";
             setTemplatesOpen(false);
+            setPeriodDrawer(null);
             setTemplateSource(null);
           }
         }
@@ -424,7 +489,15 @@ export default function Scheduler({
     }
   };
   async function save(change: Record<string, unknown>) {
-    if (writeLock.current || uncertain || templateBusy) return;
+    if (
+      writeLock.current ||
+      uncertain ||
+      templateBusy ||
+      periodBusy ||
+      writeOwner.current
+    )
+      return;
+    writeOwner.current = "legacy";
     writeLock.current = true;
     setBusy(true);
     setFormError("");
@@ -480,12 +553,23 @@ export default function Scheduler({
       }
     } finally {
       writeLock.current = false;
+      if ((rejected || acknowledged) && writeOwner.current === "legacy")
+        writeOwner.current = null;
       setBusy(false);
     }
   }
   async function publishDisplayed() {
     const snapshot = publicationRef.current;
-    if (!snapshot || writeLock.current || uncertain || templateBusy) return;
+    if (
+      !snapshot ||
+      writeLock.current ||
+      uncertain ||
+      templateBusy ||
+      periodBusy ||
+      writeOwner.current
+    )
+      return;
+    writeOwner.current = "publication";
     writeLock.current = true;
     setBusy(true);
     setFormError("");
@@ -586,17 +670,29 @@ export default function Scheduler({
     } finally {
       if (lifetime.active && generation === publicationEpoch.current) {
         writeLock.current = false;
+        if ((rejected || acknowledged) && writeOwner.current === "publication")
+          writeOwner.current = null;
         setBusy(false);
       }
     }
   }
   async function reviewSavedChanges() {
-    if (writeLock.current) return;
+    if (
+      writeLock.current ||
+      writeOwner.current === "single" ||
+      writeOwner.current === "period"
+    )
+      return;
     writeLock.current = true;
     setBusy(true);
     try {
       if (await load()) {
         setUncertain(false);
+        if (
+          writeOwner.current === "legacy" ||
+          writeOwner.current === "publication"
+        )
+          writeOwner.current = null;
         publicationRef.current = null;
         setPublication(null);
         setFormError("");
@@ -612,7 +708,14 @@ export default function Scheduler({
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (writeLock.current || uncertain || templateBusy) return;
+    if (
+      writeLock.current ||
+      uncertain ||
+      templateBusy ||
+      periodBusy ||
+      writeOwner.current
+    )
+      return;
     const form = new FormData(event.currentTarget);
     const text = (key: string) => String(form.get(key) || "");
     const base = { schedule_id: selected, revision: schedule?.revision };
@@ -676,8 +779,11 @@ export default function Scheduler({
     setPublication(null);
     templateScope.current = "";
     setTemplateBusy(false);
+    setPeriodBusy(false);
+    writeOwner.current = null;
     setData(empty);
     setTemplatesOpen(false);
+    setPeriodDrawer(null);
     setTemplateSource(null);
     setModal("");
     setError(
@@ -691,8 +797,25 @@ export default function Scheduler({
   const templateClose = useCallback(() => {
     templateScope.current = "";
     setTemplatesOpen(false);
+    setPeriodDrawer(null);
     setTemplateSource(null);
   }, []);
+  const openPeriodTemplates = (
+    kind: "day" | "week",
+    save = false,
+    anchor = day,
+    load = true,
+  ) => {
+    if (busy || uncertain || loading || error) return;
+    templateScope.current = selected;
+    setTemplatesOpen(false);
+    setPeriodDrawer({
+      kind,
+      anchor: kind === "week" ? viewDays(anchor, "Week")[0] : anchor,
+      save,
+      load: load && !save,
+    });
+  };
   const captureTemplate = () => {
     if (!editing || busy || uncertain) return;
     templateScope.current = selected;
@@ -711,8 +834,11 @@ export default function Scheduler({
     setUncertain(false);
     templateScope.current = "";
     setTemplatesOpen(false);
+    setPeriodDrawer(null);
     setTemplateSource(null);
     setTemplateBusy(false);
+    setPeriodBusy(false);
+    writeOwner.current = null;
     setSelected(id);
     setJobFilter("");
     setStatusFilter("");
@@ -1216,6 +1342,30 @@ export default function Scheduler({
                       Templates
                     </button>
                   )}
+                  {editable && (view === "Day" || view === "Week") && (
+                    <details className={styles.addMenu}>
+                      <summary>Actions</summary>
+                      <button
+                        disabled={loading || busy || uncertain || !!error}
+                        onClick={() =>
+                          openPeriodTemplates(
+                            view === "Week" ? "week" : "day",
+                            true,
+                          )
+                        }
+                      >
+                        Save {view.toLowerCase()} as template
+                      </button>
+                      <button
+                        disabled={loading || busy || uncertain || !!error}
+                        onClick={() =>
+                          openPeriodTemplates(view === "Week" ? "week" : "day")
+                        }
+                      >
+                        Load {view.toLowerCase()} template
+                      </button>
+                    </details>
+                  )}
                   {editable && (
                     <>
                       <div className={styles.addMenu}>
@@ -1262,14 +1412,6 @@ export default function Scheduler({
                   )}
                 </div>
               </div>
-              <p className={styles.calendarScopeMeta}>
-                {zone} ·{" "}
-                {schedule.status === "archived"
-                  ? "Archived schedule"
-                  : canManage
-                    ? "Manager view"
-                    : "My published shifts"}
-              </p>
               <div className={styles.tableScroll}>
                 <table
                   className={styles.calendar}
@@ -1307,6 +1449,35 @@ export default function Scheduler({
                           );
                         return (
                           <th scope="col" key={d}>
+                            {editable && (
+                              <details>
+                                <summary
+                                  aria-label={`Template actions for ${d}`}
+                                >
+                                  ⋯
+                                </summary>
+                                <button
+                                  disabled={
+                                    loading || busy || uncertain || !!error
+                                  }
+                                  onClick={() =>
+                                    openPeriodTemplates("day", true, d)
+                                  }
+                                >
+                                  Save day as template
+                                </button>
+                                <button
+                                  disabled={
+                                    loading || busy || uncertain || !!error
+                                  }
+                                  onClick={() =>
+                                    openPeriodTemplates("day", false, d)
+                                  }
+                                >
+                                  Load day template
+                                </button>
+                              </details>
+                            )}
                             <span className={styles.calendarDay}>
                               {new Intl.DateTimeFormat("en-GB", {
                                 weekday: "short",
@@ -1476,19 +1647,9 @@ export default function Scheduler({
                   Users{" "}
                   <b>{new Set(displayed.map((s) => s.agent_id)).size} users</b>
                 </span>
-                <span className="sr-only">
-                  Visible {view.toLowerCase()} totals · elapsed time
-                </span>
               </div>
               {!agents.length && <p>No assigned users match this search.</p>}
             </section>
-            <p className={styles.hint}>
-              {canManage
-                ? "Drafts are private to schedule managers. Published shifts are visible to their assigned employee."
-                : ""}{" "}
-              Overnight shifts appear on each day they touch. Hours reflect time
-              elapsed, including clock changes.
-            </p>
           </>
         )}
         {templatesOpen && schedule && canManage && (
@@ -1505,7 +1666,43 @@ export default function Scheduler({
             reload={load}
             applied={templateApplied}
             denied={templateDenied}
-            locked={setTemplateBusy}
+            locked={singleLocked}
+            acquireWrite={acquireSingle}
+            periodTab={(kind) => openPeriodTemplates(kind, false, day, false)}
+          />
+        )}
+        {periodDrawer && schedule && canManage && (
+          <PeriodTemplates
+            key={company.id + actorId + role + schedule.id}
+            tenantId={company.id}
+            actorId={actorId}
+            role={role}
+            schedule={schedule}
+            kind={periodDrawer.kind}
+            day={periodDrawer.anchor || day}
+            sourceAnchor={periodDrawer.anchor || day}
+            sourceFilters={{
+              jobId: jobFilter || null,
+              status:
+                statusFilter === "draft" || statusFilter === "published"
+                  ? statusFilter
+                  : "all",
+              workerSearch: userQuery,
+            }}
+            saveSource={periodDrawer.save}
+            loadMode={periodDrawer.load}
+            agents={assigned}
+            close={templateClose}
+            singleTab={() => {
+              setPeriodDrawer(null);
+              setTemplatesOpen(true);
+            }}
+            reload={load}
+            applied={templateApplied}
+            denied={templateDenied}
+            locked={periodLocked}
+            acquireWrite={acquirePeriod}
+            accessGeneration={currentAccessGeneration}
           />
         )}
         {modal && (

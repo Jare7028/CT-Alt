@@ -1,6 +1,6 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-// Exact immutable released Templates main fa40c91 history. This is local readiness only.
+// Exact immutable released Publication main337c0b4 history. This is local readiness only.
 const baselines={
   "20261003143058_workforce_foundation.sql": "712b7a10199b2792b8ae78cb84e3607ac8e39b3657b222bb0f13a9b3abae956b",
   "20261003153745_agents_records.sql": "a69f256d48a23529d5ffe59cc31e61e35f25a508e6a69f05b05b7c92fa14bd03",
@@ -23,17 +23,21 @@ const baselines={
   "20261004080045_forms_reporting.sql": "15669683f16ccb737e0b6e703f26f845894b749bd9d26b3196f41bacca493e68",
   "20261004114249_requests_board.sql": "eeb150cf9a54609d447d7c0b1b55ab2ea830cc24b8d6a9a520ff4b699b7320aa",
   "20261004135337_knowledge_base_files.sql": "2a09283766ee33a481e0e830ac3ea6e7e27a144ceb24c3b31fbcde47890bec36",
-  "20261004144511_rota_shift_templates.sql": "3df0b53fc93c2a76d3f987bfc7a6b19a031198e836f00018eb1a92612eaf20e7"
+  "20261004144511_rota_shift_templates.sql": "3df0b53fc93c2a76d3f987bfc7a6b19a031198e836f00018eb1a92612eaf20e7",
+  "20261004163547_rota_visible_publication.sql": "63fcbfa5740417b2b2b3c4d168066d80275e42978ded2f38ceb318902646629a"
 };
-const publicationHash='63fcbfa5740417b2b2b3c4d168066d80275e42978ded2f38ceb318902646629a';
-export function verifyKnowledgeFileBaselines(requirePublication=false){
+// Root pins this only after independent review of the frozen additive candidate.
+const periodHash='cb83bd7b7924f428e555f39459a99c6f56ea9164c1000c1f080bd4a6cf8923a5';
+export function verifyKnowledgeFileBaselines(requirePeriod=false){
  const dir=new URL('../supabase/migrations/',import.meta.url),names=readdirSync(dir).filter(name=>name.endsWith('.sql')).sort();
- const candidates=names.filter(name=>/^\d{14}_rota_visible_publication\.sql$/.test(name));
- if(candidates.length>1 || requirePublication&&candidates.length!==1)throw Error('Expected exactly one reviewed Publication candidate.');
+ const candidates=names.filter(name=>/^\d{14}_rota_period_templates\.sql$/.test(name));
+ if(candidates.length>1 || requirePeriod&&candidates.length!==1)throw Error('Expected exactly one reviewed Period Templates candidate.');
+ if(candidates.length && periodHash===null)throw Error('Period Templates candidate is not yet reviewed and frozen.');
  const expected=[...Object.keys(baselines),...candidates].sort();
- if(JSON.stringify(names)!==JSON.stringify(expected))throw Error('Expected exact22 applied baselines and only the optional reviewed Publication candidate.');
- const hashes={...baselines,...(candidates.length?{[candidates[0]]:publicationHash}:{})};
+ if(JSON.stringify(names)!==JSON.stringify(expected))throw Error('Expected exact23 applied baselines and only the optional reviewed Period Templates candidate.');
+ const hashes={...baselines,...(candidates.length?{[candidates[0]]:periodHash}:{})};
  for(const[name,hash]of Object.entries(hashes)){if(createHash('sha256').update(readFileSync(new URL(name,dir))).digest('hex')!==hash)throw Error('Immutable migration byte mismatch: '+name);}
 }
 export function verifyRotaTemplateBaselines(){verifyKnowledgeFileBaselines();}
-export function verifyRotaPublicationBaselines(){verifyKnowledgeFileBaselines(true);}
+export function verifyRotaPublicationBaselines(){verifyKnowledgeFileBaselines();}
+export function verifyRotaPeriodBaselines(){verifyKnowledgeFileBaselines(true);}
