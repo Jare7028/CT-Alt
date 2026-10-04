@@ -1,3 +1,5 @@
+import {startDatabaseStorage,registerDatabaseFixture} from './database-storage-bootstrap.mjs';
+let storageFixture;
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -68,11 +70,12 @@ select public.save_time_clock('${tenant}',gen_random_uuid(),jsonb_build_object('
 }
 let started = false;
 try {
-  docker(['run', '-d', '--name', name, '--network', 'none', '--tmpfs', '/var/lib/postgresql/data', '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', 'POSTGRES_DB=ct_alt_test', image]); started = true;
+  docker(['run', '-d', '--label', `ct-alt.test-runner-pid=${process.pid}`, '--name', name, '--network', 'none', '--tmpfs', '/var/lib/postgresql/data', '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', 'POSTGRES_DB=ct_alt_test', image]); started = true; registerDatabaseFixture(name);
   let ready = false;
   for (let i = 0; i < 60; i++) { if (spawnSync('docker', ['exec', name, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'ct_alt_test'], { stdio: 'ignore', timeout: 5000 }).status === 0) { ready = true; break; } await new Promise(resolve => setTimeout(resolve, 500)); }
   if (!ready) throw new Error('Owned local database unavailable');
   sql(readFileSync(new URL('../tests/database/bootstrap.sql', import.meta.url), 'utf8'));
+  storageFixture = await startDatabaseStorage(name);
   sql('alter default privileges in schema public grant execute on functions to anon,authenticated,service_role;');
   const directory = new URL('../supabase/migrations/', import.meta.url), files = readdirSync(directory).filter(file => file.endsWith('.sql')).sort();
   const candidates = files.filter(file => file.endsWith('_team_timesheets.sql')); assert.equal(candidates.length, 1); const migration = candidates[0];
@@ -85,4 +88,4 @@ try {
   checks.push(...result.stderr.split('\n').filter(line => line.includes('PASS:')), ...await races());
   console.log(`${baseline.stderr.split('\n').filter(line => line.includes('PASS:')).length} existing Time Clock SQL assertions passed before upgrade.`);
   console.log(checks.join('\n')); console.log(`${checks.length} team-timesheet SQL/upgrade/snapshot assertions passed in isolated PostgreSQL 17.`);
-} finally { if (started) docker(['rm', '-f', name]); }
+} finally { try {storageFixture?.cleanup();} finally { if (started) docker(['rm', '-f', name]); }}

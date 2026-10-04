@@ -1,5 +1,6 @@
 // Ephemeral CT Alt-only synthetic browser fixture. No supplied URLs or keys.
 // Stop with Ctrl-C; only containers carrying this run's random label are removed.
+import { startOwnedStorage } from "./storage-provider-fixture.mjs";
 import { spawnSync } from "node:child_process";
 import { randomBytes, randomUUID, createHmac } from "node:crypto";
 import { createServer } from "node:http";
@@ -22,7 +23,7 @@ const docker = (args, input) => {
     encoding: "utf8",
     timeout: 30000,
   });
-  if (r.status !== 0) throw Error(r.stderr || "Docker failed");
+  if (r.status !== 0) throw Error((r.stderr || "Docker failed").replaceAll(process.env.CT_ALT_KB_FILE_HMAC_KEY || "[no-key]", "[synthetic-private-key]"));
   return (r.stdout + (args[0] === "logs" ? r.stderr : "")).trim();
 };
 const sql = (s) =>
@@ -81,9 +82,10 @@ const token = (role) => {
 };
 const key = token("anon"),
   service = token("service_role");
-let gateway;
+let gateway, storageProvider, pendingStorageCleanup;
 async function cleanup() {
   gateway?.close();
+  (storageProvider?.cleanup ?? pendingStorageCleanup)?.();
   for (const c of containers.reverse()) {
     verify(c);
     docker(["rm", "-f", c]);
@@ -213,11 +215,35 @@ try {
   sql(
     "create or replace function auth.uid() returns uuid language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid $$;grant usage on schema auth to authenticated,service_role;grant execute on function auth.uid() to authenticated,service_role;",
   );
-  for (const file of readdirSync(root + "/supabase/migrations")
-    .filter((f) => f.endsWith(".sql"))
-    .sort()) {
+  const migrationFiles = readdirSync(root + "/supabase/migrations").filter(f => f.endsWith(".sql")).sort();
+  const requiresStorage = migrationFiles.some(f => f.endsWith("_knowledge_base_files.sql"));
+  if (requiresStorage || process.env.CT_ALT_FIXTURE_STORAGE === "1") {
+    storageProvider = await startOwnedStorage({dbContainer:db,dbName:"postgres",fixtureLabel:{key:"ct-alt.test",value:suffix},jwtSecret:secret,anonKey:key,serviceKey:service,networkName:network,publishPort:54827,postgrestUrl:`http://${rest}:3000`,onCleanupReady:cleanup=>{pendingStorageCleanup=cleanup;}});
+  }
+  for (const file of migrationFiles) {
     verify(db);
     sql(readFileSync(root + "/supabase/migrations/" + file, "utf8"));
+  }
+  if (storageProvider) {
+    storageProvider.verify();
+    docker(['exec','-i',storageProvider.containerName,'node','-'], `(async()=>{
+      const headers={Authorization:'Bearer '+process.env.SERVICE_KEY,'Content-Type':'application/json'};
+      const created=await fetch('http://127.0.0.1:5000/bucket',{method:'POST',headers,body:JSON.stringify({id:'ct-alt-knowledge-base',name:'ct-alt-knowledge-base',public:false,file_size_limit:2097152})});
+      if(created.status!==200)throw Error('Synthetic private bucket creation failed: '+created.status);
+      const read=await fetch('http://127.0.0.1:5000/bucket/ct-alt-knowledge-base',{headers});
+      if(read.status!==200)throw Error('Synthetic private bucket verification failed: '+read.status);
+      const bucket=await read.json();
+      if(bucket.id!=='ct-alt-knowledge-base'||bucket.name!=='ct-alt-knowledge-base'||bucket.public!==false||bucket.file_size_limit!==2097152)throw Error('Synthetic private bucket scope or byte limit mismatch');
+      console.log('Verified empty private synthetic bucket with 2 MiB limit');
+    })().catch(e=>{console.error(e.message);process.exit(1)});`);
+  }
+  if (requiresStorage) {
+    const hmacKey = process.env.CT_ALT_KB_FILE_HMAC_KEY;
+    const hmacId = process.env.CT_ALT_KB_FILE_HMAC_KEY_ID;
+    if (hmacKey || hmacId) {
+      if (!/^[A-Za-z0-9_-]{1,32}$/.test(hmacId ?? "") || !/^[A-Za-z0-9+/]+={0,2}$/.test(hmacKey ?? "") || Buffer.from(hmacKey,"base64").length < 32) throw Error("Invalid private synthetic file verifier configuration");
+      sql(`insert into workforce_private.knowledge_file_verifier_keys(key_id,key_bytes,active) values ('${hmacId}',decode('${hmacKey}','base64'),true);`);
+    }
   }
   docker([
     "run",
@@ -247,15 +273,16 @@ try {
     try {
       const isAuth = req.url.startsWith("/auth/v1/");
       const isRest = req.url.startsWith("/rest/v1/");
-      if (!isAuth && !isRest) {
+      const isStorage = Boolean(storageProvider) && req.url.startsWith("/storage/v1/");
+      if (!isAuth && !isRest && !isStorage) {
         res.writeHead(404);
         res.end();
         return;
       }
-      verify(isAuth ? auth : rest);
+      if (isStorage) storageProvider.verify(); else verify(isAuth ? auth : rest);
       const url =
-        (isAuth ? "http://127.0.0.1:54825" : "http://127.0.0.1:54826") +
-        req.url.replace(isAuth ? "/auth/v1" : "/rest/v1", "");
+        (isAuth ? "http://127.0.0.1:54825" : isStorage ? "http://127.0.0.1:54827" : "http://127.0.0.1:54826") +
+        req.url.replace(isAuth ? "/auth/v1" : isStorage ? "/storage/v1" : "/rest/v1", "");
       const buffers = [];
       for await (const c of req) buffers.push(c);
       const headers = { ...req.headers };

@@ -1,15 +1,22 @@
+import {startDatabaseStorage,registerDatabaseFixture} from './database-storage-bootstrap.mjs';
+let storageFixture;
 import {spawn,spawnSync} from 'node:child_process';
 import {readFileSync,readdirSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 const name='ct-alt-requests-'+randomUUID(),image='postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24';
-let started=false;const cleanup=()=>{if(started){started=false;spawnSync('docker',['rm','-f',name],{stdio:'ignore',timeout:30000});}};
+let started=false;const cleanup=()=>{if(started){try{storageFixture?.cleanup();}finally{const inspected=spawnSync('docker',['inspect',name],{encoding:'utf8',timeout:10000});if(inspected.status===0){if(JSON.parse(inspected.stdout)[0].Config.Labels?.['ct-alt.test-runner-pid']!==String(process.pid))throw Error('Requests fixture ownership mismatch');const removed=spawnSync('docker',['rm','-f',name],{encoding:'utf8',timeout:30000});if(removed.status!==0)throw Error('Requests fixture removal failed');}started=false;}}};
 for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{cleanup();process.exit(1);});
 function docker(args,input){const r=spawnSync('docker',args,{input,encoding:'utf8',timeout:120000,maxBuffer:16*1024*1024});if(r.error||r.status!==0)throw new Error(r.error?.message||r.stderr);return r;}
 const sql=v=>docker(['exec','-i',name,'psql','-X','-q','-v','ON_ERROR_STOP=1','-U','postgres','-d','ct_alt_test'],v).stderr;
 const query=v=>docker(['exec','-i',name,'psql','-X','-At','-v','ON_ERROR_STOP=1','-U','postgres','-d','ct_alt_test'],v).stdout.trim();
 function asyncSql(v){const p=spawn('docker',['exec','-i',name,'psql','-X','-q','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-U','postgres','-d','ct_alt_test']);let stderr='',stdout='';p.stderr.on('data',v=>stderr+=v);p.stdout.on('data',v=>stdout+=v);p.stdin.end(v);return new Promise((resolve,reject)=>{p.once('error',reject);p.once('close',status=>resolve({status,stderr,stdout}));});}
-try{docker(['run','-d','--name',name,'--label','ct-alt.fixture=requests','--network','none','--tmpfs','/var/lib/postgresql/data','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_DB=ct_alt_test',image]);started=true;let ready=false;for(let i=0;i<60;i++){if(spawnSync('docker',['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres','-d','ct_alt_test'],{stdio:'ignore',timeout:5000}).status===0){ready=true;break;}await new Promise(r=>setTimeout(r,500));}if(!ready)throw Error('Isolated Requests PG unavailable');
- sql(readFileSync(new URL('../tests/database/bootstrap.sql',import.meta.url),'utf8'));const dir=new URL('../supabase/migrations/',import.meta.url),files=readdirSync(dir).filter(f=>f.endsWith('.sql')).sort(),candidate=files.find(f=>f.endsWith('_requests_board.sql'));if(!candidate)throw Error('Missing candidate');for(const f of files.filter(f=>f<candidate))sql(readFileSync(new URL(f,dir),'utf8'));
+try{docker(['run','-d','--name',name,'--label','ct-alt.test-runner-pid='+process.pid,'--network','none','--tmpfs','/var/lib/postgresql/data','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_DB=ct_alt_test',image]);started=true;registerDatabaseFixture(name);let ready=false;for(let i=0;i<60;i++){if(spawnSync('docker',['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres','-d','ct_alt_test'],{stdio:'ignore',timeout:5000}).status===0){ready=true;break;}await new Promise(r=>setTimeout(r,500));}if(!ready)throw Error('Isolated Requests PG unavailable');
+ sql(readFileSync(new URL('../tests/database/bootstrap.sql',import.meta.url),'utf8'));storageFixture=await startDatabaseStorage(name);const dir=new URL('../supabase/migrations/',import.meta.url),files=readdirSync(dir).filter(f=>f.endsWith('.sql')).sort(),candidate=files.find(f=>f.endsWith('_requests_board.sql'));if(!candidate)throw Error('Missing candidate');for(const f of files.filter(f=>f!==candidate))sql(readFileSync(new URL(f,dir),'utf8'));
+ // Files can be recorded later than Requests without depending on it. Prove
+ // this fixture includes that real baseline, not only earlier filenames.
+ if(files.some(f=>f.endsWith('_knowledge_base_files.sql'))){
+  if(!storageFixture||query("select to_regclass('workforce_private.knowledge_file_attempts') is not null")!=='t'||query('select count(*) from storage.migrations')!=='73')throw Error('Requests preservation requires the Files baseline and hosted-matching native Storage schema');
+ }
  // A populated old-module fixture precedes the candidate; snapshot every prior
  // application table and function, ACL/owner/policy identity before upgrade.
  sql(readFileSync(new URL('../tests/database/requests-retained-fixture.sql',import.meta.url),'utf8'));

@@ -1,3 +1,5 @@
+import {verifyKnowledgeFileBaselines} from './knowledge-base-files-readiness.mjs';
+verifyKnowledgeFileBaselines();
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -55,7 +57,7 @@ try {
   originalEnv = existsSync(resolve(root, '.env.local')) ? readFileSync(resolve(root, '.env.local')) : null;
   originalMode = originalEnv ? statSync(resolve(root, '.env.local')).mode & 0o777 : 0o600;
   envCaptured = true;
-  for (const port of [5180, 54821, 54824, 54825, 54826]) await new Promise((resolve, reject) => {
+  for (const port of [5180, 54821, 54824, 54825, 54826, 54827]) await new Promise((resolve, reject) => {
     const probe = createServer();
     probe.once('error', () => reject(Error(`Owned fixture port ${port} is busy.`)));
     probe.listen(port, '127.0.0.1', () => probe.close(resolve));
@@ -71,7 +73,7 @@ try {
   const settings = JSON.parse(readFileSync(fixtures, 'utf8'));
   if (settings.url !== 'http://127.0.0.1:54821' || !/^[0-9a-f]{8}$/.test(settings.fixtureLabel) || typeof settings.key !== 'string') throw Error('Wrong owned fixture settings.');
   const files = (await import('node:fs')).readdirSync(resolve(root,'supabase/migrations')).filter(name=>name.endsWith('.sql'));
-  if(files.length!==20 || files.filter(name=>name.endsWith('_requests_board.sql')).length!==1) throw Error('Expected19 retained baselines plus one Requests candidate.');
+  if(files.length!==21 || files.filter(name=>name.endsWith('_requests_board.sql')).length!==1 || files.filter(name=>name.endsWith('_knowledge_base_files.sql')).length!==1) throw Error('Expected20 retained baselines including Requests plus one private files candidate.');
   const ownership=spawnSync('docker',['inspect','supabase_db_ct-alt-independent','--format','{{index .Config.Labels "ct-alt.test"}}'],{encoding:'utf8'});
   if(ownership.status!==0 || ownership.stdout.trim()!==settings.fixtureLabel) throw Error('Wrong owned Requests fixture database.');
   const installed=spawnSync('docker',['exec','-i','supabase_db_ct-alt-independent','psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-U','postgres'],{input:"select to_regclass('public.work_requests')is not null and to_regclass('workforce_private.request_operations')is not null and to_regprocedure('public.save_request(uuid,uuid,text)')is not null;",encoding:'utf8'});

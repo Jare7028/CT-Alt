@@ -1,13 +1,14 @@
+import type {KnowledgeCurrentFile} from './knowledge-base-file-types';
 import type {Company,Member} from './agent-types';
 
 export type KnowledgeBaseStatus='draft'|'published'|'archived';
 export type KnowledgeNodeStatus='active'|'archived';
 export type KnowledgeView='manage'|'library';
-export type KnowledgeNodeKind='folder'|'text'|'link';
+export type KnowledgeNodeKind='folder'|'text'|'link'|'file';
 export type KnowledgeIdentity={tenantId:string;actorId:string;role:Member['role'];view:KnowledgeView};
 export type KnowledgeAssignee={actorId:string;name:string;eligible:boolean};
 export type KnowledgeBase={id:string;name:string;description:string;status:KnowledgeBaseStatus;restoreStatus:'draft'|'published'|null;revision:number;audienceCount:number;eligibleAudienceCount:number;isAssigned:boolean;canRead:boolean;canEdit:boolean;canPublish:boolean;canArchive:boolean;canRestore:boolean};
-export type KnowledgeNode={id:string;baseId:string;parentId:string|null;kind:KnowledgeNodeKind;name:string;description:string;status:KnowledgeNodeStatus;revision:number;depth:number;rank:string;activeChildCount:number;canEdit:boolean;canMove:boolean;canMoveEarlier:boolean;canMoveLater:boolean;canArchive:boolean;canRestore:boolean};
+export type KnowledgeNode={id:string;baseId:string;parentId:string|null;kind:KnowledgeNodeKind;name:string;description:string;status:KnowledgeNodeStatus;revision:number;depth:number;rank:string;activeChildCount:number;canEdit:boolean;canMove:boolean;canMoveEarlier:boolean;canMoveLater:boolean;canArchive:boolean;canRestore:boolean;currentFile?:KnowledgeCurrentFile};
 export type KnowledgePathItem={id:string;name:string;status:KnowledgeNodeStatus;revision:number};
 export type KnowledgeReadScope=KnowledgeIdentity&{baseId:string;baseRevision:number;audienceVersion:string;treeVersion:string};
 export type KnowledgeBasesData=KnowledgeIdentity&{company:Company;bases:KnowledgeBase[];counts:{total:number;draft:number;published:number;archived:number};catalogVersion:string;nextCursor:string|null;serverTime:string;capabilities:{canManage:boolean}};
