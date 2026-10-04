@@ -4,7 +4,7 @@ An independently implemented workforce application using CT Alt branding. The lo
 
 ## Current state
 
-Released desktop modules include Users, Client Rotas, Chat and conversation search, Overview/Activity, Time Clock and team timesheets, Quick Tasks, Time Off, Updates with recipient CSV, and Smart Groups/segments. Each module has a defined implemented scope; this does not establish complete Connecteam feature or visual parity. [Feature coverage](docs/FEATURE_COVERAGE.md) records release evidence and remaining workflows. Knowledge Base is the next module in development; desktop functionality takes priority over new mobile polish.
+Released desktop modules include Users, Client Rotas, Chat and conversation search, Overview/Activity, Time Clock and team timesheets, Quick Tasks, Time Off, Updates with recipient CSV, Smart Groups/segments, Knowledge Base, Forms with reporting, and the Requests board. Each module has a defined implemented scope; this does not establish complete Connecteam feature or visual parity. [Feature coverage](docs/FEATURE_COVERAGE.md) records release evidence and remaining workflows. The Requests board tracks general work requests across New, In progress and Done, with saved details, assignments, priorities, due dates, search and keyboard or drag movement. Desktop functionality takes priority over new mobile polish.
 
 The company-scoped Users directory provides real end-user password sign-in and: Users/Admins/Archived views, search, basic team filter, sorting, column selection, CSV export, manual add/edit and archive/restore. Managers can view the directory; only owners/admins can mutate it. Records and audit events are saved atomically through a signed-user RPC. No application service-role credential is needed.
 

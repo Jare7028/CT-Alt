@@ -4,7 +4,9 @@ Target: an independently implemented workforce app with close Connecteam feature
 
 ## Current production and release queue
 
-Latest application release: `abe091332de4f2eb53bad312b668ce043e9e3a20` (PR27). Matching Vercel production `dpl_Fx1mPFrAJaXUm8ZhMYxYFikNdVMG` is READY and aliased to ct-alt.vercel.app. Live login200, Forms307-to-login, five valid unsigned GET routes and valid POST/reconciliation401/private-no-store verified. Real-account authenticated production workflows were not exercised.
+Latest verified application release: `8e29552f1a724a0f5c2668bc039389a3e5fec59a` (PR31 Time Clock desktop styling), after PR29 shell/scheduling and PR30 profile/typography. Matching Vercel `dpl_23MCb9aHQj6PBFnyj7HCfF5zBPbb` is READY and aliased to ct-alt.vercel.app. Exact-head CI37195417369 passed every step, including all14 retained SQL suites. Valid unsigned Clock/team routes remain private; original signed local Auth/browser acceptance passed. Requests is an active integrated candidate until its separate release is verified.
+
+The owner-authorised synthetic live seed is complete and replay-verified:21 demo directory records,3 schedules/60 published shifts,6 Clock jobs,12 Quick Tasks,6 Updates drafts,2 Knowledge Bases and2 Forms drafts. It preserves the owner's existing Auth/membership/settings and all prior rows. No real invitations, messages or notifications were sent. Requests demo cards are pending its schema/consumer release.
 
 | Area | Implemented and tested evidence | Deployment | Remaining work |
 | --- | --- | --- | --- |
@@ -55,3 +57,8 @@ Desktop Forms reporting is now in active implementation under [reporting contrac
 Read [reporting acceptance](forms-reporting-acceptance.md) and [the explicit reporting scope/bounds](FORMS_REPORTING_CONTRACT.md). Whole-scope entry limits do not guarantee every finished workbook fits the separate8MiB cap. Signed original built desktop captures were inspected. Private files current integrated PR26 head9ceffe3 passed renewed CI37186072208; no file schema/bucket/verifier configuration is provisioned. Before files release, integrate the latest actual reporting main/history. New desktop schedule-template implementation is underway separately from actual mainabe0913; current official template guides are the reference and all outputs remain drafts until separate publication.
 
 Reporting additiveSQL20261004080045 was applied once with reviewed bytes;51 existing table counts/row digests,112 function identities/security metadata and table/column grants/RLS/policies retained, no new security findings. CTAltFree remainshealthy;19 registered migrations. Consumer release still pendingCI. Privatefiles provisioning must incorporate these19 actual identities.
+
+
+| Requests kanban | Company-scoped general work requests; New/In progress/Done, details, priority/due date, captured linked assignees, search/paging, drag and keyboard movement, current permissions/revision/UUID recovery | Integrated candidate; additive Requests SQL20261004114249 applied once,20 immutable migrations | All8 distinct genuine Auth cases passed across fresh fixtures; exact CI/production verification and labelled live Requests seed pending; comments, attachments, custom stages and time-off integration are future scope |
+
+Read [Requests contract](REQUESTS_CONTRACT.md). This custom requested board uses the shared standard desktop styling; exact current authenticated Connecteam visual parity is not established.
