@@ -64,4 +64,6 @@ jobs:
         run: npm run test:rota-templates:db
       - name: Visible draft publication and preservation checks
         run: npm run test:rota-publication:db
+      - name: Day and Week Templates database and preservation checks
+        run: npm run test:rota-period-templates:db
       - run: npm run build

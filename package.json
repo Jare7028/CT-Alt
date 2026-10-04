@@ -41,7 +41,10 @@
     "test:rota-templates:integration": "node scripts/test-rota-templates-integration.mjs",
     "test:rota-publication:db": "node scripts/test-rota-publication-database.mjs",
     "test:rota-publication:integration": "node scripts/test-rota-publication-integration.mjs",
-    "test:rota-publication:ui": "node scripts/test-rota-publication-ui-browser.mjs"
+    "test:rota-publication:ui": "node scripts/test-rota-publication-ui-browser.mjs",
+    "test:rota-period-templates:db": "node scripts/test-rota-period-templates-database.mjs",
+    "test:rota-period-templates:integration": "node scripts/test-rota-period-templates-integration.mjs",
+    "test:rota-period-templates:ui": "node scripts/test-rota-period-templates-ui-browser.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

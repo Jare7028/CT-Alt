@@ -1,0 +1,8 @@
+import { NextResponse } from 'next/server';
+import { configured, supabase } from '../../../lib/supabase';
+import { validOrigin } from '../../../lib/request-security';
+import { parseRotaPeriodQuery, readRotaPeriodTemplates, previewRotaPeriodSource, previewRotaPeriodTarget, saveRotaPeriodTemplate, reconcileRotaPeriodTemplate, readRotaPeriodBody, RotaPeriodTemplateError } from '../../../lib/rota-period-template-server';
+const response=(v:unknown,status=200)=>NextResponse.json(v,{status,headers:{'Cache-Control':'private, no-store'}});
+function failure(e:unknown){return e instanceof RotaPeriodTemplateError?response({error:e.message},e.status):response({error:'Templates could not be confirmed. Recover pending changes before trying again.'},503);}
+export async function GET(request:Request){try{if(!configured())return response({error:'Company sign-in is not configured.'},503);return response({data:await readRotaPeriodTemplates(await supabase(),parseRotaPeriodQuery(new URL(request.url).searchParams))});}catch(e){return failure(e);}}
+export async function POST(request:Request){try{if(!validOrigin(request))return response({error:'Invalid request origin.'},403);if(!configured())return response({error:'Company sign-in is not configured.'},503);const v=await readRotaPeriodBody(request),c=await supabase();const mode=typeof v==='object'&&v!==null&&'mode'in v?v.mode:null;if(mode==='source-preview')return response({data:await previewRotaPeriodSource(c,v)});if(mode==='preview')return response({data:await previewRotaPeriodTarget(c,v)});if(mode==='reconcile')return response({reconciliation:await reconcileRotaPeriodTemplate(c,v)});return response({saved:await saveRotaPeriodTemplate(c,v)});}catch(e){return failure(e);}}

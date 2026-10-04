@@ -41,6 +41,8 @@ type Props = {
   applied: (day: string, message: string) => void;
   denied: () => void;
   locked: (value: boolean) => void;
+  acquireWrite?: () => boolean;
+  periodTab?: (kind: "day" | "week") => void;
 };
 export default function ShiftTemplates({
   tenantId,
@@ -55,6 +57,8 @@ export default function ShiftTemplates({
   applied,
   denied,
   locked,
+  acquireWrite,
+  periodTab,
 }: Props) {
   const dialog = useRef<HTMLDialogElement>(null),
     epoch = useRef(0),
@@ -301,7 +305,11 @@ export default function ShiftTemplates({
         throw Error(
           "Choose a date giving more than zero and no more than 24 elapsed hours.",
         );
-      preview = `${localDateTime(starts, zone)} – ${localDateTime(ends, zone)} · ${clock(Math.floor((Date.parse(ends) - Date.parse(starts)) / 60_000))}`;
+      const minutes = Math.floor(
+        (Date.parse(ends) - Date.parse(starts)) / 60000,
+      );
+      const duration = `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+      preview = `${localDateTime(starts, zone)} – ${localDateTime(ends, zone)} · ${duration}`;
     } catch (e) {
       previewError =
         e instanceof Error ? e.message : "Choose valid shift times.";
@@ -364,6 +372,12 @@ export default function ShiftTemplates({
   }
   async function write(change: RotaTemplateChange) {
     if (lock.current || marker.current || uncertain || !editable) return;
+    if (acquireWrite && !acquireWrite()) {
+      setError(
+        "Finish the current scheduling change before saving a template.",
+      );
+      return;
+    }
     const operation = { tenantId, operationId: crypto.randomUUID(), change };
     const operationMarker: RotaTemplateRecoveryQuery = {
       mode: "reconcile",
@@ -376,6 +390,7 @@ export default function ShiftTemplates({
     try {
       localStorage.setItem(markerKey, JSON.stringify(operationMarker));
     } catch {
+      locked(false);
       setError(
         "Browser storage is unavailable. No operation was sent; enable storage to keep uncertain saves recoverable.",
       );
@@ -437,6 +452,12 @@ export default function ShiftTemplates({
   async function recover() {
     const operation = marker.current;
     if (!operation || lock.current) return;
+    if (acquireWrite && !acquireWrite()) {
+      setError(
+        "Finish the current scheduling change before checking this operation.",
+      );
+      return;
+    }
     lock.current = true;
     setBusy(true);
     const generation = epoch.current;
@@ -624,6 +645,29 @@ export default function ShiftTemplates({
           ×
         </button>
       </header>
+      {periodTab && (
+        <div role="tablist" aria-label="Template kind">
+          <button role="tab" aria-selected="true" disabled={busy || uncertain}>
+            Shifts
+          </button>
+          <button
+            role="tab"
+            aria-selected="false"
+            disabled={busy || uncertain}
+            onClick={() => periodTab("day")}
+          >
+            Days
+          </button>
+          <button
+            role="tab"
+            aria-selected="false"
+            disabled={busy || uncertain}
+            onClick={() => periodTab("week")}
+          >
+            Weeks
+          </button>
+        </div>
+      )}
       <p className={styles.zone}>Shifts · {zone}</p>
       {latest?.status === "archived" && (
         <p>Archived schedule. Templates are read only.</p>
