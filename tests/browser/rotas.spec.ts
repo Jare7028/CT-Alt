@@ -19,7 +19,7 @@ async function login(page: Page, role: string) {
   if (role === "employee") {
     await page.goto("/rotas?company=" + fixtures.tenantA);
   } else {
-    await page.locator(".ct-sidebar nav").getByRole("link", { name: "Client Rotas", exact: true }).click();
+    await page.locator(".ct-sidebar nav").getByRole("link", { name: "Job scheduling", exact: true }).click();
     await expect(page).toHaveURL("/rotas?company=" + fixtures.tenantA);
   }
   await expect(

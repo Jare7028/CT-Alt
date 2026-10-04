@@ -16,6 +16,85 @@ import {
   zonedInstant,
 } from "../../lib/rota-time";
 import styles from "./scheduler.module.css";
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="16" rx="1.5" />
+      <path d="M7 3v4m10-4v4M3.5 10h17M7 14h3m4 0h3M7 17.5h3" />
+    </svg>
+  );
+}
+function CalendarArtwork() {
+  return (
+    <svg
+      className={styles.calendarArtwork}
+      viewBox="0 0 120 82"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M91 14l14 68H90z" fill="#1c70ba" />
+      <path d="M9 14h83v68H9z" fill="#fff" />
+      <path d="M9 14h83v12H9z" fill="#2998ff" />
+      {[15, 24, 33, 42, 51, 60, 69, 78, 87].map((x) => (
+        <circle key={x} cx={x} cy="20" r="1.25" fill="white" />
+      ))}
+      <path d="M9 36h83M9 47h83M9 58h83M9 69h83M9 80h83" stroke="#d6ebff" />
+      <rect x="15" y="38" width="31" height="8" rx="4" fill="#2998ff" />
+      <rect x="59" y="49" width="23" height="8" rx="4" fill="#2998ff" />
+      <path
+        d="m28 65 3 3 5-5"
+        stroke="#54adff"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 4v4l3 2" />
+    </svg>
+  );
+}
+function ShiftsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="2" y="3" width="12" height="4" rx="1" />
+      <rect x="2" y="9" width="12" height="4" rx="1" />
+    </svg>
+  );
+}
+function UsersIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="5" r="2" />
+      <path d="M3 13v-1a5 5 0 0 1 10 0v1z" />
+    </svg>
+  );
+}
+function elapsedLabel(hours: number) {
+  const minutes = Math.round(hours * 60);
+  return (
+    Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, "0") +
+    ":" +
+    (minutes % 60).toString().padStart(2, "0")
+  );
+}
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((x) => Array.from(x)[0])
+    .join("")
+    .toUpperCase();
+}
 function jobInk(color: string) {
   const rgb = [1, 3, 5]
     .map((i) => parseInt(color.slice(i, i + 2), 16) / 255)
@@ -255,7 +334,8 @@ export default function Scheduler({
       }
       if (
         !result.saved ||
-        (change.action === "create_schedule" && typeof result.saved.schedule_id !== "string")
+        (change.action === "create_schedule" &&
+          typeof result.saved.schedule_id !== "string")
       )
         throw new Error("The save acknowledgement could not be verified.");
       acknowledged = true;
@@ -296,7 +376,9 @@ export default function Scheduler({
         setUncertain(false);
         setFormError("");
         setModal("");
-        setNotice("Schedules reloaded. Review the latest saved changes before trying again.");
+        setNotice(
+          "Schedules reloaded. Review the latest saved changes before trying again.",
+        );
       }
     } finally {
       writeLock.current = false;
@@ -375,218 +457,78 @@ export default function Scheduler({
       activeModule="rotas"
       companyId={company.id}
       companyName={company.name}
-      moduleLinks={{forms:`/forms?company=${encodeURIComponent(company.id)}`,'knowledge-base':`/knowledge-base?company=${encodeURIComponent(company.id)}`,'smart-groups':owner?`/smart-groups?company=${encodeURIComponent(company.id)}`:undefined,updates:`/updates?company=${encodeURIComponent(company.id)}`, 'time-off':`/time-off?company=${encodeURIComponent(company.id)}`, 'quick-tasks':`/quick-tasks?company=${encodeURIComponent(company.id)}`, 'time-clock':`/time-clock?company=${encodeURIComponent(company.id)}`,  overview: role !== "employee" ? `/overview?company=${encodeURIComponent(company.id)}` : undefined, activity: owner ? `/activity?company=${encodeURIComponent(company.id)}` : undefined, chat: `/chat?company=${encodeURIComponent(company.id)}`, rotas: `/rotas?company=${encodeURIComponent(company.id)}` }}
+      accountName={
+        data.members.find((m) => m.user_id === actorId)?.display_name
+      }
+      moduleLinks={{
+        forms: `/forms?company=${encodeURIComponent(company.id)}`,
+        "knowledge-base": `/knowledge-base?company=${encodeURIComponent(company.id)}`,
+        "smart-groups": owner
+          ? `/smart-groups?company=${encodeURIComponent(company.id)}`
+          : undefined,
+        updates: `/updates?company=${encodeURIComponent(company.id)}`,
+        "time-off": `/time-off?company=${encodeURIComponent(company.id)}`,
+        "quick-tasks": `/quick-tasks?company=${encodeURIComponent(company.id)}`,
+        "time-clock": `/time-clock?company=${encodeURIComponent(company.id)}`,
+        overview:
+          role !== "employee"
+            ? `/overview?company=${encodeURIComponent(company.id)}`
+            : undefined,
+        activity: owner
+          ? `/activity?company=${encodeURIComponent(company.id)}`
+          : undefined,
+        chat: `/chat?company=${encodeURIComponent(company.id)}`,
+        rotas: `/rotas?company=${encodeURIComponent(company.id)}`,
+      }}
       companyControl={
         <label>
           <span className="sr-only">Company</span>
-          <select value={company.id} onChange={(event) => router.push(`/rotas?company=${encodeURIComponent(event.target.value)}`)}>
-            {companies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          <select
+            value={company.id}
+            onChange={(event) =>
+              router.push(
+                `/rotas?company=${encodeURIComponent(event.target.value)}`,
+              )
+            }
+          >
+            {companies.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
         </label>
       }
     >
-    <main className={styles.shell}>
-      <div className={styles.toolbar}>
-        <h1>{schedule ? schedule.name : "Job scheduling"}</h1>
-        {selected ? (
-          <button onClick={() => changeSchedule("")}>All schedules</button>
-        ) : (
-          owner && (
-            <button
-              disabled={loading || !!error}
-              className={styles.primary}
-              onClick={() => open("schedule")}
-            >
-              Create schedule
-            </button>
-          )
-        )}
-        <button
-          disabled={busy || loading}
-          onClick={() => {
-            setLoading(true);
-            void load();
-          }}
+      <main className={styles.shell}>
+        <div
+          className={selected ? styles.calendarTitleBar : styles.lobbyTitleBar}
         >
-          Reload
-        </button>
-      </div>
-      {loading && <p role="status">Loading schedules…</p>}
-      {error && (
-        <p role="alert" className={styles.error}>
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p role="status" className={styles.notice}>
-          {notice}
-        </p>
-      )}
-      {!selected && (
-        <>
-          <div className={styles.toolbar}>
-            <div role="tablist" aria-label="Schedule status">
-              <button
-                role="tab"
-                aria-selected={!archived}
-                onClick={() => setArchived(false)}
-              >
-                Active
-              </button>
-              <button
-                role="tab"
-                aria-selected={archived}
-                onClick={() => setArchived(true)}
-              >
-                Archived
-              </button>
-            </div>
-            <input
-              type="search"
-              aria-label="Search schedules"
-              placeholder="Search schedules"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+          <div
+            className={
+              styles.lobbyHeading +
+              (selected ? " " + styles.calendarHeading : "")
+            }
+          >
+            <span className={styles.lobbyHeadingIcon}>
+              <CalendarIcon />
+            </span>
+            <h1 aria-label={selected ? undefined : "Job scheduling"}>
+              {schedule ? schedule.name : "Job scheduling lobby"}
+            </h1>
           </div>
-          <div className={styles.tableScroll}>
-            <table className={styles.lobby}>
-              <thead>
-                <tr>
-                  <th>Schedule</th>
-                  <th>Assigned users</th>
-                  <th>Administrators</th>
-                  <th>Time zone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.schedules
-                  .filter(
-                    (s) =>
-                      (s.status === "archived") === archived &&
-                      s.name.toLowerCase().includes(query.toLowerCase()),
-                  )
-                  .map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <button
-                          className={styles.textButton}
-                          onClick={() => {
-                            changeSchedule(s.id);
-                            setDay(
-                              dateInZone(new Date().toISOString(), s.time_zone),
-                            );
-                          }}
-                        >
-                          {s.name}
-                        </button>
-                      </td>
-                      <td>
-                        {
-                          data.assignments.filter((a) => a.schedule_id === s.id)
-                            .length
-                        }
-                        {!owner && role === "employee"
-                          ? " (your assignment)"
-                          : ""}
-                      </td>
-                      <td>
-                        {data.admins
-                          .filter((a) => a.schedule_id === s.id)
-                          .map(
-                            (a) =>
-                              data.members.find((m) => m.user_id === a.user_id)
-                                ?.display_name,
-                          )
-                          .filter(Boolean)
-                          .join(", ") ||
-                          (owner ? "Company owners and admins" : "—")}
-                      </td>
-                      <td>{s.time_zone}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-          {!loading &&
-            !error &&
-            !data.schedules.some(
-              (s) =>
-                (s.status === "archived") === archived &&
-                s.name.toLowerCase().includes(query.toLowerCase()),
-            ) && <p>No {archived ? "archived" : "active"} schedules match.</p>}
-        </>
-      )}
-      {schedule && (
-        <>
-          {!supportedRotaZone(requestedZone) && (
-            <p role="alert" className={styles.error}>
-              This schedule’s time zone cannot be displayed safely. Times are
-              shown in UTC and shift editing is disabled. Ask a company owner or
-              admin to choose a supported IANA time zone in Settings.
-            </p>
-          )}
-          <div className={styles.toolbar}>
-            <p className={styles.zone}>
-              {zone} ·{" "}
-              {schedule.status === "archived"
-                ? "Archived schedule"
-                : canManage
-                  ? "Manager view"
-                  : "My published shifts"}
-            </p>
-            <div className={styles.actions}>
+          {selected && (
+            <div className={styles.calendarHeaderActions}>
+              <button onClick={() => changeSchedule("")}>All schedules</button>
               {editable && (
-                <>
-                  <button
-                    disabled={loading || busy || !!error}
-                    onClick={() => open("job")}
-                  >
-                    Job list
-                  </button>
-                  <div className={styles.addMenu}>
-                    <button
-                      aria-expanded={addOpen}
-                      disabled={
-                        loading ||
-                        busy ||
-                        !!error ||
-                        !jobs.length ||
-                        !activeAssigned.length
-                      }
-                      onClick={() => setAddOpen(!addOpen)}
-                    >
-                      Add ▾
-                    </button>
-                    {addOpen && (
-                      <div className={styles.addOptions}>
-                        <button
-                          onClick={() => {
-                            setAddOpen(false);
-                            open("shift");
-                          }}
-                        >
-                          Add single shift
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    className={styles.primary}
-                    disabled={
-                      loading ||
-                      busy ||
-                      !!error ||
-                      !shifts.some((s) => s.status === "draft")
-                    }
-                    onClick={() => open("publish")}
-                  >
-                    Publish ({shifts.filter((s) => s.status === "draft").length}
-                    )
-                  </button>
-                </>
+                <button
+                  disabled={loading || busy || !!error}
+                  onClick={() => open("job")}
+                >
+                  Job list
+                </button>
               )}
-              {owner && schedule.status === "active" && (
+              {owner && schedule?.status === "active" && (
                 <button
                   disabled={loading || busy || !!error}
                   onClick={() => open("settings")}
@@ -594,7 +536,7 @@ export default function Scheduler({
                   Settings
                 </button>
               )}
-              {owner && (
+              {owner && schedule && (
                 <button
                   disabled={loading || busy || !!error}
                   onClick={() =>
@@ -607,543 +549,989 @@ export default function Scheduler({
                 </button>
               )}
             </div>
-          </div>
-          <div className={styles.toolbar}>
-            <div className={styles.actions}>
-              <button
-                aria-label="Previous period"
-                onClick={() =>
-                  setDay(
-                    view === "Month"
-                      ? new Date(
-                          Date.UTC(
-                            Number(day.slice(0, 4)),
-                            Number(day.slice(5, 7)) - 2,
-                            1,
-                          ),
-                        )
-                          .toISOString()
-                          .slice(0, 10)
-                      : addDays(day, view === "Week" ? -7 : -1),
-                  )
-                }
-              >
-                ‹
-              </button>
-              <button onClick={today}>Today</button>
-              <button
-                aria-label="Next period"
-                onClick={() =>
-                  setDay(
-                    view === "Month"
-                      ? new Date(
-                          Date.UTC(
-                            Number(day.slice(0, 4)),
-                            Number(day.slice(5, 7)),
-                            1,
-                          ),
-                        )
-                          .toISOString()
-                          .slice(0, 10)
-                      : addDays(day, view === "Week" ? 7 : 1),
-                  )
-                }
-              >
-                ›
-              </button>
-              <label>
-                Date
-                <input
-                  type="date"
-                  value={day}
-                  required
-                  onChange={(e) => {
-                    if (e.target.value) setDay(e.target.value);
-                  }}
-                />
-              </label>
-            </div>
-            <div role="tablist" aria-label="Calendar view">
-              {(["Day", "Week", "Month"] as const).map((v) => (
-                <button
-                  key={v}
-                  role="tab"
-                  aria-selected={view === v}
-                  onClick={() => setView(v)}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className={styles.filters}>
-            <input
-              type="search"
-              aria-label="Search users"
-              placeholder="Search users"
-              value={userQuery}
-              onChange={(e) => setUserQuery(e.target.value)}
-            />
-            <label>
-              Sort users
-              <select value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="name">Name</option>
-                <option value="hours">Hours, highest first</option>
-              </select>
-            </label>
-            <label>
-              Job
-              <select
-                value={jobFilter}
-                onChange={(e) => setJobFilter(e.target.value)}
-              >
-                <option value="">All jobs</option>
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {canManage && (
-              <label>
-                Shift status
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">All shifts</option>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                </select>
-              </label>
-            )}
-          </div>
-          <div className={styles.summary} aria-label="Period summary">
-            <strong>{hours.toFixed(1)} hours</strong>
-            <span>{displayed.length} shifts</span>
-            <span>{new Set(displayed.map((s) => s.agent_id)).size} users</span>
-            <span>Visible {view.toLowerCase()} totals · elapsed time</span>
-          </div>
-          <div className={styles.tableScroll}>
-            <table className={styles.calendar}>
-              <thead>
-                <tr>
-                  <th scope="col">Users</th>
-                  {days.map((d) => (
-                    <th scope="col" key={d}>
-                      {new Intl.DateTimeFormat("en-GB", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        timeZone: "UTC",
-                      }).format(new Date(d + "T12:00:00Z"))}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {agents.map((a) => (
-                  <tr key={a.id}>
-                    <th scope="row">
-                      {a.first_name} {a.last_name}
-                      <small>
-                        {displayed
-                          .filter((s) => s.agent_id === a.id)
-                          .reduce(
-                            (sum, s) =>
-                              sum + days.reduce((h, d) => h + hoursOn(s, d), 0),
-                            0,
-                          )
-                          .toFixed(1)}{" "}
-                        h{a.status !== "active" ? " · Archived user" : ""}
-                      </small>
-                    </th>
-                    {days.map((d) => (
-                      <td key={d}>
-                        {displayed
-                          .filter(
-                            (s) => s.agent_id === a.id && hoursOn(s, d) > 0,
-                          )
-                          .map((s) => {
-                            const job = jobs.find((j) => j.id === s.job_id);
-                            return (
-                              <button
-                                key={s.id}
-                                className={styles.shift}
-                                style={{
-                                  backgroundColor: job?.color,
-                                  color: job ? jobInk(job.color) : undefined,
-                                  borderStyle:
-                                    s.status === "draft" ? "dashed" : "solid",
-                                }}
-                                disabled={
-                                  !editable ||
-                                  loading ||
-                                  busy ||
-                                  !!error ||
-                                  s.status === "published"
-                                }
-                                onClick={() => open("shift", s)}
-                                aria-label={`${s.status === "draft" ? "Edit draft" : "Published"} ${s.title || job?.name} ${a.first_name} ${a.last_name}`}
-                              >
-                                <strong>{job?.name}</strong>
-                                <span>
-                                  {localDateTime(s.starts_at, zone).slice(11)} –{" "}
-                                  {localDateTime(s.ends_at, zone).slice(11)}
-                                  {dateInZone(s.starts_at, zone) !==
-                                  dateInZone(s.ends_at, zone)
-                                    ? " (overnight)"
-                                    : ""}
-                                </span>
-                                {s.title && <span>{s.title}</span>}
-                                <small>
-                                  {s.status === "draft" ? "Draft" : "Published"}{" "}
-                                  · {hoursOn(s, d).toFixed(1)} h today
-                                </small>
-                              </button>
-                            );
-                          })}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">Daily totals</th>
-                  {days.map((d) => (
-                    <td key={d}>
-                      {displayed
-                        .reduce((sum, s) => sum + hoursOn(s, d), 0)
-                        .toFixed(1)}{" "}
-                      h
-                    </td>
-                  ))}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          {!agents.length && <p>No assigned users match this search.</p>}
-          <p className={styles.hint}>
-            {canManage
-              ? "Drafts are private to schedule managers. Published shifts are visible to their assigned employee."
-              : ""}{" "}
-            Overnight shifts appear on each day they touch. Hours reflect time
-            elapsed, including clock changes.
+          )}
+          {selected && (
+            <button
+              disabled={busy || loading}
+              onClick={() => {
+                setLoading(true);
+                void load();
+              }}
+            >
+              Reload
+            </button>
+          )}
+        </div>
+        {loading && <p role="status">Loading schedules…</p>}
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
           </p>
-        </>
-      )}
-      {modal && (
-        <Modal
-          title={
-            modal === "settings"
-              ? "Schedule settings"
-              : modal === "schedule"
-                ? "Create schedule"
-                : modal === "job"
-                  ? "Job list"
-                  : modal === "shift"
-                    ? editing
-                      ? "Edit draft shift"
-                      : "Add draft shift"
-                    : modal === "publish"
-                      ? "Publish draft shifts"
-                      : modal === "archive"
-                        ? "Archive schedule"
-                        : "Restore schedule"
-          }
-          close={close}
-        >
-          <form onSubmit={submit}>
-            <fieldset className={styles.formFields} disabled={busy || uncertain}>
-            {(modal === "schedule" || modal === "settings") && (
-              <>
-                <label>
-                  Schedule name
-                  <input
-                    name="name"
-                    required
-                    maxLength={100}
-                    defaultValue={modal === "settings" ? schedule?.name : ""}
-                  />
-                </label>
-                <label>
-                  Time zone
-                  <input
-                    name="time_zone"
-                    required
-                    defaultValue={
-                      modal === "settings"
-                        ? schedule?.time_zone
-                        : company.time_zone
-                    }
-                    maxLength={100}
-                  />
-                </label>
-                <p>Use an IANA time zone such as Europe/London.</p>
-                {modal === "settings" && (
-                  <p>
-                    Changing the time zone changes the displayed times. Existing
-                    shifts keep their absolute start and end times. Saving
-                    settings does not publish drafts. Users with retained shifts
-                    cannot be removed.
-                  </p>
-                )}
-                <fieldset>
-                  <legend>Assigned users</legend>
-                  {data.agents
-                    .filter(
-                      (a) =>
-                        a.status === "active" ||
-                        (modal === "settings" &&
-                          data.assignments.some(
-                            (r) =>
-                              r.schedule_id === selected && r.agent_id === a.id,
-                          )),
-                    )
-                    .map((a) => (
-                      <label className={styles.checkbox} key={a.id}>
-                        <input
-                          type="checkbox"
-                          name="agent_ids"
-                          value={a.id}
-                          defaultChecked={
-                            modal === "settings" &&
-                            data.assignments.some(
-                              (r) =>
-                                r.schedule_id === selected &&
-                                r.agent_id === a.id,
-                            )
-                          }
-                        />
-                        {a.first_name} {a.last_name}
-                      </label>
-                    ))}
-                </fieldset>
-                <fieldset>
-                  <legend>Schedule administrators</legend>
-                  <p>
-                    Company owners and admins always manage schedules. Select
-                    managers who can also edit this schedule.
-                  </p>
-                  {modal === "settings" &&
-                    data.admins
-                      .filter(
-                        (r) =>
-                          r.schedule_id === selected &&
-                          !data.members.some(
-                            (m) =>
-                              m.user_id === r.user_id && m.role === "manager",
-                          ),
-                      )
-                      .map((r) => (
-                        <p key={r.user_id}>
-                          Existing unavailable administrator retained.
-                          <input
-                            type="hidden"
-                            name="admin_ids"
-                            value={r.user_id}
-                          />
-                        </p>
-                      ))}
-                  {data.members
-                    .filter((m) => m.role === "manager")
-                    .map((m) => (
-                      <label className={styles.checkbox} key={m.user_id}>
-                        <input
-                          type="checkbox"
-                          name="admin_ids"
-                          value={m.user_id}
-                          defaultChecked={
-                            modal === "settings" &&
-                            data.admins.some(
-                              (r) =>
-                                r.schedule_id === selected &&
-                                r.user_id === m.user_id,
-                            )
-                          }
-                        />
-                        {m.display_name}
-                      </label>
-                    ))}
-                </fieldset>
-              </>
-            )}
-            {modal === "job" && (
-              <>
-                <ul className={styles.jobs}>
-                  {jobs.map((j) => (
-                    <li key={j.id}>
-                      <span style={{ backgroundColor: j.color }} />
-                      {j.name}
-                    </li>
-                  ))}
-                </ul>
-                <label>
-                  Job name
-                  <input name="name" required maxLength={100} />
-                </label>
-                <label>
-                  Job color
-                  <input
-                    name="color"
-                    type="color"
-                    defaultValue="#285c4c"
-                    required
-                  />
-                </label>
-              </>
-            )}
-            {modal === "shift" && (
-              <>
-                <p>
-                  Times are in {zone}. Choose the next date for an overnight
-                  shift.
-                </p>
-                <label>
-                  User
-                  <select
-                    name="agent_id"
-                    defaultValue={editing?.agent_id || activeAssigned[0]?.id}
-                    required
-                  >
-                    {activeAssigned.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.first_name} {a.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Job
-                  <select
-                    name="job_id"
-                    defaultValue={editing?.job_id || jobs[0]?.id}
-                    required
-                  >
-                    {jobs.map((j) => (
-                      <option key={j.id} value={j.id}>
-                        {j.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Shift title
-                  <input
-                    name="title"
-                    defaultValue={editing?.title}
-                    maxLength={100}
-                  />
-                </label>
-                <label>
-                  Start
-                  <input
-                    name="starts_at"
-                    type="datetime-local"
-                    required
-                    defaultValue={
-                      editing
-                        ? localDateTime(editing.starts_at, zone)
-                        : day + "T09:00"
-                    }
-                  />
-                </label>
-                <label>
-                  Start clock-change occurrence
-                  <select name="start_occurrence" defaultValue="">
-                    <option value="">Choose if time occurs twice</option>
-                    <option value="earlier">Earlier occurrence</option>
-                    <option value="later">Later occurrence</option>
-                  </select>
-                </label>
-                <label>
-                  End
-                  <input
-                    name="ends_at"
-                    type="datetime-local"
-                    required
-                    defaultValue={
-                      editing
-                        ? localDateTime(editing.ends_at, zone)
-                        : day + "T17:00"
-                    }
-                  />
-                </label>
-                <label>
-                  End clock-change occurrence
-                  <select name="end_occurrence" defaultValue="">
-                    <option value="">Choose if time occurs twice</option>
-                    <option value="earlier">Earlier occurrence</option>
-                    <option value="later">Later occurrence</option>
-                  </select>
-                </label>
-                {overlapWarning && (
-                  <label className={styles.checkbox}>
-                    <input type="checkbox" name="allow_overlap" />I reviewed the
-                    times and allow this user’s overlap.
-                  </label>
-                )}
-              </>
-            )}
-            {modal === "publish" && (
-              <p>
-                Publish all {shifts.filter((s) => s.status === "draft").length}{" "}
-                draft shifts in this schedule, including drafts outside the
-                displayed period? Assigned employees will be able to see them.
-              </p>
-            )}
-            {modal === "archive" && (
-              <p>
-                Move this schedule to Archived? Shifts are retained and remain
-                readable. Retained drafts and published shifts still count in
-                overlap warnings. Managers cannot add or publish shifts until it
-                is restored.
-              </p>
-            )}
-            {modal === "restore" && <p>Return this schedule to Active?</p>}
-            </fieldset>
-            {formError && (
-              <p className={styles.error} role="alert">
-                {formError}
-              </p>
-            )}
-            {uncertain && (
-              <button type="button" disabled={busy} onClick={reviewSavedChanges}>
-                Reload schedules to review
-              </button>
-            )}
-            <div className={styles.modalActions}>
-              <button type="button" disabled={busy || uncertain} onClick={close}>
-                Cancel
+        )}
+        {notice && (
+          <p role="status" className={styles.notice}>
+            {notice}
+          </p>
+        )}
+        {!selected && (
+          <section className={styles.lobbyRegion} aria-label="Schedules">
+            <div
+              role="tablist"
+              aria-label="Schedule status"
+              className={styles.lobbyTabs}
+            >
+              <button
+                role="tab"
+                aria-label="Active"
+                aria-selected={!archived}
+                onClick={() => setArchived(false)}
+              >
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="10" cy="10" r="7.5" />
+                  <path d="m6.5 10 2.2 2.4 4.8-5" />
+                </svg>
+                Active (
+                {loading || error
+                  ? "—"
+                  : data.schedules.filter((s) => s.status === "active").length}
+                )
               </button>
               <button
-                type="submit"
-                disabled={busy || loading || uncertain}
-                className={styles.primary}
+                role="tab"
+                aria-label="Archived"
+                aria-selected={archived}
+                onClick={() => setArchived(true)}
               >
-                {busy
-                  ? "Saving…"
-                  : modal === "shift"
-                    ? "Save draft"
-                    : modal === "job"
-                      ? "Add job"
-                      : modal === "settings"
-                        ? "Save settings"
-                        : modal === "schedule"
-                          ? "Create schedule"
-                          : modal === "publish"
-                            ? "Publish all drafts"
-                            : modal === "archive"
-                              ? "Archive"
-                              : "Restore"}
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M3 3h14v14H3zM3 12h4l1.3 2h3.4l1.3-2h4" />
+                </svg>
+                Archived (
+                {loading || error
+                  ? "—"
+                  : data.schedules.filter((s) => s.status === "archived")
+                      .length}
+                )
               </button>
             </div>
-          </form>
-        </Modal>
-      )}
-    </main>
+            <div
+              className={
+                styles.lobbyPanel + (archived ? " " + styles.archivedPanel : "")
+              }
+            >
+              <div className={styles.lobbyControls}>
+                <button
+                  className={styles.lobbyReload}
+                  disabled={busy || loading}
+                  onClick={() => {
+                    setLoading(true);
+                    void load();
+                  }}
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M16.5 8a6.5 6.5 0 1 0 .2 4M16.5 3.5V8H12" />
+                  </svg>
+                  Reload
+                </button>
+                <div className={styles.lobbySearch}>
+                  <input
+                    type="search"
+                    aria-label="Search schedules"
+                    placeholder="Search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="10.5" cy="10.5" r="7.5" />
+                    <path d="m16 16 5 5" />
+                  </svg>
+                </div>
+                {owner && (
+                  <button
+                    className={styles.lobbyAdd}
+                    aria-label="Create schedule"
+                    disabled={loading || !!error}
+                    onClick={() => open("schedule")}
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="10" r="7.5" />
+                      <path d="M10 6v8m-4-4h8" />
+                    </svg>
+                    Add new
+                  </button>
+                )}
+              </div>
+              <div className={styles.scheduleGrid}>
+                {data.schedules
+                  .filter(
+                    (s) =>
+                      (s.status === "archived") === archived &&
+                      s.name.toLowerCase().includes(query.toLowerCase()),
+                  )
+                  .map((s) => {
+                    const assignedCount = data.assignments.filter(
+                      (a) => a.schedule_id === s.id,
+                    ).length;
+                    const admins = data.members.filter(
+                      (m) =>
+                        ["owner", "admin"].includes(m.role) ||
+                        data.admins.some(
+                          (a) =>
+                            a.schedule_id === s.id && a.user_id === m.user_id,
+                        ),
+                    );
+                    const enter = () => {
+                      changeSchedule(s.id);
+                      setDay(dateInZone(new Date().toISOString(), s.time_zone));
+                    };
+                    return (
+                      <article
+                        className={styles.scheduleCard}
+                        key={s.id}
+                        aria-label={"Schedule " + s.name}
+                      >
+                        <div className={styles.scheduleArt}>
+                          <CalendarArtwork />
+                        </div>
+                        <div className={styles.scheduleBody}>
+                          <p className={styles.scheduleLabel}>Schedule</p>
+                          <h2>
+                            <button
+                              className={styles.scheduleName}
+                              title={s.name}
+                              onClick={enter}
+                            >
+                              {s.name}
+                            </button>
+                          </h2>
+                          <div className={styles.scheduleAssigned}>
+                            <span>Assigned</span>
+                            <span
+                              className={
+                                assignedCount
+                                  ? styles.assignedPill
+                                  : styles.unassigned
+                              }
+                            >
+                              {assignedCount
+                                ? assignedCount +
+                                  " " +
+                                  (assignedCount === 1 ? "user" : "users")
+                                : "Not assigned"}
+                              {!owner && role === "employee" && assignedCount
+                                ? " (your assignment)"
+                                : ""}
+                            </span>
+                          </div>
+                          <div className={styles.scheduleAdmins}>
+                            <span>Admins</span>
+                            {admins.length ? (
+                              <div className={styles.adminAvatars}>
+                                {admins.slice(0, 3).map((a, i) => (
+                                  <span
+                                    key={a.user_id}
+                                    className={styles.adminAvatar}
+                                    data-tone={i}
+                                    role="img"
+                                    aria-label={a.display_name}
+                                    title={a.display_name}
+                                  >
+                                    {initials(a.display_name) || "?"}
+                                  </span>
+                                ))}
+                                {admins.length > 3 && (
+                                  <span
+                                    className={styles.adminMore}
+                                    title={admins
+                                      .map((a) => a.display_name)
+                                      .join(", ")}
+                                  >
+                                    +{admins.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className={styles.unassigned}>
+                                {owner ? "Company owners and admins" : "—"}
+                              </span>
+                            )}
+                          </div>
+                          <span className={styles.scheduleZone}>
+                            {s.time_zone}
+                          </span>
+                        </div>
+                        <div className={styles.scheduleFooter}>
+                          <button
+                            className={styles.accessSchedule}
+                            onClick={enter}
+                            aria-label={"Access schedule " + s.name}
+                          >
+                            Access schedule
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+              </div>
+              {!loading &&
+                !error &&
+                !data.schedules.some(
+                  (s) =>
+                    (s.status === "archived") === archived &&
+                    s.name.toLowerCase().includes(query.toLowerCase()),
+                ) && (
+                  <p className={styles.scheduleEmpty}>
+                    No {archived ? "archived" : "active"} schedules match.
+                  </p>
+                )}
+            </div>
+          </section>
+        )}
+        {schedule && (
+          <>
+            {!supportedRotaZone(requestedZone) && (
+              <p role="alert" className={styles.error}>
+                This schedule’s time zone cannot be displayed safely. Times are
+                shown in UTC and shift editing is disabled. Ask a company owner
+                or admin to choose a supported IANA time zone in Settings.
+              </p>
+            )}
+            <section
+              className={styles.calendarPane}
+              aria-label="Schedule calendar"
+            >
+              <div className={styles.calendarControls}>
+                <div className={styles.calendarViewControls}>
+                  <details className={styles.calendarFilterMenu}>
+                    <summary>
+                      Filters <span aria-hidden="true">⌄</span>
+                    </summary>
+                    <div className={styles.filters}>
+                      <label>
+                        Sort users
+                        <select
+                          value={sort}
+                          onChange={(e) => setSort(e.target.value)}
+                        >
+                          <option value="name">Name</option>
+                          <option value="hours">Hours, highest first</option>
+                        </select>
+                      </label>
+                      <label>
+                        Job
+                        <select
+                          value={jobFilter}
+                          onChange={(e) => setJobFilter(e.target.value)}
+                        >
+                          <option value="">All jobs</option>
+                          {jobs.map((j) => (
+                            <option key={j.id} value={j.id}>
+                              {j.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {canManage && (
+                        <label>
+                          Shift status
+                          <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                          >
+                            <option value="">All shifts</option>
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                  </details>
+                  <div
+                    role="tablist"
+                    aria-label="Calendar view"
+                    className={styles.calendarViewTabs}
+                  >
+                    {(["Day", "Week", "Month"] as const).map((v) => (
+                      <button
+                        key={v}
+                        role="tab"
+                        aria-selected={view === v}
+                        onClick={() => setView(v)}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                  <div className={styles.calendarPeriod}>
+                    <button
+                      aria-label="Previous period"
+                      onClick={() =>
+                        setDay(
+                          view === "Month"
+                            ? new Date(
+                                Date.UTC(
+                                  Number(day.slice(0, 4)),
+                                  Number(day.slice(5, 7)) - 2,
+                                  1,
+                                ),
+                              )
+                                .toISOString()
+                                .slice(0, 10)
+                            : addDays(day, view === "Week" ? -7 : -1),
+                        )
+                      }
+                    >
+                      ‹
+                    </button>
+                    <span>
+                      {days.length > 1
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            timeZone: "UTC",
+                          }).formatRange(
+                            new Date(days[0] + "T12:00:00Z"),
+                            new Date(days[days.length - 1] + "T12:00:00Z"),
+                          )
+                        : new Intl.DateTimeFormat("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            timeZone: "UTC",
+                          }).format(new Date(days[0] + "T12:00:00Z"))}
+                    </span>
+                    <button
+                      aria-label="Next period"
+                      onClick={() =>
+                        setDay(
+                          view === "Month"
+                            ? new Date(
+                                Date.UTC(
+                                  Number(day.slice(0, 4)),
+                                  Number(day.slice(5, 7)),
+                                  1,
+                                ),
+                              )
+                                .toISOString()
+                                .slice(0, 10)
+                            : addDays(day, view === "Week" ? 7 : 1),
+                        )
+                      }
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <label className={styles.calendarDate}>
+                    <span className="sr-only">Date</span>
+                    <input
+                      type="date"
+                      value={day}
+                      required
+                      onChange={(e) => {
+                        if (e.target.value) setDay(e.target.value);
+                      }}
+                    />
+                  </label>
+                  <button onClick={today}>Today</button>
+                </div>
+                <div className={styles.calendarWriteActions}>
+                  {editable && (
+                    <>
+                      <div className={styles.addMenu}>
+                        <button
+                          aria-expanded={addOpen}
+                          disabled={
+                            loading ||
+                            busy ||
+                            !!error ||
+                            !jobs.length ||
+                            !activeAssigned.length
+                          }
+                          onClick={() => setAddOpen(!addOpen)}
+                        >
+                          Add ▾
+                        </button>
+                        {addOpen && (
+                          <div className={styles.addOptions}>
+                            <button
+                              onClick={() => {
+                                setAddOpen(false);
+                                open("shift");
+                              }}
+                            >
+                              Add single shift
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className={styles.primary}
+                        disabled={
+                          loading ||
+                          busy ||
+                          !!error ||
+                          !shifts.some((s) => s.status === "draft")
+                        }
+                        onClick={() => open("publish")}
+                      >
+                        Publish (
+                        {shifts.filter((s) => s.status === "draft").length})
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className={styles.calendarScopeMeta}>
+                {zone} ·{" "}
+                {schedule.status === "archived"
+                  ? "Archived schedule"
+                  : canManage
+                    ? "Manager view"
+                    : "My published shifts"}
+              </p>
+              <div className={styles.tableScroll}>
+                <table
+                  className={styles.calendar}
+                  style={{ minWidth: 192 + days.length * 138 }}
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <span className="sr-only">Users</span>
+                        <div className={styles.calendarUserSearch}>
+                          <input
+                            type="search"
+                            aria-label="Search users"
+                            placeholder="Search users"
+                            value={userQuery}
+                            onChange={(e) => setUserQuery(e.target.value)}
+                          />
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <circle cx="10.5" cy="10.5" r="7.5" />
+                            <path d="m16 16 5 5" />
+                          </svg>
+                        </div>
+                      </th>
+                      {days.map((d) => {
+                        const dayShifts = displayed.filter(
+                            (s) => hoursOn(s, d) > 0,
+                          ),
+                          dayHours = dayShifts.reduce(
+                            (h, s) => h + hoursOn(s, d),
+                            0,
+                          );
+                        return (
+                          <th scope="col" key={d}>
+                            <span className={styles.calendarDay}>
+                              {new Intl.DateTimeFormat("en-GB", {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "2-digit",
+                                timeZone: "UTC",
+                              }).format(new Date(d + "T12:00:00Z"))}
+                            </span>
+                            <div
+                              className={styles.calendarDayTotals}
+                              aria-label={"Daily totals for " + d}
+                            >
+                              <span title={dayHours.toFixed(1) + " hours"}>
+                                <ClockIcon />
+                                {elapsedLabel(dayHours)}
+                              </span>
+                              <span title="Shifts">
+                                <ShiftsIcon />
+                                {dayShifts.length}
+                              </span>
+                              <span title="Users">
+                                <UsersIcon />
+                                {new Set(dayShifts.map((s) => s.agent_id)).size}
+                              </span>
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agents.map((a) => (
+                      <tr key={a.id}>
+                        <th scope="row">
+                          <div className={styles.calendarUser}>
+                            <span
+                              className={styles.calendarUserAvatar}
+                              aria-hidden="true"
+                            >
+                              {initials(a.first_name + " " + a.last_name)}
+                            </span>
+                            <div className={styles.calendarUserText}>
+                              <span title={a.first_name + " " + a.last_name}>
+                                {a.first_name} {a.last_name}
+                              </span>
+                              <small>
+                                <ClockIcon />
+                                {elapsedLabel(
+                                  displayed
+                                    .filter((s) => s.agent_id === a.id)
+                                    .reduce(
+                                      (sum, s) =>
+                                        sum +
+                                        days.reduce(
+                                          (h, d) => h + hoursOn(s, d),
+                                          0,
+                                        ),
+                                      0,
+                                    ),
+                                )}
+                                <ShiftsIcon />
+                                {
+                                  displayed.filter((s) => s.agent_id === a.id)
+                                    .length
+                                }
+                                {a.status !== "active"
+                                  ? " · Archived user"
+                                  : ""}
+                              </small>
+                            </div>
+                          </div>
+                        </th>
+                        {days.map((d) => (
+                          <td key={d}>
+                            {displayed
+                              .filter(
+                                (s) => s.agent_id === a.id && hoursOn(s, d) > 0,
+                              )
+                              .map((s) => {
+                                const job = jobs.find((j) => j.id === s.job_id);
+                                return (
+                                  <button
+                                    key={s.id}
+                                    className={styles.shift}
+                                    style={{
+                                      backgroundColor:
+                                        s.status === "draft"
+                                          ? "#fff"
+                                          : job?.color,
+                                      color:
+                                        s.status === "draft"
+                                          ? "#4b5358"
+                                          : job
+                                            ? jobInk(job.color)
+                                            : undefined,
+                                      borderColor: job?.color,
+                                      borderStyle: "solid",
+                                    }}
+                                    disabled={
+                                      !editable ||
+                                      loading ||
+                                      busy ||
+                                      !!error ||
+                                      s.status === "published"
+                                    }
+                                    onClick={() => open("shift", s)}
+                                    aria-label={`${s.status === "draft" ? "Edit draft" : "Published"} ${s.title || job?.name} ${a.first_name} ${a.last_name}`}
+                                  >
+                                    <strong>
+                                      {localDateTime(s.starts_at, zone).slice(
+                                        11,
+                                      )}{" "}
+                                      –{" "}
+                                      {localDateTime(s.ends_at, zone).slice(11)}
+                                      {dateInZone(s.starts_at, zone) !==
+                                      dateInZone(s.ends_at, zone)
+                                        ? " (overnight)"
+                                        : ""}
+                                    </strong>
+                                    <span>{s.title || job?.name}</span>
+                                    <small className="sr-only">
+                                      {job?.name} ·{" "}
+                                      {s.status === "draft"
+                                        ? "Draft"
+                                        : "Published"}{" "}
+                                      · {hoursOn(s, d).toFixed(1)} h today
+                                    </small>
+                                  </button>
+                                );
+                              })}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div
+                className={styles.calendarSummary}
+                aria-label="Period summary"
+              >
+                <strong>
+                  {view === "Week"
+                    ? "Weekly"
+                    : view === "Month"
+                      ? "Monthly"
+                      : "Daily"}{" "}
+                  totals
+                </strong>
+                <span>
+                  <ClockIcon />
+                  Hours <b>{hours.toFixed(1)} hours</b>
+                </span>
+                <span>
+                  <ShiftsIcon />
+                  Shifts <b>{displayed.length} shifts</b>
+                </span>
+                <span>
+                  <UsersIcon />
+                  Users{" "}
+                  <b>{new Set(displayed.map((s) => s.agent_id)).size} users</b>
+                </span>
+                <span className="sr-only">
+                  Visible {view.toLowerCase()} totals · elapsed time
+                </span>
+              </div>
+              {!agents.length && <p>No assigned users match this search.</p>}
+            </section>
+            <p className={styles.hint}>
+              {canManage
+                ? "Drafts are private to schedule managers. Published shifts are visible to their assigned employee."
+                : ""}{" "}
+              Overnight shifts appear on each day they touch. Hours reflect time
+              elapsed, including clock changes.
+            </p>
+          </>
+        )}
+        {modal && (
+          <Modal
+            title={
+              modal === "settings"
+                ? "Schedule settings"
+                : modal === "schedule"
+                  ? "Create schedule"
+                  : modal === "job"
+                    ? "Job list"
+                    : modal === "shift"
+                      ? editing
+                        ? "Edit draft shift"
+                        : "Add draft shift"
+                      : modal === "publish"
+                        ? "Publish draft shifts"
+                        : modal === "archive"
+                          ? "Archive schedule"
+                          : "Restore schedule"
+            }
+            close={close}
+          >
+            <form onSubmit={submit}>
+              <fieldset
+                className={styles.formFields}
+                disabled={busy || uncertain}
+              >
+                {(modal === "schedule" || modal === "settings") && (
+                  <>
+                    <label>
+                      Schedule name
+                      <input
+                        name="name"
+                        required
+                        maxLength={100}
+                        defaultValue={
+                          modal === "settings" ? schedule?.name : ""
+                        }
+                      />
+                    </label>
+                    <label>
+                      Time zone
+                      <input
+                        name="time_zone"
+                        required
+                        defaultValue={
+                          modal === "settings"
+                            ? schedule?.time_zone
+                            : company.time_zone
+                        }
+                        maxLength={100}
+                      />
+                    </label>
+                    <p>Use an IANA time zone such as Europe/London.</p>
+                    {modal === "settings" && (
+                      <p>
+                        Changing the time zone changes the displayed times.
+                        Existing shifts keep their absolute start and end times.
+                        Saving settings does not publish drafts. Users with
+                        retained shifts cannot be removed.
+                      </p>
+                    )}
+                    <fieldset>
+                      <legend>Assigned users</legend>
+                      {data.agents
+                        .filter(
+                          (a) =>
+                            a.status === "active" ||
+                            (modal === "settings" &&
+                              data.assignments.some(
+                                (r) =>
+                                  r.schedule_id === selected &&
+                                  r.agent_id === a.id,
+                              )),
+                        )
+                        .map((a) => (
+                          <label className={styles.checkbox} key={a.id}>
+                            <input
+                              type="checkbox"
+                              name="agent_ids"
+                              value={a.id}
+                              defaultChecked={
+                                modal === "settings" &&
+                                data.assignments.some(
+                                  (r) =>
+                                    r.schedule_id === selected &&
+                                    r.agent_id === a.id,
+                                )
+                              }
+                            />
+                            {a.first_name} {a.last_name}
+                          </label>
+                        ))}
+                    </fieldset>
+                    <fieldset>
+                      <legend>Schedule administrators</legend>
+                      <p>
+                        Company owners and admins always manage schedules.
+                        Select managers who can also edit this schedule.
+                      </p>
+                      {modal === "settings" &&
+                        data.admins
+                          .filter(
+                            (r) =>
+                              r.schedule_id === selected &&
+                              !data.members.some(
+                                (m) =>
+                                  m.user_id === r.user_id &&
+                                  m.role === "manager",
+                              ),
+                          )
+                          .map((r) => (
+                            <p key={r.user_id}>
+                              Existing unavailable administrator retained.
+                              <input
+                                type="hidden"
+                                name="admin_ids"
+                                value={r.user_id}
+                              />
+                            </p>
+                          ))}
+                      {data.members
+                        .filter((m) => m.role === "manager")
+                        .map((m) => (
+                          <label className={styles.checkbox} key={m.user_id}>
+                            <input
+                              type="checkbox"
+                              name="admin_ids"
+                              value={m.user_id}
+                              defaultChecked={
+                                modal === "settings" &&
+                                data.admins.some(
+                                  (r) =>
+                                    r.schedule_id === selected &&
+                                    r.user_id === m.user_id,
+                                )
+                              }
+                            />
+                            {m.display_name}
+                          </label>
+                        ))}
+                    </fieldset>
+                  </>
+                )}
+                {modal === "job" && (
+                  <>
+                    <ul className={styles.jobs}>
+                      {jobs.map((j) => (
+                        <li key={j.id}>
+                          <span style={{ backgroundColor: j.color }} />
+                          {j.name}
+                        </li>
+                      ))}
+                    </ul>
+                    <label>
+                      Job name
+                      <input name="name" required maxLength={100} />
+                    </label>
+                    <label>
+                      Job color
+                      <input
+                        name="color"
+                        type="color"
+                        defaultValue="#285c4c"
+                        required
+                      />
+                    </label>
+                  </>
+                )}
+                {modal === "shift" && (
+                  <>
+                    <p>
+                      Times are in {zone}. Choose the next date for an overnight
+                      shift.
+                    </p>
+                    <label>
+                      User
+                      <select
+                        name="agent_id"
+                        defaultValue={
+                          editing?.agent_id || activeAssigned[0]?.id
+                        }
+                        required
+                      >
+                        {activeAssigned.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.first_name} {a.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Job
+                      <select
+                        name="job_id"
+                        defaultValue={editing?.job_id || jobs[0]?.id}
+                        required
+                      >
+                        {jobs.map((j) => (
+                          <option key={j.id} value={j.id}>
+                            {j.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Shift title
+                      <input
+                        name="title"
+                        defaultValue={editing?.title}
+                        maxLength={100}
+                      />
+                    </label>
+                    <label>
+                      Start
+                      <input
+                        name="starts_at"
+                        type="datetime-local"
+                        required
+                        defaultValue={
+                          editing
+                            ? localDateTime(editing.starts_at, zone)
+                            : day + "T09:00"
+                        }
+                      />
+                    </label>
+                    <label>
+                      Start clock-change occurrence
+                      <select name="start_occurrence" defaultValue="">
+                        <option value="">Choose if time occurs twice</option>
+                        <option value="earlier">Earlier occurrence</option>
+                        <option value="later">Later occurrence</option>
+                      </select>
+                    </label>
+                    <label>
+                      End
+                      <input
+                        name="ends_at"
+                        type="datetime-local"
+                        required
+                        defaultValue={
+                          editing
+                            ? localDateTime(editing.ends_at, zone)
+                            : day + "T17:00"
+                        }
+                      />
+                    </label>
+                    <label>
+                      End clock-change occurrence
+                      <select name="end_occurrence" defaultValue="">
+                        <option value="">Choose if time occurs twice</option>
+                        <option value="earlier">Earlier occurrence</option>
+                        <option value="later">Later occurrence</option>
+                      </select>
+                    </label>
+                    {overlapWarning && (
+                      <label className={styles.checkbox}>
+                        <input type="checkbox" name="allow_overlap" />I reviewed
+                        the times and allow this user’s overlap.
+                      </label>
+                    )}
+                  </>
+                )}
+                {modal === "publish" && (
+                  <p>
+                    Publish all{" "}
+                    {shifts.filter((s) => s.status === "draft").length} draft
+                    shifts in this schedule, including drafts outside the
+                    displayed period? Assigned employees will be able to see
+                    them.
+                  </p>
+                )}
+                {modal === "archive" && (
+                  <p>
+                    Move this schedule to Archived? Shifts are retained and
+                    remain readable. Retained drafts and published shifts still
+                    count in overlap warnings. Managers cannot add or publish
+                    shifts until it is restored.
+                  </p>
+                )}
+                {modal === "restore" && <p>Return this schedule to Active?</p>}
+              </fieldset>
+              {formError && (
+                <p className={styles.error} role="alert">
+                  {formError}
+                </p>
+              )}
+              {uncertain && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={reviewSavedChanges}
+                >
+                  Reload schedules to review
+                </button>
+              )}
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  disabled={busy || uncertain}
+                  onClick={close}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy || loading || uncertain}
+                  className={styles.primary}
+                >
+                  {busy
+                    ? "Saving…"
+                    : modal === "shift"
+                      ? "Save draft"
+                      : modal === "job"
+                        ? "Add job"
+                        : modal === "settings"
+                          ? "Save settings"
+                          : modal === "schedule"
+                            ? "Create schedule"
+                            : modal === "publish"
+                              ? "Publish all drafts"
+                              : modal === "archive"
+                                ? "Archive"
+                                : "Restore"}
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+      </main>
     </AppShell>
   );
 }
