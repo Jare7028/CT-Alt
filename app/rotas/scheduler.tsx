@@ -78,7 +78,7 @@ function UsersIcon() {
   );
 }
 function elapsedLabel(hours: number) {
-  const minutes = Math.round(hours * 60);
+  const minutes = Math.floor(Math.round(hours * 3_600_000) / 60_000);
   return (
     Math.floor(minutes / 60)
       .toString()
@@ -1319,7 +1319,7 @@ export default function Scheduler({
                               className={styles.calendarDayTotals}
                               aria-label={"Daily totals for " + d}
                             >
-                              <span title={dayHours.toFixed(1) + " hours"}>
+                              <span title={elapsedLabel(dayHours)}>
                                 <ClockIcon />
                                 {elapsedLabel(dayHours)}
                               </span>
@@ -1439,7 +1439,7 @@ export default function Scheduler({
                                       {s.status === "draft"
                                         ? "Draft"
                                         : "Published"}{" "}
-                                      · {hoursOn(s, d).toFixed(1)} h today
+                                      · {elapsedLabel(hoursOn(s, d))} today
                                     </small>
                                   </button>
                                 );
@@ -1465,7 +1465,7 @@ export default function Scheduler({
                 </strong>
                 <span>
                   <ClockIcon />
-                  Hours <b>{hours.toFixed(1)} hours</b>
+                  Hours <b>{elapsedLabel(hours)}</b>
                 </span>
                 <span>
                   <ShiftsIcon />

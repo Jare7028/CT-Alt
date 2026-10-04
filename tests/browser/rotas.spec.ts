@@ -80,7 +80,7 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   await dialog.getByLabel("Shift title").fill("Overnight care");
   await dialog.getByRole("button", { name: "Save draft" }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByLabel("Period summary")).toContainText("9.0 hours");
+  await expect(page.getByLabel("Period summary")).toContainText("09:00");
   await expect(
     page.getByRole("button", { name: /Edit draft Overnight care/ }),
   ).toHaveCount(2);
@@ -194,7 +194,7 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   ).toBeVisible();
   await employee.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(employee.getByLabel("Period summary")).toContainText(
-    "9.0 hours",
+    "09:00",
   );
   await expect(
     employee.getByRole("button", { name: /Published Reviewed overnight care/ }),
@@ -216,16 +216,16 @@ test("owner creates drafts; manager publishes; employee sees only published own 
   ).toHaveCount(0);
   await employee.getByRole("tab", { name: "Day", exact: true }).click();
   await expect(employee.getByLabel("Period summary")).toContainText(
-    "1.0 hours",
+    "01:00",
   );
   await employee.getByRole("button", { name: "Next period" }).click();
   await expect(employee.getByLabel("Period summary")).toContainText(
-    "8.0 hours",
+    "08:00",
   );
   await employee.getByRole("tab", { name: "Month", exact: true }).click();
   await expect(employee.getByRole("columnheader")).toHaveCount(32);
   await expect(employee.getByLabel("Period summary")).toContainText(
-    "9.0 hours",
+    "09:00",
   );
   const stale = await page.request.post("/api/rotas", {
     headers: { Origin: "http://127.0.0.1:5180" },

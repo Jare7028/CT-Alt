@@ -301,7 +301,7 @@ export default function ShiftTemplates({
         throw Error(
           "Choose a date giving more than zero and no more than 24 elapsed hours.",
         );
-      preview = `${localDateTime(starts, zone)} – ${localDateTime(ends, zone)} · ${hours} elapsed hours · ${starts} → ${ends}`;
+      preview = `${localDateTime(starts, zone)} – ${localDateTime(ends, zone)} · ${clock(Math.floor((Date.parse(ends) - Date.parse(starts)) / 60_000))}`;
     } catch (e) {
       previewError =
         e instanceof Error ? e.message : "Choose valid shift times.";
