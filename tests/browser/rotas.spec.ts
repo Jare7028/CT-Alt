@@ -181,15 +181,16 @@ test("owner creates drafts; manager publishes; employee sees only published own 
     manager.getByRole("button", { name: "Create schedule", exact: true }),
   ).toHaveCount(0);
   await manager.getByRole("button", { name, exact: true }).click();
+  await manager.getByLabel("Date", { exact: true }).fill("2026-10-24");
   await manager
     .getByRole("button", { name: "Publish (2)", exact: true })
     .click();
   await manager
     .getByRole("dialog")
-    .getByRole("button", { name: "Publish all drafts" })
+    .getByRole("button", { name: "Publish displayed drafts" })
     .click();
   await expect(
-    manager.getByRole("status").filter({ hasText: "Published." }),
+    manager.getByRole("status").filter({ hasText: "Published 2 displayed draft shifts. Assigned employees can now see them." }),
   ).toBeVisible();
   await employee.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(employee.getByLabel("Period summary")).toContainText(
