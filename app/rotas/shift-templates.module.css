@@ -1,0 +1,172 @@
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: 340px;
+  max-width: calc(100vw - 20px);
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-left: 1px solid #dddfe1;
+  padding: 20px;
+  background: white;
+  color: #263746;
+  box-shadow: -8px 0 28px #2637461a;
+  font: 14px inherit;
+  overflow: auto;
+}
+.drawer::backdrop {
+  background: #14283e35;
+}
+.drawer header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.drawer h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.drawer h3 {
+  font-size: 15px;
+  margin: 8px 0;
+}
+.drawer button,
+.drawer input,
+.drawer select {
+  font: inherit;
+  border: 1px solid #dddfe1;
+  border-radius: 7px;
+  padding: 9px;
+  background: white;
+  color: #263746;
+  max-width: 100%;
+}
+.drawer button {
+  cursor: pointer;
+}
+.drawer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.drawer label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 12px 0;
+}
+.drawer .checkbox {
+  flex-direction: row;
+  align-items: start;
+}
+.drawer fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.drawer fieldset p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #68788a;
+}
+.zone {
+  color: #89939d;
+  font-size: 12px;
+}
+.search input {
+  width: 100%;
+}
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+.card {
+  border: 2px solid;
+  border-radius: 9px;
+  padding: 12px;
+}
+.card p {
+  margin: 7px 0;
+  font-size: 12px;
+}
+.card > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.card details {
+  position: relative;
+}
+.card summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 9px;
+}
+.card details[open] {
+  background: #f6f9fc;
+}
+.card details button {
+  display: block;
+  width: 100%;
+  margin: 3px 0;
+}
+.drawer footer {
+  position: sticky;
+  bottom: -20px;
+  background: white;
+  padding: 16px 0;
+  margin-top: 20px;
+  border-top: 1px solid #e6e8eb;
+}
+.drawer .primary {
+  background: #2998ff;
+  border-color: #2998ff;
+  color: white;
+}
+.drawer footer button {
+  width: 100%;
+  border-radius: 22px;
+}
+.error {
+  background: #fff1ef;
+  border: 1px solid #efc6c0;
+  padding: 10px;
+  color: #8d2020;
+  font-size: 13px;
+}
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.drawer :focus-visible {
+  outline: 2px solid #1265ce;
+  outline-offset: 3px;
+}
+
+.drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+.drawer > header,
+.drawer > label,
+.drawer > button,
+.drawer > p,
+.drawer > footer {
+  flex-shrink: 0;
+}
+.cards {
+  flex: 1;
+}
+.card {
+  flex-shrink: 0;
+}
+.drawer footer {
+  margin-top: auto;
+}

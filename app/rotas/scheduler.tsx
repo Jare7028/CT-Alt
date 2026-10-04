@@ -1,5 +1,6 @@
 "use client";
 import AppShell from "../components/app-shell";
+import ShiftTemplates from "./shift-templates";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -159,7 +160,13 @@ export default function Scheduler({
   const router = useRouter();
   const [data, setData] = useState<RotaData>(empty);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [rotaBusy, setBusy] = useState(false);
+  const [templateBusy, setTemplateBusy] = useState(false);
+  const busy = rotaBusy || templateBusy;
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templateSource, setTemplateSource] = useState<RotaShift | null>(null);
+  const accessEpoch = useRef(0);
+  const templateScope = useRef("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState("");
@@ -180,6 +187,7 @@ export default function Scheduler({
     | "settings"
     | "job"
     | "shift"
+    | "details"
     | "publish"
     | "archive"
     | "restore"
@@ -191,14 +199,66 @@ export default function Scheduler({
   const [overlapWarning, setOverlapWarning] = useState(false);
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      const generation = accessEpoch.current;
       try {
         const response = await fetch("/api/rotas?tenantId=" + company.id, {
           cache: "no-store",
           signal,
         });
         const json = await response.json();
+        if (signal?.aborted || generation !== accessEpoch.current) return false;
+        if (response.status === 401 || response.status === 403) {
+          accessEpoch.current++;
+          setData(empty);
+          setTemplatesOpen(false);
+          setTemplateSource(null);
+          setModal("");
+        }
         if (!response.ok) throw new Error(json.error);
         setData(json);
+        const currentCanManage = (scheduleId: string) =>
+          (json.schedules as RotaData["schedules"]).some(
+            (item) => item.id === scheduleId,
+          ) &&
+          (["owner", "admin"].includes(role) ||
+            (role === "manager" &&
+              (json.admins as RotaData["admins"]).some(
+                (grant) =>
+                  grant.schedule_id === scheduleId && grant.user_id === actorId,
+              )));
+        let restored = false;
+        try {
+          for (const available of json.schedules as RotaData["schedules"]) {
+            if (
+              currentCanManage(available.id) &&
+              localStorage.getItem(
+                `ct-alt:rota-template-operation:v1:${actorId}:${company.id}:${available.id}`,
+              )
+            ) {
+              templateScope.current = available.id;
+              setSelected(available.id);
+              setTemplateSource(null);
+              setTemplatesOpen(true);
+              setTemplateBusy(true);
+              restored = true;
+              break;
+            }
+          }
+        } catch {
+          // The drawer prevents new template mutations when a recovery marker
+          // cannot be persisted; unrelated scheduling remains available.
+        }
+        if (!restored) {
+          setTemplateBusy(false);
+          if (
+            templateScope.current &&
+            !currentCanManage(templateScope.current)
+          ) {
+            templateScope.current = "";
+            setTemplatesOpen(false);
+            setTemplateSource(null);
+          }
+        }
         setError("");
         return true;
       } catch (e) {
@@ -211,7 +271,7 @@ export default function Scheduler({
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [company.id],
+    [company.id, actorId, role],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -308,7 +368,7 @@ export default function Scheduler({
     if (!writeLock.current && !uncertain) setModal("");
   };
   async function save(change: Record<string, unknown>) {
-    if (writeLock.current || uncertain) return;
+    if (writeLock.current || uncertain || templateBusy) return;
     writeLock.current = true;
     setBusy(true);
     setFormError("");
@@ -387,7 +447,7 @@ export default function Scheduler({
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (writeLock.current || uncertain) return;
+    if (writeLock.current || uncertain || templateBusy) return;
     const form = new FormData(event.currentTarget);
     const text = (key: string) => String(form.get(key) || "");
     const base = { schedule_id: selected, revision: schedule?.revision };
@@ -444,8 +504,40 @@ export default function Scheduler({
     if (["publish", "archive", "restore"].includes(modal))
       void save({ action: modal, ...base });
   }
+  const templateDenied = useCallback(() => {
+    accessEpoch.current++;
+    templateScope.current = "";
+    setTemplateBusy(false);
+    setData(empty);
+    setTemplatesOpen(false);
+    setTemplateSource(null);
+    setModal("");
+    setError(
+      "Scheduling access changed. Reload to check your current permissions.",
+    );
+  }, []);
+  const templateApplied = useCallback((date: string, message: string) => {
+    setDay(date);
+    setNotice(message);
+  }, []);
+  const templateClose = useCallback(() => {
+    templateScope.current = "";
+    setTemplatesOpen(false);
+    setTemplateSource(null);
+  }, []);
+  const captureTemplate = () => {
+    if (!editing || busy || uncertain) return;
+    templateScope.current = selected;
+    setTemplateSource(editing);
+    setModal("");
+    setTemplatesOpen(true);
+  };
   const today = () => setDay(dateInZone(new Date().toISOString(), zone));
   const changeSchedule = (id: string) => {
+    templateScope.current = "";
+    setTemplatesOpen(false);
+    setTemplateSource(null);
+    setTemplateBusy(false);
     setSelected(id);
     setJobFilter("");
     setStatusFilter("");
@@ -936,6 +1028,19 @@ export default function Scheduler({
                   <button onClick={today}>Today</button>
                 </div>
                 <div className={styles.calendarWriteActions}>
+                  {canManage && (
+                    <button
+                      id="shift-templates-trigger"
+                      disabled={loading || busy || uncertain || !!error}
+                      onClick={() => {
+                        templateScope.current = selected;
+                        setTemplateSource(null);
+                        setTemplatesOpen(true);
+                      }}
+                    >
+                      Templates
+                    </button>
+                  )}
                   {editable && (
                     <>
                       <div className={styles.addMenu}>
@@ -1126,13 +1231,20 @@ export default function Scheduler({
                                       borderStyle: "solid",
                                     }}
                                     disabled={
-                                      !editable ||
+                                      !canManage ||
                                       loading ||
                                       busy ||
                                       !!error ||
-                                      s.status === "published"
+                                      (s.status === "draft" && !editable)
                                     }
-                                    onClick={() => open("shift", s)}
+                                    onClick={() =>
+                                      open(
+                                        s.status === "published"
+                                          ? "details"
+                                          : "shift",
+                                        s,
+                                      )
+                                    }
                                     aria-label={`${s.status === "draft" ? "Edit draft" : "Published"} ${s.title || job?.name} ${a.first_name} ${a.last_name}`}
                                   >
                                     <strong>
@@ -1204,6 +1316,23 @@ export default function Scheduler({
             </p>
           </>
         )}
+        {templatesOpen && schedule && canManage && (
+          <ShiftTemplates
+            key={company.id + actorId + schedule.id}
+            tenantId={company.id}
+            actorId={actorId}
+            schedule={schedule}
+            jobs={jobs}
+            agents={activeAssigned}
+            day={day}
+            source={templateSource}
+            close={templateClose}
+            reload={load}
+            applied={templateApplied}
+            denied={templateDenied}
+            locked={setTemplateBusy}
+          />
+        )}
         {modal && (
           <Modal
             title={
@@ -1217,11 +1346,13 @@ export default function Scheduler({
                       ? editing
                         ? "Edit draft shift"
                         : "Add draft shift"
-                      : modal === "publish"
-                        ? "Publish draft shifts"
-                        : modal === "archive"
-                          ? "Archive schedule"
-                          : "Restore schedule"
+                      : modal === "details"
+                        ? "Published shift details"
+                        : modal === "publish"
+                          ? "Publish draft shifts"
+                          : modal === "archive"
+                            ? "Archive schedule"
+                            : "Restore schedule"
             }
             close={close}
           >
@@ -1466,6 +1597,40 @@ export default function Scheduler({
                     )}
                   </>
                 )}
+                {modal === "details" && editing && (
+                  <>
+                    <p>Published · {zone}</p>
+                    <p>
+                      {editing.title ||
+                        jobs.find((j) => j.id === editing.job_id)?.name}
+                    </p>
+                    <p>
+                      {localDateTime(editing.starts_at, zone)} –{" "}
+                      {localDateTime(editing.ends_at, zone)}
+                    </p>
+                    <p>
+                      {
+                        assigned.find((a) => a.id === editing.agent_id)
+                          ?.first_name
+                      }{" "}
+                      {
+                        assigned.find((a) => a.id === editing.agent_id)
+                          ?.last_name
+                      }
+                    </p>
+                  </>
+                )}
+                {(modal === "details" || modal === "shift") &&
+                  editing &&
+                  canManage && (
+                    <button
+                      type="button"
+                      disabled={!editable || busy || uncertain}
+                      onClick={captureTemplate}
+                    >
+                      Save as template from saved shift
+                    </button>
+                  )}
                 {modal === "publish" && (
                   <p>
                     Publish all{" "}
@@ -1507,27 +1672,29 @@ export default function Scheduler({
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={busy || loading || uncertain}
-                  className={styles.primary}
-                >
-                  {busy
-                    ? "Saving…"
-                    : modal === "shift"
-                      ? "Save draft"
-                      : modal === "job"
-                        ? "Add job"
-                        : modal === "settings"
-                          ? "Save settings"
-                          : modal === "schedule"
-                            ? "Create schedule"
-                            : modal === "publish"
-                              ? "Publish all drafts"
-                              : modal === "archive"
-                                ? "Archive"
-                                : "Restore"}
-                </button>
+                {modal !== "details" && (
+                  <button
+                    type="submit"
+                    disabled={busy || loading || uncertain}
+                    className={styles.primary}
+                  >
+                    {busy
+                      ? "Saving…"
+                      : modal === "shift"
+                        ? "Save draft"
+                        : modal === "job"
+                          ? "Add job"
+                          : modal === "settings"
+                            ? "Save settings"
+                            : modal === "schedule"
+                              ? "Create schedule"
+                              : modal === "publish"
+                                ? "Publish all drafts"
+                                : modal === "archive"
+                                  ? "Archive"
+                                  : "Restore"}
+                  </button>
+                )}
               </div>
             </form>
           </Modal>

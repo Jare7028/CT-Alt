@@ -1,5 +1,5 @@
-import {verifyKnowledgeFileBaselines} from './knowledge-base-files-readiness.mjs';
-verifyKnowledgeFileBaselines();
+import {verifyRotaTemplateBaselines} from './knowledge-base-files-readiness.mjs';
+verifyRotaTemplateBaselines();
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -7,9 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const diagnosticDesktop = process.argv.slice(2).length === 1 && process.argv[2] === '--diagnostic-desktop';
-const diagnosticRecovery = process.argv.slice(2).length === 1 && process.argv[2] === '--diagnostic-recovery';
-if(process.argv.length > 2 && !diagnosticDesktop && !diagnosticRecovery) throw Error('Only the bounded desktop diagnostic flag is supported.');
+if(process.argv.length>2)throw Error('No arguments are supported.');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (realpathSync(process.cwd()) !== realpathSync(root) || JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).name !== 'ct-alt') throw Error('Run only from this independent CT Alt repository.');
 const remote = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: root, encoding: 'utf8' });
@@ -32,7 +30,7 @@ function run(args, env) {
   command = child;
   return new Promise((resolve, reject) => {
     child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve() : reject(Error('Requests acceptance command failed.')));
+    child.on('exit', code => code === 0 ? resolve() : reject(Error('Shift Templates acceptance command failed.')));
   });
 }
 async function stop(child) {
@@ -72,19 +70,13 @@ try {
   if (!ready) throw Error('Owned fixture startup timed out.');
   const settings = JSON.parse(readFileSync(fixtures, 'utf8'));
   if (settings.url !== 'http://127.0.0.1:54821' || !/^[0-9a-f]{8}$/.test(settings.fixtureLabel) || typeof settings.key !== 'string') throw Error('Wrong owned fixture settings.');
-  const files = (await import('node:fs')).readdirSync(resolve(root,'supabase/migrations')).filter(name=>name.endsWith('.sql'));
-  if(files.length!==22 || files.filter(name=>name.endsWith('_requests_board.sql')).length!==1 || files.filter(name=>name.endsWith('_knowledge_base_files.sql')).length!==1 || files.filter(name=>name.endsWith('_rota_shift_templates.sql')).length!==1) throw Error('Expected21 applied baselines including Files plus one Templates candidate.');
-  const ownership=spawnSync('docker',['inspect','supabase_db_ct-alt-independent','--format','{{index .Config.Labels "ct-alt.test"}}'],{encoding:'utf8'});
-  if(ownership.status!==0 || ownership.stdout.trim()!==settings.fixtureLabel) throw Error('Wrong owned Requests fixture database.');
-  const installed=spawnSync('docker',['exec','-i','supabase_db_ct-alt-independent','psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-U','postgres'],{input:"select to_regclass('public.work_requests')is not null and to_regclass('workforce_private.request_operations')is not null and to_regprocedure('public.save_request(uuid,uuid,text)')is not null;",encoding:'utf8'});
-  if(installed.status!==0 || installed.stdout.trim()!=='t') throw Error('Requests candidate did not load into owned fixture.');
-  const configPath = `/tmp/ct-alt-requests-auth-${settings.fixtureLabel}.config.mjs`;
+  const configPath = `/tmp/ct-alt-rota-templates-auth-${settings.fixtureLabel}.config.mjs`;
   // This dedicated test is outside the shared tests/browser configuration.
-  writeFileSync(configPath, `export default ${JSON.stringify({ testDir: resolve(root, 'tests/browser'), testMatch: 'requests.spec.ts', workers: 1, retries: 0, outputDir: resolve(root, 'test-results'), use: { baseURL: 'http://127.0.0.1:5180', headless: true, viewport: { width: 1444, height: 960 }, launchOptions: { executablePath: process.env.CT_ALT_CHROMIUM || '/usr/bin/chromium', args: ['--no-sandbox'] } } })};
+  writeFileSync(configPath, `export default ${JSON.stringify({ testDir: resolve(root, 'tests/browser'), testMatch: 'rota-templates.spec.ts', workers: 1, retries: 0, outputDir: resolve(root, 'test-results'), use: { baseURL: 'http://127.0.0.1:5180', headless: true, viewport: { width: 1444, height: 960 }, launchOptions: { executablePath: process.env.CT_ALT_CHROMIUM || '/usr/bin/chromium', args: ['--no-sandbox'] } } })};
 `, { mode: 0o600, flag: 'wx' });
   config = configPath;
   const syntax = spawnSync(process.execPath, ['--check', configPath], { cwd: root, encoding: 'utf8' });
-  if (syntax.error || syntax.status !== 0) throw Error('Generated Requests browser configuration is invalid: ' + (syntax.error?.message || syntax.stderr));
+  if (syntax.error || syntax.status !== 0) throw Error('Generated Shift Templates browser configuration is invalid: ' + (syntax.error?.message || syntax.stderr));
   const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: settings.url, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: settings.key, NEXT_TELEMETRY_DISABLED: '1' };
   await run(['node_modules/next/dist/bin/next', 'build'], env);
   server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', '5180'], { cwd: root, stdio: 'inherit', env });
@@ -95,7 +87,7 @@ try {
     await delay(250);
   }
   if (!ready) throw Error('Owned application startup timed out.');
-  await run(['node_modules/@playwright/test/cli.js', 'test', '--config', config, ...(diagnosticDesktop ? ['--grep', 'signed roles see|exact counts and literal|desktop create/edit|held real POST'] : diagnosticRecovery ? ['--grep','held real POST'] : [])], env);
+  await run(['node_modules/@playwright/test/cli.js', 'test', '--config', config], env);
 } finally {
   await cleanup();
 }

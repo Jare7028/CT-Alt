@@ -1,6 +1,6 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-// Exact immutable released main d9fe304 history. This is local readiness only.
+// Exact immutable released Files main 84dedff history. This is local readiness only.
 const baselines={
   "20261003143058_workforce_foundation.sql": "712b7a10199b2792b8ae78cb84e3607ac8e39b3657b222bb0f13a9b3abae956b",
   "20261003153745_agents_records.sql": "a69f256d48a23529d5ffe59cc31e61e35f25a508e6a69f05b05b7c92fa14bd03",
@@ -21,14 +21,17 @@ const baselines={
   "20261004034015_knowledge_base.sql": "9592218cee4d5cd5225a420f28728a6663060938c4af81224d587deeebb018c4",
   "20261004063200_desktop_forms.sql": "5493dd3385dc0d89acb023d9ba250ab767a1984423290bc8b23bad4ab7167875",
   "20261004080045_forms_reporting.sql": "15669683f16ccb737e0b6e703f26f845894b749bd9d26b3196f41bacca493e68",
-  "20261004114249_requests_board.sql": "eeb150cf9a54609d447d7c0b1b55ab2ea830cc24b8d6a9a520ff4b699b7320aa"
+  "20261004114249_requests_board.sql": "eeb150cf9a54609d447d7c0b1b55ab2ea830cc24b8d6a9a520ff4b699b7320aa",
+  "20261004135337_knowledge_base_files.sql": "2a09283766ee33a481e0e830ac3ea6e7e27a144ceb24c3b31fbcde47890bec36"
 };
-const candidateHash='2a09283766ee33a481e0e830ac3ea6e7e27a144ceb24c3b31fbcde47890bec36';
-export function verifyKnowledgeFileBaselines(){
+const templateHash='3df0b53fc93c2a76d3f987bfc7a6b19a031198e836f00018eb1a92612eaf20e7';
+export function verifyKnowledgeFileBaselines(requireTemplates=false){
  const dir=new URL('../supabase/migrations/',import.meta.url),names=readdirSync(dir).filter(name=>name.endsWith('.sql')).sort();
- const candidates=names.filter(name=>/^\d{14}_knowledge_base_files\.sql$/.test(name));
- if(candidates.length!==1)throw Error('Expected exactly one timestamped Private Files candidate.');
- const candidate=candidates[0],expected=[...Object.keys(baselines),candidate].sort();
- if(JSON.stringify(names)!==JSON.stringify(expected))throw Error('Private Files requires exact20 released baselines plus the reviewed Files candidate.');
- for(const[name,hash]of Object.entries({...baselines,[candidate]:candidateHash})){if(createHash('sha256').update(readFileSync(new URL(name,dir))).digest('hex')!==hash)throw Error('Immutable migration byte mismatch: '+name);}
+ const candidates=names.filter(name=>/^\d{14}_rota_shift_templates\.sql$/.test(name));
+ if(candidates.length>1 || requireTemplates&&candidates.length!==1)throw Error('Expected exactly one reviewed Templates candidate.');
+ const expected=[...Object.keys(baselines),...candidates].sort();
+ if(JSON.stringify(names)!==JSON.stringify(expected))throw Error('Expected exact21 applied baselines and only the optional reviewed Templates candidate.');
+ const hashes={...baselines,...(candidates.length?{[candidates[0]]:templateHash}:{})};
+ for(const[name,hash]of Object.entries(hashes)){if(createHash('sha256').update(readFileSync(new URL(name,dir))).digest('hex')!==hash)throw Error('Immutable migration byte mismatch: '+name);}
 }
+export function verifyRotaTemplateBaselines(){verifyKnowledgeFileBaselines(true);}
