@@ -1,5 +1,9 @@
 # Requests acceptance
 
+## Current verified release
+
+PR32 is released: main `de023f0edb6db888062661c59bdbcd5e4c83dec8`, passing CI `37200205189`, READY production `dpl_CrievaTxw817FiZHhz25Pe9LHJgt` at ct-alt.vercel.app. All 48 fictional cards are live: 24 New, 12 In progress, 12 Done. The owner subsequently requested natural wording, superseding visible Demo labels. Each card now has a unique site-specific title and useful description; dates, priorities, stages and eligible linked assignments are retained. Read [current content evidence](LIVE_DEMO_DATA.md). The schema and original seed must not be replayed. Pending-release statements below are historical snapshots.
+
 The owner requested a general work-request kanban and live fictional demo data on 4 October 2026. The implemented company-scoped workflow follows [Requests contract](REQUESTS_CONTRACT.md), with the existing standard desktop shell and original CT Alt assets.
 
 ## Verified application
