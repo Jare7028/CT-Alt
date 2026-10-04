@@ -31,7 +31,8 @@
     "test:smart-groups:db": "node scripts/test-smart-groups-database.mjs",
     "test:knowledge-base:db": "node scripts/test-knowledge-base-database.mjs",
     "test:forms:db": "node scripts/test-forms-database.mjs",
-    "test:knowledge-base-files:db": "node scripts/test-knowledge-base-files-database.mjs"
+    "test:knowledge-base-files:db": "node scripts/test-knowledge-base-files-database.mjs",
+    "test:forms-reporting:db": "node scripts/test-forms-reporting-database.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -54,6 +54,8 @@ jobs:
         run: npm run test:knowledge-base:db
       - name: Forms database checks
         run: npm run test:forms:db
+      - name: Forms reporting database checks
+        run: npm run test:forms-reporting:db
       - name: Knowledge Base files and genuine Storage checks
         run: npm run test:knowledge-base-files:db
       - run: npm run build
