@@ -22,6 +22,16 @@ import type {
   KnowledgeNodeKind,
   KnowledgeViewReconciliation,
 } from "../../lib/knowledge-base-types";
+import {
+  KNOWLEDGE_FILE_HEADERS,
+  KNOWLEDGE_FILE_MAX_BYTES,
+  KNOWLEDGE_FILE_MAX_METADATA_BYTES,
+  type KnowledgeCurrentFile,
+  type KnowledgeFileMetadata,
+  type KnowledgeFileSaved,
+  type KnowledgeFileAttemptData,
+  type KnowledgeFileBudgetData,
+} from "../../lib/knowledge-base-file-types";
 import "./knowledge-base.css";
 type Props = {
   company: Company;
@@ -38,7 +48,7 @@ type CatalogQuery = {
   status: "all" | "draft" | "published" | "archived";
   search: string;
 };
-type Editor = "base" | "audience" | "node" | "move" | null;
+type Editor = "base" | "audience" | "node" | "file" | "move" | null;
 type Confirmation = {
   action:
     | "publish_base"
@@ -170,13 +180,71 @@ function validBase(value: KnowledgeBase) {
       ["draft", "published"].includes(value.restoreStatus))
   );
 }
+function validFile(value: KnowledgeCurrentFile | undefined) {
+  return (
+    !!value &&
+    uuid.test(value.versionId) &&
+    text(value.filename, 255, 1) &&
+    !/[\r\n]/.test(value.filename) &&
+    new TextEncoder().encode(value.filename).length <= 1024 &&
+    [
+      "application/pdf",
+      "text/plain",
+      "text/csv",
+      "image/png",
+      "image/jpeg",
+    ].includes(value.mediaType) &&
+    Number.isSafeInteger(value.bytes) &&
+    value.bytes > 0 &&
+    value.bytes <= KNOWLEDGE_FILE_MAX_BYTES &&
+    /^[0-9a-f]{64}$/.test(value.sha256) &&
+    typeof value.uploadedAt === "string" &&
+    Number.isFinite(Date.parse(value.uploadedAt)) &&
+    text(value.uploaderName, 200, 1)
+  );
+}
+function fileIssue(value: File | null) {
+  if (!value) return "Choose one file.";
+  if (!value.size || value.size > KNOWLEDGE_FILE_MAX_BYTES)
+    return "Choose a nonempty file up to 2 MiB.";
+  if (
+    !legalText(value.name) ||
+    !value.name.length ||
+    value.name.length > 255 ||
+    /[\r\n]/.test(value.name) ||
+    new TextEncoder().encode(value.name).length > 1024
+  )
+    return "The filename is invalid or too long.";
+  const extension = value.name.split(".").pop()?.toLowerCase();
+  const media: Record<string, string> = {
+    pdf: "application/pdf",
+    txt: "text/plain",
+    csv: "text/csv",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+  };
+  if (!extension || !media[extension])
+    return "Choose a PDF, UTF-8 text or CSV, PNG, or JPEG file.";
+  if (
+    value.type &&
+    value.type !== "application/octet-stream" &&
+    value.type !== media[extension] &&
+    !(extension === "csv" && value.type === "application/vnd.ms-excel")
+  )
+    return "The filename and declared file type must agree.";
+  return "";
+}
 function validNode(value: KnowledgeNode, baseId: string) {
   return (
     !!value &&
     uuid.test(value.id) &&
     value.baseId === baseId &&
     (value.parentId === null || uuid.test(value.parentId)) &&
-    ["folder", "text", "link"].includes(value.kind) &&
+    ["folder", "text", "link", "file"].includes(value.kind) &&
+    (value.kind === "file"
+      ? validFile(value.currentFile)
+      : value.currentFile === undefined) &&
     text(value.name, 100, 1) &&
     text(value.description, 500) &&
     ["active", "archived"].includes(value.status) &&
@@ -269,9 +337,9 @@ function Library({ company, initialData }: Props) {
   const [insights, setInsights] = useState<KnowledgeInsightsData | null>(null),
     [insightSearch, setInsightSearch] = useState(""),
     [insightQuery, setInsightQuery] = useState("");
-  const [recoveryKind, setRecoveryKind] = useState<"view" | "management">(
-    "management",
-  );
+  const [recoveryKind, setRecoveryKind] = useState<
+    "view" | "management" | "file"
+  >("management");
   const [phase, setPhase] = useState<Phase>("checking"),
     [writePending, setWritePending] = useState(false),
     [error, setError] = useState(""),
@@ -304,6 +372,14 @@ function Library({ company, initialData }: Props) {
     } | null>(null),
     [destinationBusy, setDestinationBusy] = useState(false),
     [confirmation, setConfirmation] = useState<Confirmation>(null);
+  const [chosenFile, setChosenFile] = useState<File | null>(null);
+  const [fileBudget, setFileBudget] = useState<KnowledgeFileBudgetData | null>(
+    null,
+  );
+  const [fileAttempt, setFileAttempt] =
+    useState<KnowledgeFileAttemptData | null>(null);
+  const [downloadBusy, setDownloadBusy] = useState(false);
+  const downloadUrls = useRef(new Set<string>());
   const dialog = useRef<HTMLDialogElement>(null),
     confirmDialog = useRef<HTMLDialogElement>(null),
     mounted = useRef(true),
@@ -315,7 +391,14 @@ function Library({ company, initialData }: Props) {
     marker = useRef<{ operationId: string; action: string } | null>(null);
   const requests = useRef<
     Record<
-      "main" | "search" | "roster" | "insights" | "destination" | "reconcile",
+      | "main"
+      | "search"
+      | "roster"
+      | "insights"
+      | "destination"
+      | "reconcile"
+      | "download"
+      | "budget",
       AbortController | null
     >
   >({
@@ -325,11 +408,14 @@ function Library({ company, initialData }: Props) {
     insights: null,
     destination: null,
     reconcile: null,
+    download: null,
+    budget: null,
   });
   const storageKey = `ct-alt:knowledge-base:${initialData.actorId}:${company.id}`;
   useEffect(() => {
     mounted.current = true;
     const epochRef = epoch;
+    const urls = downloadUrls.current;
     let pending = false;
     try {
       const stored = sessionStorage.getItem(storageKey);
@@ -348,7 +434,11 @@ function Library({ company, initialData }: Props) {
       if (pending) {
         setCatalog(null);
         setRecoveryKind(
-          marker.current?.action === "view" ? "view" : "management",
+          marker.current?.action === "view"
+            ? "view"
+            : marker.current?.action === "save_file"
+              ? "file"
+              : "management",
         );
       }
       setPhase(pending ? "unknown" : "ready");
@@ -358,11 +448,20 @@ function Library({ company, initialData }: Props) {
       clearTimeout(timer);
       epochRef.current += 1;
       Object.values(requests.current).forEach((r) => r?.abort());
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.clear();
     };
   }, [storageKey]);
   const locked = phase !== "ready" || !catalog || writePending;
   const canManage = !!catalog?.capabilities.canManage;
   const base = baseData?.base;
+  function cancelDownload() {
+    requests.current.download?.abort();
+    requests.current.download = null;
+    downloadUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    downloadUrls.current.clear();
+    setDownloadBusy(false);
+  }
   function invalidate() {
     epoch.current++;
     Object.values(requests.current).forEach((r) => r?.abort());
@@ -373,12 +472,19 @@ function Library({ company, initialData }: Props) {
       insights: null,
       destination: null,
       reconcile: null,
+      download: null,
+      budget: null,
     };
+    cancelDownload();
+    setFileBudget(null);
     setRenderedOpen(null);
     setRosterBusy(false);
     setDestinationBusy(false);
   }
   function closeEditor() {
+    requests.current.budget?.abort();
+    requests.current.budget = null;
+    setFileBudget(null);
     requests.current.roster?.abort();
     requests.current.roster = null;
     requests.current.destination?.abort();
@@ -386,6 +492,7 @@ function Library({ company, initialData }: Props) {
     dialog.current?.close();
     confirmDialog.current?.close();
     setEditor(null);
+    setChosenFile(null);
     setNewParent(null);
     setConfirmation(null);
     setEditingBase(null);
@@ -423,6 +530,7 @@ function Library({ company, initialData }: Props) {
     invalidate();
     closeEditor();
     setCatalog(null);
+    setFileAttempt(null);
     clearContents();
     setCatalogSearch("");
     setQuery(emptyQuery);
@@ -535,6 +643,7 @@ function Library({ company, initialData }: Props) {
   }
   function clearMarker() {
     marker.current = null;
+    setFileAttempt(null);
     viewSelection.current = null;
     setOperation(null);
     try {
@@ -807,6 +916,7 @@ function Library({ company, initialData }: Props) {
   async function readSearch(value: string, nextCursor: string | null = null) {
     if (locked || writeBusy.current || recoveryBusy.current || !baseData)
       return;
+    cancelDownload();
     requests.current.insights?.abort();
     requests.current.insights = null;
     setInsights(null);
@@ -909,6 +1019,7 @@ function Library({ company, initialData }: Props) {
       view !== "manage"
     )
       return;
+    cancelDownload();
     requests.current.search?.abort();
     requests.current.search = null;
     setSearchData(null);
@@ -1186,10 +1297,439 @@ function Library({ company, initialData }: Props) {
     closeEditor();
     void perform(mutation);
   }
+  function fileIdentity(value: {
+    tenantId: string;
+    actorId: string;
+    role: Member["role"];
+  }) {
+    return (
+      value.tenantId === company.id &&
+      value.actorId === initialData.actorId &&
+      value.role === initialData.role
+    );
+  }
+  function validFileSaved(value: KnowledgeFileSaved, operationId: string) {
+    return (
+      !!value &&
+      fileIdentity(value) &&
+      value.operationId === operationId &&
+      value.action === "save_file" &&
+      uuid.test(value.baseId) &&
+      uuid.test(value.nodeId) &&
+      uuid.test(value.versionId) &&
+      revision(value.revision) &&
+      revision(value.nodeRevision)
+    );
+  }
+  function validAttempt(value: KnowledgeFileAttemptData, operationId: string) {
+    return (
+      !!value &&
+      fileIdentity(value) &&
+      value.operationId === operationId &&
+      value.action === "save_file" &&
+      [
+        "not_recorded",
+        "upload_attempted",
+        "uploaded_unverified",
+        "provider_succeeded",
+        "finalized",
+        "closed",
+        "cleanup_acknowledged",
+      ].includes(value.status) &&
+      (value.status === "not_recorded"
+        ? value.attemptRevision === null
+        : revision(value.attemptRevision)) &&
+      !!value.capabilities &&
+      [
+        value.capabilities.canClose,
+        value.capabilities.canFinalize,
+        value.capabilities.canCleanup,
+      ].every((v) => typeof v === "boolean") &&
+      (!value.capabilities.canFinalize ||
+        value.status === "provider_succeeded") &&
+      (!value.capabilities.canClose ||
+        [
+          "upload_attempted",
+          "uploaded_unverified",
+          "provider_succeeded",
+        ].includes(value.status)) &&
+      (value.status === "finalized"
+        ? validFileSaved(value.saved!, operationId)
+        : value.saved === null) &&
+      (value.deadline === null ||
+        (typeof value.deadline === "string" &&
+          Number.isFinite(Date.parse(value.deadline)))) &&
+      typeof value.serverTime === "string" &&
+      Number.isFinite(Date.parse(value.serverTime))
+    );
+  }
+  async function readFileBudget() {
+    if (
+      !mounted.current ||
+      writeBusy.current ||
+      recoveryBusy.current ||
+      !canManage ||
+      locked
+    )
+      return;
+    const read = startRead("budget");
+    setFileBudget(null);
+    try {
+      const next = await fetchJson<KnowledgeFileBudgetData>(
+        `/api/knowledge-base/files/budget?${new URLSearchParams({ tenantId: company.id })}`,
+        read.controller,
+      );
+      if (!read.current()) return;
+      if (
+        !fileIdentity(next) ||
+        !count(next.allocatedBytes) ||
+        !count(next.allocatedAttempts) ||
+        next.allocatedBytes > 104857600 ||
+        next.allocatedAttempts > 2048 ||
+        next.byteLimit !== 104857600 ||
+        next.globalAttemptLimit !== 4096 ||
+        next.companyAttemptLimit !== 2048 ||
+        !next.states ||
+        ![
+          "upload_attempted",
+          "uploaded_unverified",
+          "provider_succeeded",
+          "finalized",
+          "closed",
+          "cleanup_acknowledged",
+        ].every((key) => count(next.states[key as keyof typeof next.states])) ||
+        Object.values(next.states).reduce((sum, value) => sum + value, 0) !==
+          next.allocatedAttempts
+      )
+        throw new Error(
+          "The reserved and retained budget could not be verified.",
+        );
+      setFileBudget(next);
+    } catch (cause) {
+      if (read.current()) fail(cause);
+    }
+  }
+  async function finishFile(saved: KnowledgeFileSaved, operationId: string) {
+    const fresh = await readCatalog("manage", emptyQuery, null, operationId);
+    if (!fresh || !mounted.current) return;
+    const opened = await openResource(
+      { baseId: saved.baseId, parentId: null, nodeId: saved.nodeId },
+      "manage",
+      false,
+      operationId,
+      null,
+      nodeStatus,
+      true,
+    );
+    if (!opened || !mounted.current) return;
+    clearMarker();
+    setNotice("File saved. Current resource refreshed.");
+  }
+  async function saveFile() {
+    if (
+      locked ||
+      writeBusy.current ||
+      recoveryBusy.current ||
+      !baseData ||
+      !base?.canEdit ||
+      editor !== "file"
+    )
+      return;
+    const issue = fileIssue(chosenFile);
+    if (
+      issue ||
+      !legalText(nodeDraft.name) ||
+      !nodeDraft.name.trim() ||
+      nodeDraft.name.length > 100 ||
+      !legalText(nodeDraft.description) ||
+      nodeDraft.description.length > 500
+    ) {
+      setError(issue || "Check the resource name and description.");
+      return;
+    }
+    const operationId = crypto.randomUUID();
+    const common = {
+      tenantId: company.id,
+      operationId,
+      baseId: baseData.baseId,
+      expectedBaseRevision: baseData.baseRevision,
+      name: nodeDraft.name,
+      description: nodeDraft.description,
+      filename: chosenFile!.name,
+    };
+    if (!editingNode && !newParent) return;
+    const metadata: KnowledgeFileMetadata = editingNode
+      ? {
+          ...common,
+          mode: "replace",
+          nodeId: editingNode.id,
+          expectedNodeRevision: editingNode.revision,
+        }
+      : { ...common, mode: "create", parentId: newParent! };
+    if (encoded(metadata) > KNOWLEDGE_FILE_MAX_METADATA_BYTES) {
+      setError("The file metadata is too large.");
+      return;
+    }
+    const body = new FormData();
+    body.set("metadata", JSON.stringify(metadata));
+    body.set("file", chosenFile!);
+    writeBusy.current = operationId;
+    setWritePending(true);
+    invalidate();
+    closeEditor();
+    setOperation(null);
+    setFileAttempt(null);
+    marker.current = { operationId, action: "save_file" };
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(marker.current));
+    } catch {}
+    setRecoveryKind("file");
+    setPhase("saving");
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(
+        `/api/knowledge-base/${metadata.baseId}/files`,
+        { method: "POST", cache: "no-store", body },
+      );
+      if (!mounted.current) return;
+      const result = await response.json();
+      if (!mounted.current) return;
+      if (!response.ok)
+        throw new Error(
+          typeof result?.error === "string"
+            ? result.error
+            : "The upload was not acknowledged. Recover this operation without resending the file.",
+        );
+      const saved = result?.saved as KnowledgeFileSaved;
+      if (
+        !validFileSaved(saved, operationId) ||
+        saved.baseId !== metadata.baseId ||
+        saved.revision !== metadata.expectedBaseRevision + 1 ||
+        (metadata.mode === "replace" &&
+          (saved.nodeId !== metadata.nodeId ||
+            saved.nodeRevision !== metadata.expectedNodeRevision + 1)) ||
+        (metadata.mode === "create" && saved.nodeRevision !== 1)
+      )
+        throw new Error(
+          "The file acknowledgement could not be verified. Recover without resending bytes.",
+        );
+      await finishFile(saved, operationId);
+    } catch (cause) {
+      if (mounted.current) fail(cause);
+    } finally {
+      writeBusy.current = null;
+      if (mounted.current) setWritePending(false);
+    }
+  }
+  async function reconcileFile() {
+    const pending = marker.current;
+    if (!pending || pending.action !== "save_file") return;
+    invalidate();
+    setFileAttempt(null);
+    setPhase("reading");
+    setError("");
+    const read = startRead("reconcile");
+    try {
+      const next = await fetchJson<KnowledgeFileAttemptData>(
+        "/api/knowledge-base/files/reconcile",
+        read.controller,
+        { tenantId: company.id, operationId: pending.operationId },
+      );
+      if (!read.current()) return;
+      if (!validAttempt(next, pending.operationId))
+        throw new Error("The original file operation could not be verified.");
+      if (
+        ["not_recorded", "closed", "cleanup_acknowledged"].includes(next.status)
+      ) {
+        const fresh = await readCatalog("manage", emptyQuery);
+        if (fresh) {
+          clearMarker();
+          setNotice(
+            next.status === "not_recorded"
+              ? "No file reservation was recorded. No bytes were resent."
+              : "The file operation is closed. Its permanent reserved and retained budget remains charged.",
+          );
+        }
+      } else if (next.status === "finalized") {
+        await finishFile(next.saved!, pending.operationId);
+      } else {
+        setFileAttempt(next);
+        setPhase("unknown");
+        setNotice("The file operation remains locked. No bytes were resent.");
+      }
+    } catch (cause) {
+      if (read.current()) fail(cause);
+    }
+  }
+  async function changeFileAttempt(action: "finalize" | "close") {
+    if (
+      writeBusy.current ||
+      recoveryBusy.current ||
+      !mounted.current ||
+      !fileAttempt ||
+      !marker.current ||
+      marker.current.action !== "save_file" ||
+      fileAttempt.operationId !== marker.current.operationId ||
+      !revision(fileAttempt.attemptRevision) ||
+      !(action === "finalize"
+        ? fileAttempt.capabilities.canFinalize
+        : fileAttempt.capabilities.canClose)
+    )
+      return;
+    const pending = fileAttempt;
+    writeBusy.current = pending.operationId;
+    setWritePending(true);
+    invalidate();
+    setFileAttempt(null);
+    setPhase("saving");
+    setError("");
+    try {
+      const response = await fetch(`/api/knowledge-base/files/${action}`, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId: company.id,
+          operationId: pending.operationId,
+          expectedAttemptRevision: pending.attemptRevision,
+        }),
+      });
+      if (!mounted.current) return;
+      const next = await response.json();
+      if (!mounted.current) return;
+      if (!response.ok)
+        throw new Error(
+          typeof next?.error === "string"
+            ? next.error
+            : "The operation was not acknowledged. Recover before continuing.",
+        );
+      if (action === "finalize") {
+        if (!validFileSaved(next?.saved, pending.operationId))
+          throw new Error("The final file receipt could not be verified.");
+        await finishFile(next.saved, pending.operationId);
+      } else {
+        if (
+          !validAttempt(next, pending.operationId) ||
+          next.status !== "closed"
+        )
+          throw new Error("The file close receipt could not be verified.");
+        const fresh = await readCatalog(
+          "manage",
+          emptyQuery,
+          null,
+          pending.operationId,
+        );
+        if (fresh) {
+          clearMarker();
+          setNotice(
+            "File operation closed. Its reserved and retained budget remains permanently charged.",
+          );
+        }
+      }
+    } catch (cause) {
+      if (mounted.current) fail(cause);
+    } finally {
+      writeBusy.current = null;
+      if (mounted.current) setWritePending(false);
+    }
+  }
+  async function downloadFile() {
+    if (
+      locked ||
+      writeBusy.current ||
+      recoveryBusy.current ||
+      !node ||
+      node.node.kind !== "file" ||
+      node.node.status !== "active" ||
+      base?.status === "archived" ||
+      node.path.some((item) => item.status !== "active") ||
+      !node.node.currentFile ||
+      downloadBusy
+    )
+      return;
+    const current = node.node.currentFile;
+    const baseId = node.baseId;
+    const nodeId = node.node.id;
+    const read = startRead("download");
+    setDownloadBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(
+        `/api/knowledge-base/${baseId}/nodes/${nodeId}/download?${new URLSearchParams({ tenantId: company.id, versionId: current.versionId })}`,
+        { cache: "no-store", signal: read.controller.signal },
+      );
+      if (!read.current()) return;
+      if (!response.ok)
+        throw new Error(
+          response.status === 401 || response.status === 403
+            ? "Your current file access could not be verified. Private content has been cleared."
+            : "The current file could not be downloaded. Refresh before continuing.",
+        );
+      const headers = response.headers;
+      if (
+        headers.get(KNOWLEDGE_FILE_HEADERS.actor) !== initialData.actorId ||
+        headers.get(KNOWLEDGE_FILE_HEADERS.tenant) !== company.id ||
+        headers.get(KNOWLEDGE_FILE_HEADERS.base) !== baseId ||
+        headers.get(KNOWLEDGE_FILE_HEADERS.node) !== nodeId ||
+        headers.get(KNOWLEDGE_FILE_HEADERS.version) !== current.versionId ||
+        headers.get("Content-Type")?.split(";")[0].trim() !==
+          current.mediaType ||
+        headers.get("Content-Length") !== String(current.bytes) ||
+        !headers.get("Cache-Control")?.toLowerCase().includes("no-store") ||
+        !headers.get("Cache-Control")?.toLowerCase().includes("private") ||
+        headers.get("X-Content-Type-Options") !== "nosniff" ||
+        !headers
+          .get("Content-Disposition")
+          ?.toLowerCase()
+          .startsWith("attachment;")
+      )
+        throw new Error(
+          "The file identity, version, or attachment headers could not be verified.",
+        );
+      const blob = await response.blob();
+      if (
+        !read.current() ||
+        selection.current?.baseId !== baseId ||
+        selection.current?.nodeId !== nodeId
+      )
+        return;
+      if (
+        blob.size !== current.bytes ||
+        blob.size <= 0 ||
+        blob.size > KNOWLEDGE_FILE_MAX_BYTES
+      )
+        throw new Error("The complete file body could not be verified.");
+      const url = URL.createObjectURL(blob);
+      downloadUrls.current.add(url);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = current.filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setNotice(
+        "File download started. Downloading does not record an additional view.",
+      );
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        downloadUrls.current.delete(url);
+      }, 0);
+    } catch (cause) {
+      if (read.current()) fail(cause);
+    } finally {
+      if (read.current()) setDownloadBusy(false);
+    }
+  }
   async function refresh() {
     if (writeBusy.current || recoveryBusy.current || !mounted.current) return;
     recoveryBusy.current = true;
     try {
+      if (phase === "unknown" && marker.current?.action === "save_file") {
+        await reconcileFile();
+        return;
+      }
       if (phase === "unknown" && marker.current?.action === "view") {
         invalidate();
         setPhase("reading");
@@ -1309,6 +1849,14 @@ function Library({ company, initialData }: Props) {
       !base?.canEdit
     )
       return;
+    if (
+      !value &&
+      kind === "file" &&
+      (!nodes?.parent ||
+        nodes.parent.status !== "active" ||
+        nodes.parent.depth >= 16)
+    )
+      return;
     closeEditor();
     let content: KnowledgeNodeData | null = null;
     if (value) {
@@ -1344,8 +1892,9 @@ function Library({ company, initialData }: Props) {
       body: content?.body || "",
       url: content?.url || "",
     });
-    setEditor("node");
+    setEditor((content?.node.kind || kind) === "file" ? "file" : "node");
     dialog.current?.showModal();
+    if ((content?.node.kind || kind) === "file") void readFileBudget();
   }
   function moveNode(value: KnowledgeNode) {
     if (locked || writeBusy.current || !baseData || !value.canMove) return;
@@ -1423,7 +1972,7 @@ function Library({ company, initialData }: Props) {
             }
           : baseChange,
   };
-  const draftIssue = payloadIssue(draftMutation);
+  const draftIssue = editor === "file" ? "" : payloadIssue(draftMutation);
   const path = node?.path || nodes?.path || [];
   return (
     <div
@@ -1469,12 +2018,54 @@ function Library({ company, initialData }: Props) {
           <p>
             {recoveryKind === "view"
               ? "An interrupted rendered-open event may have been recorded. Recovery checks only your operation receipt and current reader access; it never replays a view."
-              : "The last action may have saved. Fresh unfiltered management reads are required for a pending management change."}{" "}
+              : recoveryKind === "file"
+                ? "An interrupted file upload may have reserved permanent budget. Recovery checks only your original operation. It never resends file bytes or reconstructs private fields."
+                : "The last action may have saved. Fresh unfiltered management reads are required for a pending management change."}{" "}
             Names, content and resource IDs are not stored for recovery.
           </p>
           <button disabled={writePending} onClick={() => void refresh()}>
             Refresh to recover
           </button>
+          {fileAttempt && (
+            <div className="kb-file-recovery">
+              <p>
+                Original file operation:{" "}
+                {fileAttempt.status.replaceAll("_", " ")}.{" "}
+                {fileAttempt.deadline && (
+                  <>
+                    Deadline:{" "}
+                    <time dateTime={fileAttempt.deadline}>
+                      {fileAttempt.deadline
+                        .replace("T", " ")
+                        .replace("Z", " UTC")}
+                    </time>
+                    .
+                  </>
+                )}
+              </p>
+              <p className="kb-hint">
+                An unknown provider result cannot become a readable file. Only a
+                durably acknowledged provider success may be finalized. Closing
+                is permanent and retains the budget charge.
+              </p>
+              {fileAttempt.capabilities.canFinalize && (
+                <button
+                  disabled={writePending}
+                  onClick={() => void changeFileAttempt("finalize")}
+                >
+                  Verify and finalize original file
+                </button>
+              )}
+              {fileAttempt.capabilities.canClose && (
+                <button
+                  disabled={writePending}
+                  onClick={() => void changeFileAttempt("close")}
+                >
+                  Permanently close file operation
+                </button>
+              )}
+            </div>
+          )}
           {operation && (
             <button
               disabled={writePending}
@@ -1872,6 +2463,12 @@ function Library({ company, initialData }: Props) {
                               >
                                 Add external link
                               </button>
+                              <button
+                                disabled={locked || nodes.parent.depth >= 16}
+                                onClick={() => void editNode(null, "file")}
+                              >
+                                Add file
+                              </button>
                             </>
                           )}
                         </div>
@@ -1930,7 +2527,8 @@ function Library({ company, initialData }: Props) {
                             <span className="kb-node-icon" aria-hidden="true">
                               {result.node.kind === "folder"
                                 ? "▰"
-                                : result.node.kind === "text"
+                                : result.node.kind === "text" ||
+                                    result.node.kind === "file"
                                   ? "▤"
                                   : "↗"}
                             </span>
@@ -2032,7 +2630,8 @@ function Library({ company, initialData }: Props) {
                                 >
                                   {value.kind === "folder"
                                     ? "▰"
-                                    : value.kind === "text"
+                                    : value.kind === "text" ||
+                                        value.kind === "file"
                                       ? "▤"
                                       : "↗"}
                                 </span>
@@ -2061,7 +2660,9 @@ function Library({ company, initialData }: Props) {
                                       ? `${value.activeChildCount} active child resources`
                                       : value.kind === "text"
                                         ? "Plain text"
-                                        : "Named external link"}
+                                        : value.kind === "file"
+                                          ? "Private file attachment"
+                                          : "Named external link"}
                                   </small>
                                 </div>
                                 <span className={`kb-status ${value.status}`}>
@@ -2255,6 +2856,62 @@ function Library({ company, initialData }: Props) {
                                 visit to or reading of the external website.
                               </p>
                             </>
+                          ) : node.node.kind === "file" &&
+                            node.node.currentFile ? (
+                            <section
+                              className="kb-file-card"
+                              aria-label="Current file"
+                            >
+                              <span className="kb-file-icon" aria-hidden="true">
+                                ▤
+                              </span>
+                              <div>
+                                <h4>{node.node.currentFile.filename}</h4>
+                                <p>
+                                  {node.node.currentFile.mediaType} ·{" "}
+                                  {node.node.currentFile.bytes.toLocaleString(
+                                    "en-GB",
+                                  )}{" "}
+                                  bytes
+                                </p>
+                                <p className="kb-hint">
+                                  Uploaded by{" "}
+                                  {node.node.currentFile.uploaderName} ·{" "}
+                                  <time
+                                    dateTime={node.node.currentFile.uploadedAt}
+                                  >
+                                    {new Intl.DateTimeFormat("en-GB", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                      timeZone: "UTC",
+                                    }).format(
+                                      new Date(node.node.currentFile.uploadedAt),
+                                    )}{" "}
+                                    UTC
+                                  </time>
+                                </p>
+                                <p className="kb-hint">
+                                  Private attachment. Download the file to view
+                                  it on your device.
+                                </p>
+                                <button
+                                  disabled={
+                                    locked ||
+                                    downloadBusy ||
+                                    base?.status === "archived" ||
+                                    node.node.status !== "active" ||
+                                    node.path.some(
+                                      (item) => item.status !== "active",
+                                    )
+                                  }
+                                  onClick={() => void downloadFile()}
+                                >
+                                  {downloadBusy
+                                    ? "Preparing file download…"
+                                    : "Download current file"}
+                                </button>
+                              </div>
+                            </section>
                           ) : (
                             <p>This is a retained folder resource.</p>
                           )}
@@ -2452,7 +3109,11 @@ function Library({ company, initialData }: Props) {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (locked || draftIssue) return;
+            if (locked || (editor !== "file" && draftIssue)) return;
+            if (editor === "file") {
+              void saveFile();
+              return;
+            }
             if (editor === "base") {
               if (!baseDraft.name.trim()) return;
               change(baseChange);
@@ -2504,13 +3165,17 @@ function Library({ company, initialData }: Props) {
                   ? "Edit assignments"
                   : editor === "move"
                     ? "Move resource"
-                    : editingNode
-                      ? "Edit resource"
-                      : nodeDraft.kind === "folder"
-                        ? "Add folder"
-                        : nodeDraft.kind === "text"
-                          ? "Add plain text"
-                          : "Add external link"}
+                    : editor === "file"
+                      ? editingNode
+                        ? "Replace file"
+                        : "Add file"
+                      : editingNode
+                        ? "Edit resource"
+                        : nodeDraft.kind === "folder"
+                          ? "Add folder"
+                          : nodeDraft.kind === "text"
+                            ? "Add plain text"
+                            : "Add external link"}
             </h2>
             <button
               className="kb-dialog-close"
@@ -2522,6 +3187,117 @@ function Library({ company, initialData }: Props) {
               ×
             </button>
           </div>
+          {editor === "file" && (
+            <>
+              <label>
+                Resource name
+                <input
+                  required
+                  maxLength={100}
+                  value={nodeDraft.name}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setNodeDraft((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Resource description
+                <textarea
+                  maxLength={500}
+                  value={nodeDraft.description}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setNodeDraft((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Choose file
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.txt,.csv,.png,.jpg,.jpeg"
+                  disabled={locked}
+                  onChange={(event) =>
+                    setChosenFile(event.target.files?.[0] || null)
+                  }
+                />
+              </label>
+              <p className="kb-hint">
+                One nonempty PDF, UTF-8 text or CSV, PNG, or JPEG, up to 2 MiB.
+                The server verifies the filename, declared type, and file
+                content. Files download as attachments; no inline preview.
+              </p>
+              {editingNode && (
+                <p className="kb-hint">
+                  The existing current file stays readable until this
+                  replacement is finalized. Superseded files remain charged to
+                  the permanent budget.
+                </p>
+              )}
+              {chosenFile && (
+                <p>
+                  {chosenFile.name} · {chosenFile.size.toLocaleString("en-GB")}{" "}
+                  bytes
+                </p>
+              )}
+              {chosenFile && fileIssue(chosenFile) && (
+                <p className="kb-error" role="alert">
+                  {fileIssue(chosenFile)}
+                </p>
+              )}
+              <section
+                className="kb-file-budget"
+                aria-label="Reserved and retained budget"
+              >
+                <h3>Reserved and retained budget</h3>
+                {fileBudget ? (
+                  <>
+                    <p>
+                      This company:{" "}
+                      {fileBudget.allocatedBytes.toLocaleString("en-GB")} bytes
+                      across{" "}
+                      {fileBudget.allocatedAttempts.toLocaleString("en-GB")}{" "}
+                      permanent attempts.
+                    </p>
+                    <details>
+                      <summary>Company reservation states</summary>
+                      <dl className="kb-file-states">
+                        {Object.entries(fileBudget.states).map(
+                          ([status, total]) => (
+                            <div key={status}>
+                              <dt>{status.replaceAll("_", " ")}</dt>
+                              <dd>{total.toLocaleString("en-GB")}</dd>
+                            </div>
+                          ),
+                        )}
+                      </dl>
+                    </details>
+                    <p>
+                      Deployment lifetime cap: 100 MiB and 4,096 attempts.
+                      Company attempt cap: 2,048. Other companies’ allocations
+                      are private.
+                    </p>
+                  </>
+                ) : (
+                  <p>Loading this company’s permanent allocations…</p>
+                )}
+                <p className="kb-hint">
+                  Failed, unknown, closed and superseded attempts remain
+                  charged. Closing or deleting never releases this budget. A new
+                  reservation can be unavailable even when this company is below
+                  its cap.
+                </p>
+              </section>
+            </>
+          )}
           {editor === "base" && (
             <>
               <label>
@@ -2855,6 +3631,8 @@ function Library({ company, initialData }: Props) {
                   (!nodeDraft.name.trim() ||
                     (nodeDraft.kind === "text" && !nodeDraft.body.length) ||
                     (nodeDraft.kind === "link" && !safeLink(nodeDraft.url)))) ||
+                (editor === "file" &&
+                  (!nodeDraft.name.trim() || !!fileIssue(chosenFile))) ||
                 (editor === "move" && !destinationChoice)
               }
             >
@@ -2864,7 +3642,11 @@ function Library({ company, initialData }: Props) {
                   ? "Save assignments"
                   : editor === "move"
                     ? "Move resource"
-                    : "Save resource"}
+                    : editor === "file"
+                      ? editingNode
+                        ? "Replace file"
+                        : "Save file"
+                      : "Save resource"}
             </button>
           </div>
         </form>

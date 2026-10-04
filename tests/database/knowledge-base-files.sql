@@ -1,0 +1,10 @@
+begin;
+create function pg_temp.file_check(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'FAIL: %',label;end if;raise notice 'PASS: %',label;end$$;
+select pg_temp.file_check(not has_table_privilege('authenticated','workforce_private.knowledge_file_verifier_keys','select')and not has_function_privilege('authenticated','workforce_private.knowledge_file_proof(workforce_private.knowledge_file_attempts,text,text,text,bigint)','execute'),'private verifier keys and proof internals inaccessible');
+select pg_temp.file_check(not exists(select 1 from pg_constraint c where c.contype='f'and c.conrelid in('workforce_private.knowledge_file_attempts'::regclass,'workforce_private.knowledge_file_versions'::regclass,'workforce_private.knowledge_file_current'::regclass)and c.confrelid='storage.objects'::regclass),'private lock chain has no implicit Storage foreign-key lock');
+select pg_temp.file_check(not has_function_privilege('anon','public.reserve_knowledge_file(uuid,uuid,jsonb)','execute')and not has_function_privilege('service_role','public.reserve_knowledge_file(uuid,uuid,jsonb)','execute'),'public mutations authenticated-only despite provider default ACLs');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+do $$begin begin perform public.change_knowledge_file('88000000-0000-4000-8000-000000000001','6f000000-0000-4000-8000-000000000003','finalize',4,'fixture-v1',repeat('0',64),floor(extract(epoch from clock_timestamp())*1000)::bigint+1000);exception when others then raise exception 'Finalized receipt retry should acknowledge without new proof: %',sqlerrm;end;end$$;
+select pg_temp.file_check((public.read_knowledge_file_budget('88000000-0000-4000-8000-000000000001')->>'allocatedAttempts')::integer=2,'finalized replay never double charges lifetime quota');
+reset role;
+rollback;

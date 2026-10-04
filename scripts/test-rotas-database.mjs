@@ -1,3 +1,5 @@
+import {startDatabaseStorage,registerDatabaseFixture} from './database-storage-bootstrap.mjs';
+let storageFixture;
 import { reviewRaceChecks } from "../tests/database/rotas-races.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -162,8 +164,7 @@ async function raceChecks() {
 let started = false;
 try {
   docker([
-    "run",
-    "-d",
+    'run', '-d', '--label', `ct-alt.test-runner-pid=${process.pid}`,
     "--name",
     name,
     "--network",
@@ -176,7 +177,7 @@ try {
     "POSTGRES_DB=ct_alt_test",
     image,
   ]);
-  started = true;
+  started = true; registerDatabaseFixture(name);
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
     const result = spawnSync(
@@ -207,6 +208,7 @@ try {
       "utf8",
     ),
   );
+  storageFixture = await startDatabaseStorage(name);
   const checks = [];
   const runSuite = (suite) => {
     const result = sql(readFileSync(new URL("../tests/database/" + suite, import.meta.url), "utf8"));
@@ -242,6 +244,6 @@ try {
   console.log(
     `${checks.length} database assertions passed in isolated PostgreSQL 17.`,
   );
-} finally {
+} finally { try {storageFixture?.cleanup();} finally {
   if (started) docker(["rm", "-f", name]);
-}
+}}

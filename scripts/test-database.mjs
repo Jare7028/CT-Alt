@@ -1,3 +1,5 @@
+import {startDatabaseStorage,registerDatabaseFixture} from './database-storage-bootstrap.mjs';
+let storageFixture;
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -54,8 +56,8 @@ async function raceChecks() {
 }
 let started = false;
 try {
-  docker(['run', '-d', '--name', name, '--network', 'none', '--tmpfs', '/var/lib/postgresql/data', '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', 'POSTGRES_DB=ct_alt_test', image]);
-  started = true;
+  docker(['run', '-d', '--label', `ct-alt.test-runner-pid=${process.pid}`, '--name', name, '--network', 'none', '--tmpfs', '/var/lib/postgresql/data', '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', 'POSTGRES_DB=ct_alt_test', image]);
+  started = true; registerDatabaseFixture(name);
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
     // The image briefly starts a socket-only init server and then restarts it.
@@ -66,6 +68,7 @@ try {
   }
   if (!ready) throw new Error('Isolated test database did not become ready');
   sql(readFileSync(new URL('../tests/database/bootstrap.sql', import.meta.url), 'utf8'));
+  storageFixture = await startDatabaseStorage(name);
   const directory = new URL('../supabase/migrations/', import.meta.url);
   for (const file of readdirSync(directory).filter(file => file.endsWith('.sql')).sort()) {
     sql(readFileSync(new URL(file, directory), 'utf8'));
@@ -79,6 +82,6 @@ try {
   checks.push(...await raceChecks());
   console.log(checks.join('\n'));
   console.log(`${checks.length} database assertions passed in isolated PostgreSQL 17.`);
-} finally {
+} finally { try {storageFixture?.cleanup();} finally {
   if (started) docker(['rm', '-f', name]);
-}
+}}
