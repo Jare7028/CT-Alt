@@ -1,0 +1,30 @@
+begin;
+create function pg_temp.forms_check(ok boolean,label text)returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'FAIL: %',label;end if;raise notice 'PASS: %',label;end$$;
+create function pg_temp.forms_throws(code text,command text,label text)returns void language plpgsql as $$begin begin execute command;raise exception 'Expected SQLSTATE %',code;exception when others then if sqlstate<>code then raise exception 'FAIL %: expected %, actual % (%)',label,code,sqlstate,sqlerrm;end if;end;raise notice 'PASS: %',label;end$$;
+create temporary table forms_history_state(k text primary key,v jsonb);grant all on forms_history_state to authenticated;
+insert into public.forms(id,tenant_id,name,description,schema,status,schema_frozen,allow_respondent_edit)values('6f400000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000001','Original frozen title','','[{"id":"6f400000-0000-4000-8000-000000000002","kind":"text","label":"Original frozen label","required":true}]','published',true,true);
+insert into public.form_assignments(tenant_id,form_id,actor_id,name)values('88000000-0000-4000-8000-000000000001','6f400000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000903','Original manager');
+set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000903',false);
+insert into forms_history_state values('submitted',public.save_form('88000000-0000-4000-8000-000000000001',gen_random_uuid(),'{"action":"submit_response","formId":"6f400000-0000-4000-8000-000000000001","formRevision":1,"responseRevision":0,"answers":{"6f400000-0000-4000-8000-000000000002":"First answer"}}'));
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000901',false);
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:='6f400000-0000-4000-8000-000000000001';rid uuid:=((select v from forms_history_state where k='submitted')->>'responseId')::uuid;r jsonb;d jsonb;c jsonb;cur jsonb:=null;ids uuid[]:='{}';row jsonb;begin
+ for n in 1..50 loop c:=jsonb_build_object('action','admin_edit_response','formId',f,'formRevision',1,'responseId',rid,'responseRevision',n,'answers',jsonb_build_object('6f400000-0000-4000-8000-000000000002','Answer '||n));r:=public.save_form(t,gen_random_uuid(),c::text);end loop;
+ d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);perform pg_temp.forms_check(d->>'historyCount'='50'and d->'response'->>'revision'='51'and d->'response'->'canEdit'='false'::jsonb,'fiftieth content edit retains fifty snapshots and disables further answer edits');insert into forms_history_state values('lastEdited',d->'response');
+ perform pg_temp.forms_throws('54000',format('select public.save_form(%L,gen_random_uuid(),%L)',t,(c||jsonb_build_object('responseRevision',51))::text),'fifty-first edit rejects before answer audit and receipt changes');
+ loop d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10,cur);for row in select value from jsonb_array_elements(d->'history')loop ids:=array_append(ids,(row->>'id')::uuid);end loop;cur:=d->'nextCursor';exit when cur='null'::jsonb;end loop;
+ perform pg_temp.forms_check(cardinality(ids)=50 and(select count(distinct id)from unnest(ids)id)=50,'ten-row history pages return every one of fifty immutable prior versions exactly once');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','review_response','formId',f,'formRevision',1,'responseId',rid,'responseRevision',51,'reviewed',true)::text);d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);
+ perform pg_temp.forms_check(d->>'historyCount'='50'and d->'response'->>'revision'='52'and d->'response'->>'lastEditedAt'=(select v->>'lastEditedAt'from forms_history_state where k='lastEdited'),'review remains available at content edit cap without changing original editor timestamp or history');
+ perform pg_temp.forms_throws('40001',format('select public.save_form(%L,gen_random_uuid(),%L)',t,jsonb_build_object('action','edit_form','formId',f,'formRevision',1,'name','Live renamed form','description','','schema',jsonb_build_array(jsonb_build_object('id','6f400000-0000-4000-8000-000000000002','kind','text','label','Forbidden new label','required',true)),'allowRespondentEdit',true)::text),'published and retained schema labels cannot change');
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','edit_form','formId',f,'formRevision',1,'name','Live renamed form','description','Current metadata','schema','[{"id":"6f400000-0000-4000-8000-000000000002","kind":"text","label":"Original frozen label","required":true}]'::jsonb,'allowRespondentEdit',false)::text);d:=public.read_forms(t,'response','manage',f,rid,'all','all','',10);
+ perform pg_temp.forms_check(d->'form'->>'name'='Live renamed form'and d->'response'->>'formName'='Original frozen title'and d->'response'->'schema'->0->>'label'='Original frozen label'and d->'history'->0->>'formName'='Original frozen title','metadata edits preserve original submitted title schema labels and history shared snapshot');
+end$$;
+reset role;
+select pg_temp.forms_check((select retained_rows from workforce_private.form_history_counter)=50 and(select count(*)from workforce_private.form_response_history)=50,'review and failed content edits do not consume retained history admission');
+update workforce_private.form_history_counter set retained_rows=4096;
+set role authenticated;
+do $$declare t uuid:='88000000-0000-4000-8000-000000000001';f uuid:='6f400000-0000-4000-8000-000000000001';rid uuid:=((select v from forms_history_state where k='submitted')->>'responseId')::uuid;r jsonb;begin
+ r:=public.save_form(t,gen_random_uuid(),jsonb_build_object('action','review_response','formId',f,'formRevision',2,'responseId',rid,'responseRevision',52,'reviewed',false)::text);perform pg_temp.forms_check(r->>'responseRevision'='53','review toggling remains available when deployment history is full');
+end$$;
+reset role;select pg_temp.forms_check((select retained_rows from workforce_private.form_history_counter)=4096,'history capacity remains monotonic and reviews grant no history credit');
+rollback;
