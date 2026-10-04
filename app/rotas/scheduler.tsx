@@ -1815,9 +1815,8 @@ export default function Scheduler({
                     </p>
                     <p>{publication.caption}</p>
                     <p>
-                      This confirmation keeps the exact draft IDs and revisions
-                      selected when it opened. Drafts outside that displayed
-                      subset stay private.
+                      Only the displayed drafts selected here will be published.
+                      Other drafts stay private.
                     </p>
                   </>
                 )}

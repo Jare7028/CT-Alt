@@ -14,7 +14,9 @@ A separate bounded `capture-confirmation` diagnostic reran the existing filtered
 
 Whole lint/typecheck, all 220 configuration cases and production build passed. The runners restored the prior environment file and removed their owned processes, labelled containers, temporary configuration and lock. All six assigned ports were independently checked free after cleanup. No hosted Auth, SQL, messages, deployment or other project resources were touched by these local checks. Hosted application and exact existing data/security preservation are verified. Exact-head CI, consumer merge and matching production verification remain release gates.
 
-Frozen SHA256 identities:
+The release then simplified only the confirmation paragraph to plain product language: “Only the displayed drafts selected here will be published. Other drafts stay private.” Independent review confirmed no logic changes. All10 focused publication cases and whole check passed again. Final scheduler SHA256 is `e05757c9c1310aa0b53d3e746ae124efe482b15e9bb9e355dd89f49b918919c9`; the earlier genuine capture/full signed results above describe the behaviorally identical pre-copy build. Production build passed again for the final copy.
+
+Frozen pre-copy SHA256 identities:
 
 | File | SHA256 |
 | --- | --- |
