@@ -1,0 +1,17 @@
+# Standard desktop profile and shared typography
+
+The owner selected Connecteam’s standard desktop layout on 4 October 2026. This pass matches the profile geometry shown in the official [Managing your users’ profiles guide](https://help.connecteam.com/en/articles/8934869-managing-your-users-profiles), updated 1 June 2026, with supporting [profile-field documentation](https://help.connecteam.com/en/articles/1810638-user-profile-fields), updated 24 August 2026. These are public instructional images, not measurements from a current authenticated Connecteam account. Competitor screenshots stay outside this public repository.
+
+The profile now has a compact full-width header with a 36px original initials avatar and 22px name, a 288px personal/company details column, an 18px gutter, and the existing Company access and Record information panels beside it. Actual fields, inline edits, access checks, status/recovery messages and navigation remain available. Unsupported work rules, payroll and activity tabs are not presented as implemented features. The shell account name comes from the currently signed-in actor’s existing tenant-scoped membership query; it does not borrow the viewed profile’s identity.
+
+Six existing modules still overrode the shared font with Arial after the shell release. Activity, Overview, Quick Tasks, Time Clock, Time Off and Updates now inherit the separately sourced, licensed, self-hosted Noto Sans. Account initials use the first letters of up to two name words. No API, database, migration or mutation-handler changes are included.
+
+## Validation
+
+All 32 retained genuine local Auth/API/browser cases passed: 14 directory, 14 profile/edit and four passwordless cases, each group using a fresh isolated fixture. The final compact-header/current-actor query change then passed all 14 profile/edit cases again. After the typography/initials change, whole lint/typecheck passed and a fresh production build plus the original signed directory-to-profile case passed, retaining its read-only API, escaped text, custom/calendar fields, reload, navigation and narrow-screen assertions. No assertions were removed or relaxed. All services, exclusive fixture locks and private fixture files were cleaned up.
+
+The module browser reviews also passed: Time Clock and Quick Tasks lifecycle/recovery/permission checks, Overview/Activity counts/filters/paging, all 17 Time Off cases and all 50 Updates cases. These module reviews use intercepted synthetic local responses rather than genuine Auth or hosted data. The unchanged 174 configuration checks passed earlier in this pass. Independent frozen-source reviews found no blockers.
+
+The final signed CT Alt captures use a genuine isolated Auth/PostgREST/Postgres stack and synthetic data: [1444×960 profile](screenshots/profile-auth-desktop-1444x960.png), [1444×776 profile](screenshots/profile-auth-desktop-1444x776.png), and [measured geometry](screenshots/profile-auth-desktop-geometry.json). The measured header is 72px, left column 288px and gutter 18px; font is Noto Sans and document width is 1444px at both heights. Literal script-tag text is an intentional escaping fixture, not executed code. No hosted workforce records or competitor images are committed.
+
+This is a bounded visual improvement. Current authenticated Connecteam pixel parity and the layout of its unsupported modules remain unverified. Time Clock’s fuller layout pass is being developed separately.

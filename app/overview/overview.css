@@ -1,4 +1,4 @@
-.overview-page { padding:var(--ct-content-inset,20px);color:var(--ct-text,#4b5054);font:14px Arial,Helvetica,sans-serif; }
+.overview-page { padding:var(--ct-content-inset,20px);color:var(--ct-text,#4b5054);font:14px var(--ct-font-family,"Noto Sans",Arial,sans-serif); }
 .overview-page :is(section,article) { max-width:none;padding:0; }
 .overview-heading { display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 26px;background:white;border-radius:12px;margin-bottom:20px; }
 .overview-heading h1 { font-size:24px;line-height:1.3;letter-spacing:normal;font-weight:600; }.overview-heading p { margin:7px 0 0;color:#7a858f; }

@@ -1,10 +1,7 @@
 .updates-page {
   padding: var(--ct-content-inset, 20px);
   color: var(--ct-text, #4b5054);
-  font:
-    14px Arial,
-    Helvetica,
-    sans-serif;
+  font: 14px var(--ct-font-family,"Noto Sans",Arial,sans-serif);
 }
 .updates-page :is(section, article) {
   max-width: none;
