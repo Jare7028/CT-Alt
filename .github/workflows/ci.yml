@@ -56,4 +56,6 @@ jobs:
         run: npm run test:forms:db
       - name: Forms reporting database checks
         run: npm run test:forms-reporting:db
+      - name: Requests database checks
+        run: npm run test:requests:db
       - run: npm run build
