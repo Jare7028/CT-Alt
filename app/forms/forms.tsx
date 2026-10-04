@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import FormsReporting from "./reporting";
 import type { Company, Member } from "../../lib/agent-types";
 import type {
   FormsAnswers,
@@ -315,6 +316,12 @@ function FormsWorkspace({ company, role, initialData }: Props) {
   const [view, setView] = useState<FormsView>(initialData.view);
   const [detail, setDetail] = useState<FormsFormData | null>(null);
   const [responses, setResponses] = useState<FormsResponsesData | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const reportingScope = useRef<{
+    epoch: number;
+    formId: string;
+    revision: number;
+  } | null>(null);
   const [responseDetail, setResponseDetail] =
     useState<FormsResponseData | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
@@ -384,6 +391,8 @@ function FormsWorkspace({ company, role, initialData }: Props) {
     );
   }
   function invalidate() {
+    reportingScope.current = null;
+    setReporting(false);
     epoch.current++;
     Object.values(controllers.current).forEach((controller) =>
       controller.abort(),
@@ -525,6 +534,42 @@ function FormsWorkspace({ company, role, initialData }: Props) {
       phaseRef.current === "ready" &&
       !dirtyRef.current
     );
+  }
+  function canReport() {
+    const scope = reportingScope.current;
+    const current = detailRef.current;
+    return (
+      canNavigate() &&
+      manage &&
+      !!scope &&
+      scope.epoch === epoch.current &&
+      selection.current?.view === "manage" &&
+      selection.current.formId === scope.formId &&
+      current?.view === "manage" &&
+      current.form.id === scope.formId &&
+      current.form.revision === scope.revision &&
+      current.form.capabilities.canViewResponses
+    );
+  }
+  function openReporting() {
+    const current = detailRef.current;
+    if (
+      !canNavigate() ||
+      reading ||
+      editor ||
+      !manage ||
+      current?.view !== "manage" ||
+      !current.form.capabilities.canViewResponses
+    )
+      return;
+    reportingScope.current = {
+      epoch: epoch.current,
+      formId: current.form.id,
+      revision: current.form.revision,
+    };
+    setResponses(null);
+    setResponseDetail(null);
+    setReporting(true);
   }
   function clearLeaf() {
     setDetail(null);
@@ -2032,6 +2077,11 @@ function FormsWorkspace({ company, role, initialData }: Props) {
                       </button>
                     )}
                     {detail.form.capabilities.canViewResponses && (
+                      <button disabled={disabled} onClick={openReporting}>
+                        Reporting
+                      </button>
+                    )}
+                    {detail.form.capabilities.canViewResponses && (
                       <button
                         disabled={disabled}
                         onClick={() => void readResponses(detail.form.id)}
@@ -2040,7 +2090,31 @@ function FormsWorkspace({ company, role, initialData }: Props) {
                       </button>
                     )}
                   </div>
-                  {!responses && !responseDetail && (
+                  {reporting && detail.view === "manage" && (
+                    <FormsReporting
+                      key={`${company.id}:${initialData.actorId}:${role}:${detail.form.id}:${detail.form.revision}`}
+                      identity={{
+                        tenantId: company.id,
+                        actorId: initialData.actorId,
+                        role,
+                      }}
+                      company={company}
+                      form={detail.form}
+                      canAct={canReport}
+                      disabled={disabled || dirty || !!editor}
+                      onDenied={clearPrivate}
+                      onOpenResponse={(id) => {
+                        if (canReport()) void readResponse(detail.form.id, id);
+                      }}
+                      onClose={() => {
+                        if (canReport()) {
+                          reportingScope.current = null;
+                          setReporting(false);
+                        }
+                      }}
+                    />
+                  )}
+                  {!reporting && !responses && !responseDetail && (
                     <Questions schema={detail.schema} answers={{}} disabled />
                   )}
                 </>

@@ -1,0 +1,165 @@
+.forms-page .forms-reporting {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid #dce2ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #182338;
+}
+.forms-page .forms-reporting .fr-heading,
+.forms-page .forms-reporting .fr-counts,
+.forms-page .forms-reporting .fr-field-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.forms-page .forms-reporting h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.forms-page .forms-reporting h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.forms-page .forms-reporting p {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.forms-page .forms-reporting .fr-heading p,
+.forms-page .forms-reporting .fr-hint {
+  color: #59677d;
+}
+.forms-page .forms-reporting button {
+  padding: 9px 14px;
+  border: 1px solid #d5deeb;
+  border-radius: 7px;
+  background: #fff;
+  color: #263a58;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.forms-page .forms-reporting button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.forms-page .forms-reporting button:focus-visible,
+.forms-page .forms-reporting input:focus-visible,
+.forms-page .forms-reporting select:focus-visible {
+  outline: 3px solid #76a4f1;
+  outline-offset: 2px;
+}
+.forms-page .forms-reporting .fr-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e1e6ee;
+  padding: 18px 0 12px;
+  margin-bottom: 18px;
+}
+.forms-page .forms-reporting .fr-tabs button[aria-current="page"] {
+  background: #edf4ff;
+  color: #155cc6;
+  border-color: #9cbeee;
+  font-weight: 600;
+}
+.forms-page .forms-reporting .fr-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.forms-page .forms-reporting label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.forms-page .forms-reporting input,
+.forms-page .forms-reporting select {
+  box-sizing: border-box;
+  width: auto;
+  min-height: 36px;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #182338;
+  border: 1px solid #d5deeb;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.forms-page .forms-reporting .fr-status-filter {
+  max-width: 250px;
+  margin: 16px 0;
+}
+.forms-page .forms-reporting .fr-error {
+  padding: 12px;
+  background: #fff0ee;
+  border: 1px solid #efbcb5;
+  color: #a52619;
+  border-radius: 6px;
+}
+.forms-page .forms-reporting .fr-counts {
+  padding: 12px 0;
+}
+.forms-page .forms-reporting .fr-table-wrap {
+  overflow: auto;
+  border: 1px solid #e0e6ef;
+  border-radius: 8px;
+}
+.forms-page .forms-reporting table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+}
+.forms-page .forms-reporting th {
+  padding: 14px;
+  background: #f5f7fb;
+  color: #627086;
+  font-size: 12px;
+  font-weight: 600;
+}
+.forms-page .forms-reporting td {
+  padding: 14px;
+  border-top: 1px solid #edf0f6;
+  white-space: pre-wrap;
+}
+.forms-page .forms-reporting td small {
+  display: block;
+  color: #718096;
+  margin-top: 5px;
+}
+.forms-page .forms-reporting .fr-table-wrap > p {
+  padding: 12px 16px;
+}
+.forms-page .forms-reporting .fr-summaries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.forms-page .forms-reporting .fr-summaries article {
+  border: 1px solid #e0e6ef;
+  padding: 20px;
+  border-radius: 8px;
+}
+.forms-page .forms-reporting .fr-distribution {
+  display: grid;
+  grid-template-columns: 110px 1fr 95px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  margin: 14px 0;
+}
+.forms-page .forms-reporting progress {
+  width: 100%;
+  height: 12px;
+  accent-color: #347ce2;
+}
+.forms-page .forms-reporting .fr-load {
+  margin-top: 18px;
+}
+.forms-page .forms-reporting .fr-field-heading {
+  margin-bottom: 16px;
+}

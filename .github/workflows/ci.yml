@@ -15,7 +15,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
@@ -54,4 +54,6 @@ jobs:
         run: npm run test:knowledge-base:db
       - name: Forms database checks
         run: npm run test:forms:db
+      - name: Forms reporting database checks
+        run: npm run test:forms-reporting:db
       - run: npm run build
