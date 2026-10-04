@@ -45,6 +45,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
   const drawer = useRef<HTMLDialogElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const usersHref = companyId ? `/agents?company=${encodeURIComponent(companyId)}` : '/agents';
+  const accountInitials = (accountName || companyName).trim().split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase() || 'CT';
   function item(label: string, icon: IconName, href?: string, active = false, color?: string) {
     const content = <><span className={`ct-nav-icon${color ? ` ct-icon-${color}` : ''}`}><ShellIcon name={icon}/></span><span className="ct-nav-label">{label}</span>{!href && <span className="ct-unavailable">Unavailable</span>}</>;
     return href ? <Link href={href} className="ct-nav-item" aria-current={active ? 'page' : undefined} title={label} onClick={() => drawer.current?.close()}>{content}</Link> : <span className="ct-nav-item ct-nav-unavailable" aria-disabled="true" title={`${label} — unavailable`}>{content}</span>;
@@ -71,7 +72,7 @@ export default function AppShell({ children, companyName, companyId, activeModul
         <details className="ct-accessibility"><summary aria-label="Accessibility information"><ShellIcon name="accessibility"/></summary><div>Use Tab to move between controls, Enter to activate, and Escape to close navigation. Use your browser’s zoom to enlarge the interface.</div></details>
         <span className="ct-notifications" aria-label="Notifications unavailable" title="Notifications unavailable"><ShellIcon name="bell"/></span>
         {companyControl ? <div className="ct-company-control">{companyControl}</div> : <span className="ct-company-name">{companyName}</span>}
-        <details className="ct-account"><summary aria-label="Account menu"><span className="ct-account-avatar" aria-hidden="true">{(accountName || companyName).trim().slice(0,2).toUpperCase()}</span><ShellIcon name="chevron"/></summary><div><strong>{accountName || companyName}</strong>{accountControls || <Link href="/login">Sign-in options</Link>}</div></details>
+        <details className="ct-account"><summary aria-label="Account menu"><span className="ct-account-avatar" aria-hidden="true">{accountInitials}</span><ShellIcon name="chevron"/></summary><div><strong>{accountName || companyName}</strong>{accountControls || <Link href="/login">Sign-in options</Link>}</div></details>
       </div>
     </header>
     <div className="ct-shell-body"><aside className="ct-sidebar"><button className="ct-collapse ct-icon-button" aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}><span aria-hidden="true">{collapsed ? '›' : '‹'}</span></button>{navigation()}</aside><div id="ct-main-content" className="ct-shell-content" tabIndex={-1}>{pageNavigation ? <div className="ct-page-navigation">{pageNavigation}</div> : null}{children}</div></div>
