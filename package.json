@@ -35,7 +35,10 @@
     "test:requests:db": "node scripts/test-requests-database.mjs",
     "test:requests:ui": "node scripts/test-requests-ui-browser.mjs",
     "test:requests:integration": "node scripts/test-requests-integration.mjs",
-    "test:knowledge-base-files:db": "node scripts/test-knowledge-base-files-database.mjs"
+    "test:knowledge-base-files:db": "node scripts/test-knowledge-base-files-database.mjs",
+    "test:rota-templates:db": "node scripts/test-rota-templates-database.mjs",
+    "test:rota-templates:ui": "node scripts/test-rota-templates-ui-browser.mjs",
+    "test:rota-templates:integration": "node scripts/test-rota-templates-integration.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

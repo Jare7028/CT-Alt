@@ -60,4 +60,6 @@ jobs:
         run: npm run test:requests:db
       - name: Knowledge Base files and genuine Storage checks
         run: npm run test:knowledge-base-files:db
+      - name: Shift Templates database and preservation checks
+        run: npm run test:rota-templates:db
       - run: npm run build
