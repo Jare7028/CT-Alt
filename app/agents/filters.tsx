@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '../components/dropdown';
 import { useState, useSyncExternalStore } from 'react';
 import './filters.css';
 import DirectoryIcon from './directory-icon';
@@ -36,7 +37,7 @@ export default function Filters({fields,agents,state,onChange,onReset}:{fields:F
   function update(id:string,patch:Partial<FilterState['rules'][number]>) {
     onChange({...state,rules:state.rules.map(rule=>rule.id===id ? {...rule,...patch} : rule)});
   }
-  return <details className="filter directory-filter"><summary aria-label="Filter users"><DirectoryIcon name="filter"/><DirectoryIcon name="chevron"/>{active ? <span className="filter-dot" aria-label={`${active} active filters`} /> : null}</summary>
+  return <Dropdown className="filter directory-filter"><summary aria-label="Filter users"><DirectoryIcon name="filter"/><DirectoryIcon name="chevron"/>{active ? <span className="filter-dot" aria-label={`${active} active filters`} /> : null}</summary>
     <div className="filter-panel" role="region" aria-label="User filters">
       <div className="filter-heading"><strong>{advanced?'Advanced filters':'Quick filters'}</strong><button onClick={()=>{setFieldSearch('');onReset();}}>Reset all</button></div>
       {!advanced && !compatible ? <p className="filter-help">These conditions need advanced filters. Switch back to edit them; your conditions still apply.</p> : <>
@@ -59,5 +60,5 @@ export default function Filters({fields,agents,state,onChange,onReset}:{fields:F
       <button className="filter-switch" onClick={()=>{setFieldSearch('');onChange({...state,mode:advanced?'quick':'advanced'});}}>{advanced?'Switch to quick filters':'Advanced filters'}</button>
       <p className="filter-help">Saved for this account and company in this browser.</p>
     </div>
-  </details>;
+  </Dropdown>;
 }

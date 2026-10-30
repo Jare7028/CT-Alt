@@ -1,4 +1,5 @@
 "use client";
+import Dropdown from '../components/dropdown';
 import AppShell from "../components/app-shell";
 import ShiftTemplates from "./shift-templates";
 import PeriodTemplates from "./period-templates";
@@ -222,6 +223,21 @@ export default function Scheduler({
     dateInZone(new Date().toISOString(), company.time_zone),
   );
   const [addOpen, setAddOpen] = useState(false);
+  const addMenu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!addOpen) return;
+    function dismissOutside(event: Event) {
+      if (event.target instanceof Node && !addMenu.current?.contains(event.target)) {
+        setAddOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", dismissOutside, true);
+    document.addEventListener("click", dismissOutside, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside, true);
+      document.removeEventListener("click", dismissOutside, true);
+    };
+  }, [addOpen]);
   const [modal, setModal] = useState<
     | ""
     | "schedule"
@@ -1196,7 +1212,7 @@ export default function Scheduler({
             >
               <div className={styles.calendarControls}>
                 <div className={styles.calendarViewControls}>
-                  <details className={styles.calendarFilterMenu}>
+                  <Dropdown className={styles.calendarFilterMenu}>
                     <summary>
                       Filters <span aria-hidden="true">⌄</span>
                     </summary>
@@ -1239,7 +1255,7 @@ export default function Scheduler({
                         </label>
                       )}
                     </div>
-                  </details>
+                  </Dropdown>
                   <div
                     role="tablist"
                     aria-label="Calendar view"
@@ -1344,7 +1360,7 @@ export default function Scheduler({
                     </button>
                   )}
                   {editable && (view === "Day" || view === "Week") && (
-                    <details className={styles.addMenu}>
+                    <Dropdown className={styles.addMenu}>
                       <summary>Actions</summary>
                       <button
                         disabled={loading || busy || uncertain || !!error}
@@ -1365,11 +1381,11 @@ export default function Scheduler({
                       >
                         Load {view.toLowerCase()} template
                       </button>
-                    </details>
+                    </Dropdown>
                   )}
                   {editable && (
                     <>
-                      <div className={styles.addMenu}>
+                      <div className={styles.addMenu} ref={addMenu}>
                         <button
                           aria-expanded={addOpen}
                           disabled={
@@ -1451,7 +1467,7 @@ export default function Scheduler({
                         return (
                           <th scope="col" key={d}>
                             {editable && (
-                              <details>
+                              <Dropdown>
                                 <summary
                                   aria-label={`Template actions for ${d}`}
                                 >
@@ -1477,7 +1493,7 @@ export default function Scheduler({
                                 >
                                   Load day template
                                 </button>
-                              </details>
+                              </Dropdown>
                             )}
                             <span className={styles.calendarDay}>
                               {new Intl.DateTimeFormat("en-GB", {

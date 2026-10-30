@@ -17,6 +17,7 @@ test('quick/advanced AND/OR, inclusive dates, remove/reset and CSV use the same 
  await expect(page.locator('.pagination')).toContainText('of 28');
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export all matching users'}).click();
  const csv=readFileSync((await (await download).path())!,'utf8');expect(csv.trim().split('\r\n')).toHaveLength(29);expect(csv).toContain('Person 27');expect(csv).not.toContain('Person 28');
+ await page.getByLabel('Filter users',{exact:true}).click();
  await panel.getByRole('button',{name:'Advanced filters',exact:true}).click();
  await panel.getByRole('button',{name:'+ Add filter',exact:true}).click();
  await panel.getByLabel('Search fields',{exact:true}).fill('Employment');

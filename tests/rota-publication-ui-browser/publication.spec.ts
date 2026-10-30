@@ -357,3 +357,25 @@ test("held earlier successful read cannot restore workforce after current public
     0,
   );
 });
+
+
+test("scheduler dropdowns dismiss outside and preserve actions and filter values", async ({ page }) => {
+  await setup(page);
+  const add = page.getByRole("button", { name: "Add ▾", exact: true });
+  const single = page.getByRole("button", { name: "Add single shift", exact: true });
+  const search = page.getByLabel("Search users");
+  await add.click();
+  await expect(single).toBeVisible();
+  await search.click();
+  await expect(single).toBeHidden();
+  await expect(add).toHaveAttribute("aria-expanded", "false");
+  const filters = page.locator("summary").filter({ hasText: "Filters" });
+  await filters.click();
+  await page.getByRole("combobox", { name: "Job", exact: true }).selectOption(job);
+  await expect(page.getByRole("combobox", { name: "Job", exact: true })).toBeVisible();
+  await add.click();
+  await expect(page.getByRole("combobox", { name: "Job", exact: true })).toBeHidden();
+  await single.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(single).toBeHidden();
+});

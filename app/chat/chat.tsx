@@ -1,4 +1,5 @@
 "use client";
+import Dropdown from '../components/dropdown';
 import AppShell from "../components/app-shell";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -762,11 +763,11 @@ function ChatContent({
         <aside aria-label="Conversations">
           <div className="chat-list-toolbar">
             {" "}
-            <details>
+            <Dropdown>
               <summary>Add New</summary>
               <button onClick={() => void start("direct")}>New Chat</button>
               <button onClick={() => void start("group")}>New Group</button>
-            </details>
+            </Dropdown>
           </div>
           <label className="chat-search">
             Search conversations

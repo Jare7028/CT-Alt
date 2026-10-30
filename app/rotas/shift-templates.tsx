@@ -1,4 +1,5 @@
 "use client";
+import Dropdown from '../components/dropdown';
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -735,7 +736,7 @@ export default function ShiftTemplates({
                   >
                     Apply
                   </button>
-                  <details>
+                  <Dropdown>
                     <summary aria-label={`Actions for ${item.name}`}>
                       •••
                     </summary>
@@ -757,7 +758,7 @@ export default function ShiftTemplates({
                     >
                       Delete
                     </button>
-                  </details>
+                  </Dropdown>
                 </div>
               </article>
             ))}
