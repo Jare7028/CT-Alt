@@ -19,6 +19,7 @@
     "test:local:setup": "node scripts/setup-local-tests.mjs",
     "test:browser": "playwright test",
     "test:config": "node --test tests/config/*.test.mjs",
+    "test:dropdowns": "node scripts/test-dropdowns-ui-browser.mjs",
     "test:controls": "node scripts/review-directory-controls.mjs",
     "test:overview:db": "node scripts/test-overview-snapshot-database.mjs",
     "test:time-clock:db": "node scripts/test-time-clock-database.mjs",
